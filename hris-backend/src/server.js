@@ -8,17 +8,20 @@ const app = express();
 const PORT = process.env.PORT || 4000;
 
 // ==========================================
-// 1. Global Middleware / Plugins
+// Global Middleware / Plugins
 // ==========================================
 app.use(helmet()); // Secure HTTP headers to shield against common vulnerabilities
 app.use(cors({
     origin: process.env.CLIENT_URL || 'http://localhost:5173', // Only allow your React frontend to connect
-    credentials: true
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
+
 app.use(express.json()); // Parses incoming json request payloads automatically
 
 // ==========================================
-// 2. Base Health Check Route
+// Base Health Check Route
 // ==========================================
 app.get('/api/health', (req, res) => {
     res.json({ 
@@ -29,14 +32,14 @@ app.get('/api/health', (req, res) => {
 });
 
 // ==========================================
-// 3. Modular Feature Routing Boundaries
+// 3Modular Feature Routing Boundaries
 // ==========================================
 // Example placement for future routes:
 // const recruitmentRoutes = require('./recruitment/recruitment.routes');
 // app.use('/api', recruitmentRoutes);
 
 // ==========================================
-// 4. Server Initialization
+// Server Initialization
 // ==========================================
 app.listen(PORT, () => {
     console.log(`🚀 HRIS Engine booting up...`);
