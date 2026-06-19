@@ -1,0 +1,7 @@
+node_modules/
+dist/
+.DS_Store
+
+# Block environment configuration files from tracking
+hris-frontend/.env
+hris-backend/.env
