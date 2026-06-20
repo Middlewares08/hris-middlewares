@@ -18,6 +18,7 @@
     "express": "^5.2.1",
     "helmet": "^8.2.0",
     "knex": "^3.2.10",
+    "objection": "^3.1.5",
     "pg": "^8.22.0"
   },
   "devDependencies": {
