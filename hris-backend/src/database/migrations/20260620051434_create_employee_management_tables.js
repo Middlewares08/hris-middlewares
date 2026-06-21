@@ -13,8 +13,8 @@ exports.up = async function(knex) {
         table.string('middle_name').nullable();
         table.string('last_name').notNullable();
         table.string('preferred_name').nullable(); // Nickname
-        
         table.boolean('is_active').defaultTo(true);
+        
         table.bigInteger('created_by').unsigned().nullable()
             .references('id').inTable('employee.employees')
             .onDelete('SET NULL'); // Prevents errors if a managing employee is ever deleted
@@ -26,7 +26,7 @@ exports.up = async function(knex) {
     });
 
     // 2. CONTACT INFORMATION TABLE (1:1 Relationship)
-    await knex.schema.withSchema('employee').createTable('employee_contacts', function(table) {
+    await knex.schema.withSchema('employee').createTable('contacts', function(table) {
         table.bigIncrements('id').primary();
         // Foreign Key mapping back to core employee
         table.bigInteger('employee_id').unsigned().notNullable()
@@ -51,7 +51,7 @@ exports.up = async function(knex) {
     });
 
     // 3. DEMOGRAPHIC DATA TABLE (1:1 Relationship)
-    await knex.schema.withSchema('employee').createTable('employee_demographics', function(table) {
+    await knex.schema.withSchema('employee').createTable('demographics', function(table) {
         table.bigIncrements('id').primary();
         table.bigInteger('employee_id').unsigned().notNullable()
         .references('id').inTable('employee.employees').onDelete('CASCADE');
@@ -71,7 +71,7 @@ exports.up = async function(knex) {
     });
 
     // 4. ADDRESSES TABLE (1:Many Relationship for maximum flexibility)
-    await knex.schema.withSchema('employee').createTable('employee_addresses', function(table) {
+    await knex.schema.withSchema('employee').createTable('addresses', function(table) {
         table.bigIncrements('id').primary();
         table.bigInteger('employee_id').unsigned().notNullable()
         .references('id').inTable('employee.employees').onDelete('CASCADE');
@@ -102,8 +102,8 @@ exports.up = async function(knex) {
  */
 exports.down = async function(knex) {
     // Drop in reverse order to respect foreign key constraints
-    await knex.schema.withSchema('employee').dropTableIfExists('employee_addresses');
-    await knex.schema.withSchema('employee').dropTableIfExists('employee_demographics');
-    await knex.schema.withSchema('employee').dropTableIfExists('employee_contacts');
+    await knex.schema.withSchema('employee').dropTableIfExists('addresses');
+    await knex.schema.withSchema('employee').dropTableIfExists('demographics');
+    await knex.schema.withSchema('employee').dropTableIfExists('contacts');
     await knex.schema.withSchema('employee').dropTableIfExists('employees');
 };

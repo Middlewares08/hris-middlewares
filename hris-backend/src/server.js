@@ -32,11 +32,23 @@ app.get('/api/health', (req, res) => {
 });
 
 // ==========================================
-// 3Modular Feature Routing Boundaries
+// Modular Feature Routing Boundaries
 // ==========================================
 // Example placement for future routes:
 // const recruitmentRoutes = require('./recruitment/recruitment.routes');
 // app.use('/api', recruitmentRoutes);
+
+
+// SYSTEM ROUTES
+const systemRoutes = require('../src/route/systemRoutes');
+app.use('/system', systemRoutes);
+
+
+// AUTH ROUTE
+const authRoutes = require("../src/route/authRoutes");
+app.use('/auth', authRoutes);
+
+
 
 // ==========================================
 // Server Initialization

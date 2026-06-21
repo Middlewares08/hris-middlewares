@@ -1,8 +1,8 @@
 const BaseModel = require('../BaseModel');
 
-class EmployeeDemographic extends BaseModel {
-  static get tableName() { return 'employee_demographics'; }
-  static get schema() { return 'employee'; }
+class Demographic extends BaseModel {
+  static get tableName() { return 'employee.demographics'; }
+  // static get schema() { return 'employee'; }
   static get idColumn() { return 'id'; }
 
   // Audit Stamp Hooks
@@ -21,4 +21,4 @@ class EmployeeDemographic extends BaseModel {
   }
 }
 
-module.exports = EmployeeDemographic;
+module.exports = Demographic;

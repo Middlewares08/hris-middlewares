@@ -1,48 +1,43 @@
+// database/models/employee/Employee.js
 const BaseModel = require('../BaseModel');
 
 class Employee extends BaseModel {
-    static get tableName() { return 'employees'; }
-    static get schema() { return 'employee'; }
+    // 💡 FIX: Explicitly namespace the table name string here
+    static get tableName() { return 'employee.employees'; } 
+    
+    // You can keep or comment this out now
+    static get schema() { return 'employee'; } 
     static get idColumn() { return 'id'; }
 
-    // Relationship Mapping (Laravel-style Eager Loading)
     static get relationMappings() {
-        const Contact = require('./EmployeeContact');
-        const Demographic = require('./EmployeeDemographic');
-        const Address = require('./EmployeeAddress');
+        const Contact = require('./Contact');
+        const Demographic = require('./Demographic');
+        const Address = require('./Address');
+        const Credentials = require('./Credential');
 
         return {
-        contact: {
-            relation: BaseModel.HasOneRelation,
-            modelClass: Contact,
-            join: { from: 'employee.employees.id', to: 'employee.employee_contacts.employee_id' }
-        },
-        demographics: {
-            relation: BaseModel.HasOneRelation,
-            modelClass: Demographic,
-            join: { from: 'employee.employees.id', to: 'employee.employee_demographics.employee_id' }
-        },
-        addresses: {
-            relation: BaseModel.HasManyRelation,
-            modelClass: Address,
-            join: { from: 'employee.employees.id', to: 'employee.employee_addresses.employee_id' }
-        }
+            contact: {
+                relation: BaseModel.HasOneRelation,
+                modelClass: Contact,
+                // 💡 Match the table names directly
+                join: { from: 'employee.employees.id', to: 'employee.contacts.employee_id' }
+            },
+            demographics: {
+                relation: BaseModel.HasOneRelation,
+                modelClass: Demographic,
+                join: { from: 'employee.employees.id', to: 'employee.demographics.employee_id' }
+            },
+            addresses: {
+                relation: BaseModel.HasManyRelation,
+                modelClass: Address,
+                join: { from: 'employee.employees.id', to: 'employee.addresses.employee_id' }
+            },
+            credentials: {
+                relation: BaseModel.HasOneRelation,
+                modelClass: Credentials,
+                join: { from: 'employee.employees.id', to: 'employee.credentials.employee_id' }
+            }
         };
-    }
-
-    // Audit Stamp Hooks
-    $beforeInsert(queryContext) {
-        super.$beforeInsert(queryContext);
-        if (queryContext.user) {
-            this.created_by = queryContext.user.id;
-        }
-    }
-
-    $beforeUpdate(opt, queryContext) {
-        super.$beforeUpdate(opt, queryContext);
-        if (queryContext.user) {
-            this.updated_by = queryContext.user.id;
-        }
     }
 }
 

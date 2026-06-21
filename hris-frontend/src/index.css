@@ -33,6 +33,9 @@
     font-size: 16px;
   }
 }
+#root {
+
+}
 
 @media (prefers-color-scheme: dark) {
   :root {
@@ -59,7 +62,6 @@ body {
 }
 
 #root {
-  width: 1126px;
   max-width: 100%;
   margin: 0 auto;
   text-align: center;
@@ -68,6 +70,69 @@ body {
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
+  width: 100vw;
+  max-width: 100%;
+  margin-left: 0;
+  margin-right: 0;
+}
+
+.scrollbar-y-visible {
+    overflow-y: hidden;
+    /* Optional: Prevents layout shift/jiggle when the scrollbar appears */
+    scrollbar-gutter: stable; 
+}
+
+.scrollbar-y-visible:hover,
+.scrollbar-y-visible:active,
+.scrollbar-y-visible:focus {
+    overflow-y: auto; /* 'auto' is cleaner than 'scroll' so it only shows if content overflows */
+}
+
+.scrollbar-y-visible::-webkit-scrollbar {
+    width: 3px !important; /* 1px can be hard to click; 3px is an ultra-thin line */
+}
+
+.scrollbar-y-visible::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 255, 255, 0.2); /* Changed to light-ish white since your layout is dark bg (slate-900) */
+    border-radius: 10px;
+}
+
+.scrollbar-y-visible:hover::-webkit-scrollbar-thumb {
+    background-color: rgba(20, 184, 166, 0.7); /* Optional: Transitions to teal-500 on hover to match your HRIS accent! */
+}
+
+.scrollbar-y-visible::-webkit-scrollbar-track {
+    background-color: transparent; 
+}
+
+
+.scrollbar-x-visible {
+    overflow-x: hidden;
+    scrollbar-gutter: stable; /* Cleaned up to standard fallback */
+}
+
+.scrollbar-x-visible:hover,
+.scrollbar-x-visible:active,
+.scrollbar-x-visible:focus {
+    overflow-x: auto; /* 'auto' prevents a dead tracking bar if content fits perfectly */
+}
+
+.scrollbar-x-visible::-webkit-scrollbar {
+    height: 3px !important; /* 3px keeps it razor-thin along the bottom edge */
+    width: auto;            /* Let the width handle itself along the track */
+}
+
+.scrollbar-x-visible::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 255, 255, 0.2); /* Semi-transparent white shows beautifully on dark backgrounds */
+    border-radius: 10px;
+}
+
+.scrollbar-x-visible:hover::-webkit-scrollbar-thumb {
+    background-color: rgba(20, 184, 166, 0.7); /* Teal-500 matching your layout's core identity */
+}
+
+.scrollbar-x-visible::-webkit-scrollbar-track {
+    background-color: transparent; /* Seamless integration with no blocky backgrounds */
 }
 
 h1,

@@ -1,7 +1,8 @@
+// src/database/models/BaseModel.js
 const { Model } = require('objection');
-const knex = require('../database/connection');
 
-// Bind Objection to your active Knex instance once globally
-Model.knex(knex);
+class BaseModel extends Model {
+  // Any global configuration hooks or plugins go here
+}
 
-module.exports = Model;
+module.exports = BaseModel;
