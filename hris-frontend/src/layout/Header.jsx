@@ -1,30 +1,26 @@
 import { User } from 'lucide-react'; // Make sure User is imported
 import PropTypes from 'prop-types';
-import { useQueryClient } from '@tanstack/react-query';
+import { useAuthUser } from '../hooks/useAuthUser';
 
 Header.PropTypes = {
     components: PropTypes.node
 }
 
 function Header (props) {
-    const queryClient = useQueryClient();
-    
-    // 💡 Synchronously read the cached user data on render
-    const user = queryClient.getQueryData(['authUser']);
+    const { data: user } = useAuthUser();
 
-    console.log('user: ', user);
     return (
-        <header className="h-20 bg-teal-50/30 border-b border-teal-900/20 flex items-center justify-between px-8 w-full">
+        <header className="h-20 bg-gray-700 flex items-center justify-between px-8 w-full">
             {/* Left Side: Welcome Text */}
             <div className='flex gap-3'>
-                <div className="w-10 h-10 bg-teal-100/50 rounded-full flex items-center justify-center border border-teal-200 cursor-pointer hover:bg-teal-200 transition-colors">
-                    <User size={23} className="text-teal-700" />
+                <div className="w-10 h-10 bg-gray-100/50 rounded-full flex items-center justify-center border border-gray-200 cursor-pointer hover:bg-gray-200 transition-colors">
+                    <User size={23} className="text-gray-700" />
                 </div>
-                <div>
-                    <p className="flex text-xl font-bold label-teal leading-tight">
+                <div className='block text-start'>
+                    <p className="flex text-xl font-bold text-gray-200 leading-tight">
                         Welcome back, {user?.fullName || "User"}
                     </p>
-                    <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">
+                    <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">
                         {user?.email}
                     </p>
                 </div>

@@ -11,5 +11,10 @@ export const authService = {
         // payload = { token, code }
         const { data } = await apiClient.post('/auth/login/verify-otp', payload);
         return data;
+    },
+
+    getCurrentProfile: async () => {
+        const response = await apiClient.get('/auth/me');
+        return response.data; // Resolves to the user layout data block
     }
 };

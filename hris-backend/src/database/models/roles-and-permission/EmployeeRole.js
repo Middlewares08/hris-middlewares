@@ -1,0 +1,38 @@
+// database/models/role_permission/EmployeeRole.js
+const BaseModel = require('../BaseModel');
+
+class EmployeeRole extends BaseModel {
+    static get tableName() {
+        return 'role_permission.employee_roles';
+    }
+
+    static get idColumn() {
+        return 'id';
+    }
+
+    static get relationMappings() {
+        const Role = require('./Role');
+        const Employee = require('../employee/Employee');
+
+        return {
+            role: {
+                relation: BaseModel.BelongsToOneRelation,
+                modelClass: Role,
+                join: {
+                    from: 'role_permission.employee_roles.role_id',
+                    to: 'role_permission.roles.id'
+                }
+            },
+            employee: {
+                relation: BaseModel.BelongsToOneRelation,
+                modelClass: Employee,
+                join: {
+                    from: 'role_permission.employee_roles.employee_id',
+                    to: 'employee.employees.id'
+                }
+            }
+        };
+    }
+}
+
+module.exports = EmployeeRole;

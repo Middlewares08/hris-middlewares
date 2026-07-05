@@ -4,7 +4,7 @@ const Loading = ({
     size = "md", 
     fullPage = false, 
     text = "Loading...", 
-    color = "teal" 
+    color = "gray" 
 }) => {
     // Mapping sizes to Icon pixel values
     const sizes = {

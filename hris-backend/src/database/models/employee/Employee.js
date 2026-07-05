@@ -36,6 +36,18 @@ class Employee extends BaseModel {
                 relation: BaseModel.HasOneRelation,
                 modelClass: Credentials,
                 join: { from: 'employee.employees.id', to: 'employee.credentials.employee_id' }
+            },
+            roles: {
+                relation: BaseModel.ManyToManyRelation,
+                modelClass: require('../roles-and-permission/Role'),
+                join: {
+                    from: 'employee.employees.id',
+                    through: {
+                        from: 'role_permission.employee_roles.employee_id',
+                        to: 'role_permission.employee_roles.role_id'
+                    },
+                    to: 'role_permission.roles.id'
+                }
             }
         };
     }

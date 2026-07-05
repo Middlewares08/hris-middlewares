@@ -98,7 +98,7 @@ body {
 }
 
 .scrollbar-y-visible:hover::-webkit-scrollbar-thumb {
-    background-color: rgba(20, 184, 166, 0.7); /* Optional: Transitions to teal-500 on hover to match your HRIS accent! */
+    background-color: rgba(27, 29, 29, 0.7); /* Optional: Transitions to teal-500 on hover to match your HRIS accent! */
 }
 
 .scrollbar-y-visible::-webkit-scrollbar-track {

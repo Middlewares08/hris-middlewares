@@ -6,6 +6,8 @@ import ProtectedRoute from './layout/ProtectedRoute'
 import Dashboard from './layout/Dashboard'
 import DashboardHome from './pages/DashboardHome'
 import Employee from './pages/Employee'
+import Landing from './pages/Landing'
+import RolesAndPermission from './pages/Maintenance/RolesAndPermission'
 
 function App() {
 
@@ -14,6 +16,8 @@ function App() {
       <Toaster richColors position="top-right" closeButton />
       <Routes>
         <Route path="/auth/login" element={<Login />} />
+        <Route path="/"  element={<Landing />} />
+
         <Route
           path="/dashboard"
           element={
@@ -29,6 +33,10 @@ function App() {
 
           {/* Matches "/dashboard/employee" */}
           <Route path="/dashboard/employees" element={<Employee />}></Route>
+
+          <Route path="maintenance">
+            <Route path="roles-and-permission" element={<RolesAndPermission />} />
+          </Route>
 
           {/* <Route path="payment-success" element={<PaymentSuccess />} />
           <Route path="maintenance">

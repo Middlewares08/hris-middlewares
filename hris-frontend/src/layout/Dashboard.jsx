@@ -1,18 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { 
-  ChevronLeft, 
-  ChevronRight, 
-  LayoutDashboard, 
-  Package, 
-  Wrench, 
-  FileText, 
-  CreditCard, 
-  Users, 
-  LogOut,
-  ChevronDown,
-  ShoppingCart,
-  GroupIcon
+    ChevronLeft, 
+    ChevronRight, 
+    LayoutDashboard, 
+    Wrench, 
+    LogOut,
+    ChevronDown,
+    GroupIcon
 } from 'lucide-react';
 import { useLogout } from '../hooks/useLogout';
 import Header from './Header';
@@ -27,30 +22,30 @@ const Dashboard = () => {
     const logout = useLogout();
 
     const menuItems = [
-        { icon: <LayoutDashboard size={20} />, label: 'Dashboard', path: '/dashboard' },
-        { icon: <GroupIcon size={20}/>, label: 'Employee', path: '/dashboard/employees'},
-        { 
-            icon: <Package size={20} />, 
-            label: 'Products', 
-            path: '/dashboard/products',
-            children: [
-                { label: 'Inventory', path: '/dashboard/products/inventory' },
-                { label: 'Categories', path: '/dashboard/products/categories' },
-            ]
-        },
-        { 
-            icon: <Wrench size={20} />, 
-            label: 'Services', 
-            path: '/dashboard/services', 
-            children: [
-                { label: 'Services', path: '/dashboard/services/list' },
-                { label: 'Categories', path: '/dashboard/services/categories' },
-            ] 
-        },
-        { icon: <FileText size={20} />, label: 'Quotations', path: '/dashboard/quotations' },
-        { icon: <CreditCard size={20} />, label: 'Payments', path: '/dashboard/payments' },
-        { icon: <Users size={20} />, label: 'Customers', path: '/dashboard/users' },
-        { icon: <Wrench size={20} />, 
+        { icon: <LayoutDashboard className='hover:cursor-pointer' size={20} />, label: 'Dashboard', path: '/dashboard' },
+        { icon: <GroupIcon className='hover:cursor-pointer' size={20}/>, label: 'Employee', path: '/dashboard/employees'},
+        // { 
+        //     icon: <Package size={20} />, 
+        //     label: 'Products', 
+        //     path: '/dashboard/products',
+        //     children: [
+        //         { label: 'Inventory', path: '/dashboard/products/inventory' },
+        //         { label: 'Categories', path: '/dashboard/products/categories' },
+        //     ]
+        // },
+        // { 
+        //     icon: <Wrench size={20} />, 
+        //     label: 'Services', 
+        //     path: '/dashboard/services', 
+        //     children: [
+        //         { label: 'Services', path: '/dashboard/services/list' },
+        //         { label: 'Categories', path: '/dashboard/services/categories' },
+        //     ] 
+        // },
+        // { icon: <FileText size={20} />, label: 'Quotations', path: '/dashboard/quotations' },
+        // { icon: <CreditCard size={20} />, label: 'Payments', path: '/dashboard/payments' },
+        // { icon: <Users size={20} />, label: 'Customers', path: '/dashboard/users' },
+        { icon: <Wrench className='hover:cursor-pointer' size={20} />, 
             label: 'Maintenance', 
             path: '/dashboard/maintenance', 
             children: [
@@ -82,10 +77,10 @@ const Dashboard = () => {
     }, [location.pathname]);
 
     return (
-        <div className="w-full max-w-none min-h-screen bg-slate-900 text-white">
+        <div className="w-full max-w-none min-h-screen bg-gray-200 text-black">
             {/* Sidebar */}
             <aside 
-                className={`bg-black text-slate-300 transition-all duration-300 ease-in-out flex flex-col fixed inset-y-0 left-0 z-50
+                className={`bg-gray-700 text-slate-300 transition-all duration-300 ease-in-out flex flex-col fixed inset-y-0 left-0 z-50
                 ${isCollapsed ? 'w-20' : 'w-64'}`}
             >
                 {/* Toggle Button */}
@@ -101,14 +96,14 @@ const Dashboard = () => {
 
                 {/* Brand */}
                 <div className="h-20 flex items-center px-6 mb-4">
-                    <div className="w-8 h-8 bg-teal-500 rounded shrink-0 flex items-center justify-center text-white font-bold">
+                    <div className="w-8 h-8 bg-gray-500 rounded shrink-0 flex items-center justify-center text-white font-bold">
                         HR
                     </div>
                     {!isCollapsed && <span className="ml-4 text-xl font-bold text-white tracking-tight">HRIS</span>}
                 </div>
 
                 {/* Nav Links */}
-                <nav className="flex-1 px-3 space-y-1 scrollbar-y-visible overflow-y-auto">
+                <nav className="flex-1 px-3 space-y-1 scrollbar-y-visible overflow-y-auto hover:cursor-pointer text-center">
                     {menuItems.map((item) => {
                         // const isParentActive = location.pathname.startsWith(item.path);
                         // const isSubmenuOpen = openSubmenu === item.label;
@@ -122,21 +117,21 @@ const Dashboard = () => {
                         <div key={item.label} className="flex flex-col">
                             <button
                                 onClick={() => handleNavClick(item)}
-                                className={`w-full flex items-center p-3 rounded-lg transition-all group
-                                    ${isParentActive && !item.children ? 'bg-teal-700 text-white' : 'hover:bg-slate-800 hover:text-white'}
+                                className={`w-full flex items-center p-3 justify-center rounded-lg transition-all group hover:cursor-pointer
+                                    ${isParentActive && !item.children ? 'bg-gray-500 text-white' : 'hover:bg-slate-800 hover:text-white'}
                                     ${isParentActive && item.children ? 'text-gray' : ''}`}
                             >
-                                <span className={`${isParentActive ? 'text-teal-400' : 'text-slate-400 group-hover:text-teal-400'}`}>
+                                <span className={`${isParentActive ? 'text-gray-400' : 'text-slate-400 group-hover:text-gray-400'}`}>
                                     {item.icon}
                                 </span>
                                 
                                 {!isCollapsed && (
                                     <>
-                                    <span className="ml-4 font-medium truncate flex-1 text-left">{item.label}</span>
+                                    <span className="ml-4 font-medium truncate flex-1 text-left hover:cursor-pointer">{item.label}</span>
                                     {item.children && (
                                         <ChevronDown 
                                         size={16} 
-                                        className={`transition-transform duration-200 ${isSubmenuOpen ? 'rotate-180' : ''}`} 
+                                        className={`transition-transform duration-200 hover:cursor-pointer ${isSubmenuOpen ? 'rotate-180' : ''}`} 
                                         />
                                     )}
                                     </>
@@ -152,9 +147,9 @@ const Dashboard = () => {
                                     <button
                                     key={child.label}
                                     onClick={() => navigate(child.path)}
-                                    className={`w-full text-left py-2 px-3 rounded-md text-sm transition-all
+                                    className={`w-full text-left py-2 px-3 rounded-md text-sm transition-all hover:cursor-pointer
                                         ${isChildActive 
-                                        ? 'text-teal-400 bg-teal-500/5 font-semibold' 
+                                        ? '  font-semibold bg-gray-500 text-white' 
                                         : 'text-slate-500 hover:text-slate-200 hover:bg-slate-800/50'}`}
                                     >
                                     {child.label}
@@ -173,7 +168,7 @@ const Dashboard = () => {
                 <div className="p-4 border-t border-slate-800">
                     <button 
                         onClick={logout}
-                        className="w-full flex items-center p-3 rounded-lg text-slate-400 hover:bg-red-500/10 hover:text-red-500 transition-colors"
+                        className={"w-full flex hover:cursor-pointer items-center p-3 rounded-lg text-slate-400 hover:bg-red-500/30 hover:text-red-300 transition-colors " + (isCollapsed && 'justify-center')}
                     >
                         <LogOut size={20} />
                         {!isCollapsed && <span className="ml-4 font-medium">Logout</span>}
@@ -190,7 +185,7 @@ const Dashboard = () => {
                 <Header />
                 
                 {/* 💡 Additional tweak: changed max-w-screen to max-w-none so it uses the actual canvas space */}
-                <div className="p-8 max-w-none mx-auto">
+                <div className="px-8 py-4 max-w-none mx-auto text-black">
                     <Outlet />
                 </div>
             </main>

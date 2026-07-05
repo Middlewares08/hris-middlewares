@@ -52,7 +52,7 @@ apiClient.interceptors.response.use(
                 localStorage.removeItem("accessToken");
                 // Only redirect if we aren't already on the login page
                 if (window.location.pathname !== '/') {
-                    window.location.href = "/";
+                    window.location.href = "/auth/login";
                 }
             }
         }

@@ -3,6 +3,8 @@ import { Lock, Mail, ShieldCheck } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "../hooks/useAuth";
 import { useSystemInit } from '../hooks/useSystem';
+import CustomButton from "../components/CustomButton";
+import CustomInput from "../components/CustomInput";
 
 function Login() {
     // Pull our centralized architectural states
@@ -115,29 +117,27 @@ function Login() {
             ) : (
                 /* PHASE 2: SECURITY OTP VALIDATION VIEW */
                 <form onSubmit={handleOtpSubmit} className="space-y-4">
-                    <div className="space-y-1">
-                        <label className="block text-sm font-medium text-slate-700">One-Time Code</label>
-                        <div className="flex items-center gap-2 rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 focus-within:ring-2 focus-within:ring-blue-500">
-                            <ShieldCheck size={16} className="text-gray-400" />
-                            <input
-                                value={otpCode}
-                                type="text"
-                                required
-                                maxLength={6}
-                                onChange={(e) => setOtpCode(e.target.value)}
-                                placeholder="000000"
-                                className="w-full bg-transparent outline-none text-sm text-gray-700 tracking-widest placeholder:tracking-normal placeholder-gray-400 font-mono"
-                            />
-                        </div>
-                    </div>
-
-                    <button 
+                    <CustomInput
+                        label="One-Time Code"
+                        labelPosition='left'
+                        icon={ShieldCheck}
+                        iconPosition="left"
+                        type="text"
+                        value={otpCode}
+                        isRequired={true}
+                        maxLength={6}
+                        placeholder="000000"
+                        onChange={(e) => setOtpCode(e.target.value)}
+                        inputClassName="tracking-widest placeholder:tracking-normal font-mono"
+                    />
+                    
+                    <CustomButton 
+                        children={loading ? 'Confirming code...' : 'Confirm Authentication'}
+                        type='submit'
                         disabled={loading} 
-                        className="w-full flex py-2.5 justify-center bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors disabled:bg-blue-400 cursor-pointer" 
-                        type="submit"
-                    >
-                        {loading ? 'Confirming code...' : 'Confirm Authentication'}
-                    </button>
+                        isLoading={loading}
+                        variant='primary'
+                    />
                 </form>
             )}
 

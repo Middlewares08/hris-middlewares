@@ -48,6 +48,15 @@ app.use('/system', systemRoutes);
 const authRoutes = require("../src/route/authRoutes");
 app.use('/auth', authRoutes);
 
+// MODULE
+const moduleRoutes = require("../src/route/admin/moduleRoutes");
+app.use('/modules', moduleRoutes);
+
+
+// ROLES AND PERMISSION
+const rolesAndPermissionRoutes = require("../src/route/admin/rolesAndPermissionRoutes");
+app.use('/roles', rolesAndPermissionRoutes);
+app.use('/role-permissions', rolesAndPermissionRoutes);
 
 
 // ==========================================
