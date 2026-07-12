@@ -5,9 +5,10 @@ import Login from './pages/Login'
 import ProtectedRoute from './layout/ProtectedRoute'
 import Dashboard from './layout/Dashboard'
 import DashboardHome from './pages/DashboardHome'
-import Employee from './pages/Employee'
+import Employee from './pages/Employee/Employee'
 import Landing from './pages/Landing'
 import RolesAndPermission from './pages/Maintenance/RolesAndPermission'
+import Department from './pages/LookupSetting/Department'
 
 function App() {
 
@@ -36,6 +37,10 @@ function App() {
 
           <Route path="maintenance">
             <Route path="roles-and-permission" element={<RolesAndPermission />} />
+          </Route>
+
+          <Route path="lookups">
+            <Route path="departments" element={<Department />} />
           </Route>
 
           {/* <Route path="payment-success" element={<PaymentSuccess />} />

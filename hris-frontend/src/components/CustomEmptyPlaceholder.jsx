@@ -2,7 +2,7 @@ import { FolderSearch, Plus } from 'lucide-react';
 import PropTypes from 'prop-types';
 import { toast } from 'sonner';
 
-function EmptyStatePlaceholder({
+function CustomEmptyPlaceholder({
     title,
     description,
     searchTerm,
@@ -67,7 +67,7 @@ function EmptyStatePlaceholder({
     );
 }
 
-EmptyStatePlaceholder.propTypes = {
+CustomEmptyPlaceholder.propTypes = {
     /** Override main title text string */
     title: PropTypes.string,
     /** Override descriptive paragraph body text string */
@@ -84,4 +84,4 @@ EmptyStatePlaceholder.propTypes = {
     icon: PropTypes.elementType
 };
 
-export default EmptyStatePlaceholder;
+export default CustomEmptyPlaceholder;

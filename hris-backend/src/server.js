@@ -59,6 +59,11 @@ app.use('/roles', rolesAndPermissionRoutes);
 app.use('/role-permissions', rolesAndPermissionRoutes);
 
 
+// LOOKUP
+const lookupRoutes = require("../src/route/admin/lookupRoutes");
+app.use('/lookups', lookupRoutes);
+
+
 // ==========================================
 // Server Initialization
 // ==========================================

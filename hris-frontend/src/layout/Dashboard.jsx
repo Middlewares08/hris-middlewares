@@ -7,68 +7,93 @@ import {
     Wrench, 
     LogOut,
     ChevronDown,
-    GroupIcon
+    GroupIcon,
+    CogIcon
 } from 'lucide-react';
 import { useLogout } from '../hooks/useLogout';
 import Header from './Header';
+// 🎯 UPDATE: Importing your exact utility function name
+import { can } from '../utils/permissionCheck';
 
 const Dashboard = () => {
     const [isCollapsed, setIsCollapsed] = useState(false);
-    // Track which submenu is open (e.g., 'Products')
     const [openSubmenu, setOpenSubmenu] = useState(null);
     
     const navigate = useNavigate();
     const location = useLocation();
     const logout = useLogout();
 
-    const menuItems = [
-        { icon: <LayoutDashboard className='hover:cursor-pointer' size={20} />, label: 'Dashboard', path: '/dashboard' },
-        { icon: <GroupIcon className='hover:cursor-pointer' size={20}/>, label: 'Employee', path: '/dashboard/employees'},
-        // { 
-        //     icon: <Package size={20} />, 
-        //     label: 'Products', 
-        //     path: '/dashboard/products',
-        //     children: [
-        //         { label: 'Inventory', path: '/dashboard/products/inventory' },
-        //         { label: 'Categories', path: '/dashboard/products/categories' },
-        //     ]
-        // },
-        // { 
-        //     icon: <Wrench size={20} />, 
-        //     label: 'Services', 
-        //     path: '/dashboard/services', 
-        //     children: [
-        //         { label: 'Services', path: '/dashboard/services/list' },
-        //         { label: 'Categories', path: '/dashboard/services/categories' },
-        //     ] 
-        // },
-        // { icon: <FileText size={20} />, label: 'Quotations', path: '/dashboard/quotations' },
-        // { icon: <CreditCard size={20} />, label: 'Payments', path: '/dashboard/payments' },
-        // { icon: <Users size={20} />, label: 'Customers', path: '/dashboard/users' },
-        { icon: <Wrench className='hover:cursor-pointer' size={20} />, 
+    // 1. Raw layout blueprint structure containing checking rules
+    const menuBlueprint = [
+        { 
+            icon: <LayoutDashboard className='hover:cursor-pointer' size={20} />, 
+            label: 'Dashboard', 
+            path: '/dashboard', 
+            permission: 'dashboard:view' 
+        },
+        { 
+            icon: <GroupIcon className='hover:cursor-pointer' size={20}/>, 
+            label: 'Employee', 
+            path: '/dashboard/employees', 
+            permission: 'employee-management:view'
+        },
+        { 
+            icon: <CogIcon className='hover:cursor-pointer' size={20}/>, 
+            label: 'Lookups Setting', 
+            path: '/dashboard/lookups', 
+            permission: 'lookups-setting:view',
+            children: [
+                {
+                    label: 'Departments', 
+                    path: '/dashboard/lookups/departments', 
+                    permission: 'departments:view' 
+                }
+            ]
+        },
+        { 
+            icon: <Wrench className='hover:cursor-pointer' size={20} />, 
             label: 'Maintenance', 
             path: '/dashboard/maintenance', 
+            permission: 'maintenance:view', // Optional parent node wrapper gate slug
             children: [
-                { label: 'Roles & Permission', path: '/dashboard/maintenance/roles-and-permission' },
+                { 
+                    label: 'Roles & Permission', 
+                    path: '/dashboard/maintenance/roles-and-permission', 
+                    permission: 'roles-and-permissions:view' 
+                },
             ] 
         },
     ];
 
+    // 2. 🛡️ Dynamic filter pipeline step
+    // Evaluates permissions line-by-line and strips out unauthorized nodes or links
+    const menuItems = menuBlueprint
+        .filter(item => !item.permission || can(item.permission))
+        .map(item => {
+            if (item.children) {
+                return {
+                    ...item,
+                    children: item.children.filter(child => !child.permission || can(child.permission))
+                };
+            }
+            return item;
+        })
+        // Remove parent nodes if all their children were stripped away by the filter
+        .filter(item => !item.children || item.children.length > 0);
+
     const handleNavClick = (item) => {
         if (item.children) {
-            // If it has children, toggle the submenu instead of immediate navigation
-            if (isCollapsed) setIsCollapsed(false); // Auto-expand sidebar if clicking submenu
+            if (isCollapsed) setIsCollapsed(false); 
             setOpenSubmenu(openSubmenu === item.label ? null : item.label);
         } else {
             navigate(item.path);
-            setOpenSubmenu(null); // Close submenus when navigating to a main link
+            setOpenSubmenu(null); 
         }
     };
 
     useEffect(() => {
-        // Find the menu item that has children and matches the current URL
         const activeParent = menuItems.find(item => 
-        item.children && location.pathname.startsWith(item.path)
+            item.children && location.pathname.startsWith(item.path)
         );
 
         if (activeParent) {
@@ -87,7 +112,7 @@ const Dashboard = () => {
                 <button
                     onClick={() => {
                         setIsCollapsed(!isCollapsed);
-                        if (!isCollapsed) setOpenSubmenu(null); // Close submenus when collapsing
+                        if (!isCollapsed) setOpenSubmenu(null);
                     }}
                     className="absolute -right-3 top-12 bg-black text-white rounded-full p-1 border-2 border-slate-900 hover:scale-110 transition-transform z-[60]"
                 >
@@ -105,65 +130,62 @@ const Dashboard = () => {
                 {/* Nav Links */}
                 <nav className="flex-1 px-3 space-y-1 scrollbar-y-visible overflow-y-auto hover:cursor-pointer text-center">
                     {menuItems.map((item) => {
-                        // const isParentActive = location.pathname.startsWith(item.path);
-                        // const isSubmenuOpen = openSubmenu === item.label;
                         const isParentActive = item.path === '/dashboard' 
-                        ? location.pathname === '/dashboard' 
-                        : location.pathname.startsWith(item.path);
+                            ? location.pathname === '/dashboard' 
+                            : location.pathname.startsWith(item.path);
 
                         const isSubmenuOpen = openSubmenu === item.label;
 
                         return (
-                        <div key={item.label} className="flex flex-col">
-                            <button
-                                onClick={() => handleNavClick(item)}
-                                className={`w-full flex items-center p-3 justify-center rounded-lg transition-all group hover:cursor-pointer
-                                    ${isParentActive && !item.children ? 'bg-gray-500 text-white' : 'hover:bg-slate-800 hover:text-white'}
-                                    ${isParentActive && item.children ? 'text-gray' : ''}`}
-                            >
-                                <span className={`${isParentActive ? 'text-gray-400' : 'text-slate-400 group-hover:text-gray-400'}`}>
-                                    {item.icon}
-                                </span>
-                                
-                                {!isCollapsed && (
-                                    <>
-                                    <span className="ml-4 font-medium truncate flex-1 text-left hover:cursor-pointer">{item.label}</span>
-                                    {item.children && (
-                                        <ChevronDown 
-                                        size={16} 
-                                        className={`transition-transform duration-200 hover:cursor-pointer ${isSubmenuOpen ? 'rotate-180' : ''}`} 
-                                        />
+                            <div key={item.label} className="flex flex-col">
+                                <button
+                                    onClick={() => handleNavClick(item)}
+                                    className={`w-full flex items-center p-3 justify-center rounded-lg transition-all group hover:cursor-pointer
+                                        ${isParentActive && !item.children ? 'bg-gray-500 text-white' : 'hover:bg-slate-800 hover:text-white'}
+                                        ${isParentActive && item.children ? 'text-gray' : ''}`}
+                                >
+                                    <span className={`${isParentActive ? 'text-gray-400' : 'text-slate-400 group-hover:text-gray-400'}`}>
+                                        {item.icon}
+                                    </span>
+                                    
+                                    {!isCollapsed && (
+                                        <>
+                                            <span className="ml-4 font-medium truncate flex-1 text-left hover:cursor-pointer">{item.label}</span>
+                                            {item.children && (
+                                                <ChevronDown 
+                                                    size={16} 
+                                                    className={`transition-transform duration-200 hover:cursor-pointer ${isSubmenuOpen ? 'rotate-180' : ''}`} 
+                                                />
+                                            )}
+                                        </>
                                     )}
-                                    </>
-                                )}
-                            </button>
+                                </button>
 
-                            {/* Submenu Content */}
-                            {!isCollapsed && item.children && isSubmenuOpen && (
-                            <div className="mt-1 ml-9 flex flex-col space-y-1 border-l border-slate-800 pl-2">
-                                {item.children.map((child) => {
-                                const isChildActive = location.pathname === child.path;
-                                return (
-                                    <button
-                                    key={child.label}
-                                    onClick={() => navigate(child.path)}
-                                    className={`w-full text-left py-2 px-3 rounded-md text-sm transition-all hover:cursor-pointer
-                                        ${isChildActive 
-                                        ? '  font-semibold bg-gray-500 text-white' 
-                                        : 'text-slate-500 hover:text-slate-200 hover:bg-slate-800/50'}`}
-                                    >
-                                    {child.label}
-                                    </button>
-                                );
-                                })}
+                                {/* Submenu Content */}
+                                {!isCollapsed && item.children && isSubmenuOpen && (
+                                    <div className="mt-1 ml-9 flex flex-col space-y-1 border-l border-slate-800 pl-2">
+                                        {item.children.map((child) => {
+                                            const isChildActive = location.pathname === child.path;
+                                            return (
+                                                <button
+                                                    key={child.label}
+                                                    onClick={() => navigate(child.path)}
+                                                    className={`w-full text-left py-2 px-3 rounded-md text-sm transition-all hover:cursor-pointer
+                                                        ${isChildActive 
+                                                            ? 'font-semibold bg-gray-500 text-white' 
+                                                            : 'text-slate-500 hover:text-slate-200 hover:bg-slate-800/50'}`}
+                                                >
+                                                    {child.label}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                )}
                             </div>
-                            )}
-                        </div>
                         );
                     })}
                 </nav>
 
-                
                 {/* Logout Button */}
                 <div className="p-4 border-t border-slate-800">
                     <button 
@@ -179,12 +201,10 @@ const Dashboard = () => {
             {/* Main Content Area */}
            <main 
                 className={`flex-1 transition-all duration-300 ease-in-out 
-                ${isCollapsed ? 'ml-20' : 'ml-64'}`} // 💡 FIX: Dynamic left margin matches sidebar state
+                ${isCollapsed ? 'ml-20' : 'ml-64'}`}
             >
-                {/* Pass the real user data if you have it, otherwise this placeholder works */}
                 <Header />
                 
-                {/* 💡 Additional tweak: changed max-w-screen to max-w-none so it uses the actual canvas space */}
                 <div className="px-8 py-4 max-w-none mx-auto text-black">
                     <Outlet />
                 </div>

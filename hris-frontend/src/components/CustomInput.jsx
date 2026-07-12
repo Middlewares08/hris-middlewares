@@ -24,11 +24,16 @@ const CustomInput = forwardRef(({
     className,
     inputClassName,
     labelClassName,
+    maxLength,
+    minLength,
+    showCharacterCount,
+    value,
     ...rest // 💡 Contains ONLY valid HTML attributes like value, onChange, placeholder, etc.
 }, ref) => {
     const [showPassword, setShowPassword] = useState(false);
     
     const isPasswordType = type === 'password';
+    const currentLength = value ? value.replace(/\s/g, '').length : 0;
 
     let variantStyle = VARIANTS[variant] || VARIANTS.primary;
     if (disabled) {
@@ -61,6 +66,7 @@ const CustomInput = forwardRef(({
             {/* Input Label */}
             {label && (
                 <label className={clsx(
+                    error && 'text-rose-400!',
                     'block text-sm font-medium text-slate-700 w-full',
                     labelPosition === 'left' && 'text-left',
                     labelPosition === 'middle' && 'text-center',
@@ -88,6 +94,9 @@ const CustomInput = forwardRef(({
                     type={isPasswordType && showPassword ? 'text' : type}
                     disabled={disabled}
                     required={isRequired}
+                    minLength={minLength}
+                    maxLength={maxLength}
+                    value={value}
                     className={clsx(
                         'w-full bg-transparent outline-none text-sm text-gray-700 placeholder-gray-400 disabled:cursor-not-allowed', 
                         inputClassName
@@ -109,10 +118,23 @@ const CustomInput = forwardRef(({
                 )}
             </div>
 
-            {error && errorLabel && (
-                <p className="text-xs font-medium text-rose-500 mt-1">
-                    {errorLabel}
-                </p>
+            {(error || showCharacterCount) && (
+                <div className="flex justify-between items-start w-full">
+                    <div className="flex-1">
+                        <p className="text-xs font-medium text-rose-500 mt-1 text-left">
+                            {errorLabel}
+                        </p>
+                    </div>
+                    { showCharacterCount && (
+                        <div className={clsx(
+                            'text-xs ml-2 whitespace-nowrap', 
+                            // Turn text red if they somehow exceed max length (useful for soft limits)
+                            maxLength && currentLength >= maxLength ? 'text-red-500' : 'text-gray-500'
+                        )}>
+                            {currentLength} {maxLength ? `/ ${maxLength}` : ''}
+                        </div>
+                    )}
+                </div>
             )}
         </div>
     );
@@ -135,6 +157,8 @@ CustomInput.propTypes = {
     className: PropTypes.string,      
     inputClassName: PropTypes.string, 
     labelClassName: PropTypes.string, 
+    minLength: PropTypes.number,
+    maxLength: PropTypes.number,
 };
 
 export default CustomInput;

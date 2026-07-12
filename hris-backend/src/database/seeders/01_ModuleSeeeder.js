@@ -3,15 +3,13 @@
  * @returns { Promise<void> } 
  */
 exports.seed = async function(knex) {
-    // 1. Clear out existing entries to prevent "duplicate key" errors on unique columns
-    // Using TRUNCATE with CASCADE clears the data safely if other tables reference it
-    await knex.raw('TRUNCATE TABLE role_permission.modules RESTART IDENTITY CASCADE;');
+    // 1. Fetch the immutable admin role reference safely
     const adminRole = await knex('role_permission.roles')
-        .where({ is_deletable: false }) // Or check if your column is named 'is_deleted' / 'deletable'
+        .where({ is_deletable: false })
         .first();
 
-    // 2. Insert Core System Modules
-    await knex('role_permission.modules').insert([
+    // 2. Define the Core System Modules Matrix Blueprint
+    const modulesToSeed = [
         {
             name: 'Dashboard',
             slug: 'dashboard',
@@ -28,8 +26,6 @@ exports.seed = async function(knex) {
             created_by: 1,
             updated_by: null
         },
-
-        // ATTENDANCE
         {
             name: 'Time & Attendance',
             slug: 'time-and-attendance',
@@ -70,8 +66,6 @@ exports.seed = async function(knex) {
             created_by: 1,
             updated_by: null
         },
-
-        // PAYROLL
         {
             name: 'Payroll & Compensation',
             slug: 'payroll-and-compensation',
@@ -112,16 +106,6 @@ exports.seed = async function(knex) {
             created_by: 1,
             updated_by: null
         },
-
-        // SECURITY AND SETTING
-        {
-            name: 'Security & Settings',
-            slug: 'attendance',
-            description: 'Manage Security and Settings of your websites.',
-            access_type: 'ADMIN',
-            created_by: 1,
-            updated_by: null
-        },
         {
             name: 'Roles & Permissions',
             slug: 'roles-and-permissions',
@@ -138,5 +122,62 @@ exports.seed = async function(knex) {
             created_by: 1,
             updated_by: null
         },
-    ]);
+        {
+            name: 'Maintenance',
+            slug: 'maintenance',
+            description: 'Core system maintenance workspace structures and foundational business configurations.',
+            access_type: 'ADMIN',
+            created_by: 1,
+            updated_by: null
+        },
+        {
+            name: 'Lookups Setting',
+            slug: 'lookups-setting',
+            description: 'Manage global dropdown variables, system classification rules, and metadata keys used across the platform.',
+            access_type: 'ADMIN',
+            created_by: 1,
+            updated_by: null
+        },
+        {
+            name: 'Positions',
+            slug: 'positions',
+            description: 'Company-wide job catalog, career tracks, responsibilities, and associated operational titles.',
+            access_type: 'ADMIN',
+            created_by: 1,
+            updated_by: null
+        },
+        {
+            name: 'Departments',
+            slug: 'departments',
+            description: 'Organizational department boundaries, operational cost centers, and department leadership mapping.',
+            access_type: 'ADMIN',
+            created_by: 1,
+            updated_by: null
+        },
+        {
+            name: 'Pay Grades',
+            slug: 'pay-grades',
+            description: 'Salary structures, bracket floors and ceilings, and statutory compensation grade levels.',
+            access_type: 'ADMIN',
+            created_by: 1,
+            updated_by: null
+        },
+    ];
+
+    // 3. Loop through individual nodes and execute lookups
+    for (const moduleItem of modulesToSeed) {
+        // Look up by the unique slug identifier
+        const existingModule = await knex('role_permission.modules')
+            .where({ slug: moduleItem.slug })
+            .first();
+
+        if (!existingModule) {
+            // Safe to insert since it doesn't cross unique constraints
+            await knex('role_permission.modules').insert(moduleItem);
+            console.log(`[SEED] Inserted module: ${moduleItem.name} (${moduleItem.slug})`);
+        } else {
+            // Skips seamlessly, leaving current settings untouched
+            console.log(`[SEED] Skipped module (Already Exists): ${moduleItem.name}`);
+        }
+    }
 };

@@ -4,6 +4,7 @@ import PropTypes from 'prop-types'; // Import PropTypes
 import { motion, AnimatePresence } from 'framer-motion';
 import { IoClose } from 'react-icons/io5';
 import { clsx } from 'clsx';
+import CustomLabel from './CustomLabel';
 
 const CustomModal = ({ 
     isOpen, 
@@ -12,7 +13,8 @@ const CustomModal = ({
     children, 
     childenClasses = '',
     size, 
-    showCloseButton 
+    showCloseButton,
+    hasRequiredFields = false
 }) => {
   
     // Close on Escape key
@@ -61,19 +63,24 @@ const CustomModal = ({
                         exit={{ opacity: 0, scale: 0.9, y: 40 }}
                         transition={{ type: 'spring', damping: 25, stiffness: 300 }}
                         className={clsx(
-                            "relative w-full bg-white rounded-[2rem] shadow-2xl overflow-hidden border border-teal-100/50",
+                            "relative w-full bg-white rounded-[2rem] shadow-2xl overflow-hidden border border-gray-100/50",
                             sizes[size]
                         )}
                     >
                         {/* Header */}
-                        <div className="px-8 py-5 border-b border-slate-100 flex items-center justify-between bg-teal-50/20">
-                            <h3 className="text-xl font-black text-slate-800 tracking-tight">
-                                {title}
-                            </h3>
+                        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-gray-50/20">
+                            <CustomLabel
+                                variant='h3' 
+                                children={title}
+                                addedClass='text-xl text-slate-800 tracking-tight font-bold item-left' 
+                                descriptionClass={hasRequiredFields && 'subtitle text-[10px] italic opacity-90'}
+                                description={hasRequiredFields && <span>All fields with an asterisk (<span className='text-red-600'>*</span>) are required.</span>}
+                            />
+                            
                             {showCloseButton && (
                                 <button 
                                     onClick={onClose}
-                                    className="p-2 hover:bg-white rounded-full text-slate-400 hover:text-teal-600 transition-all active:scale-90"
+                                    className="p-2 hover:bg-white hover:cursor-pointer rounded-full text-slate-400 hover:text-red-600 transition-all active:scale-90"
                                 >
                                     <IoClose size={24} />
                                 </button>
@@ -81,7 +88,7 @@ const CustomModal = ({
                         </div>
 
                         {/* Content */}
-                        <div className={`${childenClasses} p-4 overflow-y-auto max-h-[85vh]`}>
+                        <div className={`${childenClasses} py-4 px-6 overflow-y-auto max-h-[85vh]`}>
                             {children}
                         </div>
                     </motion.div>
@@ -99,7 +106,7 @@ CustomModal.propTypes = {
     /** Function to handle closing the modal (state update in parent) */
     onClose: PropTypes.func.isRequired,
 
-    /** The text displayed in the teal header area */
+    /** The text displayed in the gray header area */
     title: PropTypes.string,
 
     /** The content inside the modal (Form, Text, etc.) */
@@ -113,6 +120,9 @@ CustomModal.propTypes = {
 
     /** Whether to show the 'X' button in the top right */
     showCloseButton: PropTypes.bool,
+
+    /** Whether to show the required field label */
+    hasRequiredFields: PropTypes.bool
 };
 
 export default CustomModal;

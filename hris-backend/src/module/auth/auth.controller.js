@@ -2,6 +2,7 @@
 const Credential = require('../../database/models/employee/Credential');
 const jwt = require('jsonwebtoken'); // Ensure you have jsonwebtoken installed
 const Employee = require('../../database/models/employee/Employee');
+const Permission = require('../../database/models/roles-and-permission/Permission');
 
 const login = async (req, res) => {
     try {
@@ -74,6 +75,9 @@ const verifyOtp = async (req, res) => {
             return res.status(404).json({ message: 'User account not found.' });
         }
 
+        // get users permissions
+        const permissionsList = await Permission.getPermissionsById(user?.id);
+
         // 3. Generate production access and refresh tokens using the found user's ID
         const accessToken = jwt.sign(
             { userId: user.id }, 
@@ -104,6 +108,7 @@ const verifyOtp = async (req, res) => {
                 fullName: user.first_name + ' ' + user.last_name,
                 // preferredName: user.preferred_name,
                 email: email,
+                permissions: permissionsList
                 // contact: user.contact || null,
                 // demographics: user.demographics || null
             }

@@ -158,8 +158,6 @@ import CustomInput from '../../components/CustomInput';
 import clsx from 'clsx';
 import CustomEmptyPlaceholder from '../../components/CustomEmptyPlaceholder';
 import { useModules } from '../../hooks/useModule';
-import ModulePermissionCard from '../../components/CustomModuleCard';
-import CustomModuleCard from '../../components/CustomModuleCard';
 import CustomAccordion from '../../components/CustomAccordion';
 
 export default function RolesAndPermission() {
@@ -374,7 +372,7 @@ export default function RolesAndPermission() {
                         </div>
                         
                         {/* Tab Content Panels */}
-                        <div className="p-6 space-y-4 max-h-screen min-h-screen scrollbar-y-visible overflow-y-auto">
+                        <div className="p-6 space-y-4 max-h-[65vh] scrollbar-y-visible overflow-y-auto">
                             {
                                 selectedRole ? 
                                     <>

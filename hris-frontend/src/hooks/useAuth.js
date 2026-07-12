@@ -31,6 +31,13 @@ export function useAuth() {
             // Securely redirect to your main dashboard page
             queryClient.setQueryData(['authUser'], data?.user);
             
+            // set permission to session
+            const rawPermissionsArray = data?.user?.permissions || []; // e.g., ['view', 'edit']
+
+            // Convert array to a clean string, then encode it to Base64
+            const encodedPermissions = btoa(JSON.stringify(rawPermissionsArray));
+
+            sessionStorage.setItem('permissions', encodedPermissions);
             navigate('/dashboard');
         },
     });
