@@ -10,6 +10,18 @@ class EmployeeRole extends BaseModel {
         return 'id';
     }
 
+    // 🎯 Runs automatically right before a POST / insert operation hits the DB
+    $beforeInsert(queryContext) {
+        super.$beforeInsert(queryContext);
+        this.created_at = new Date().toISOString();
+    }
+
+    // 🎯 Runs automatically right before a PUT / PATCH update operation hits the DB
+    $beforeUpdate(opt, queryContext) {
+        super.$beforeUpdate(opt, queryContext);
+        this.updated_at = new Date().toISOString();
+    }
+
     static get relationMappings() {
         const Role = require('./Role');
         const Employee = require('../employee/Employee');

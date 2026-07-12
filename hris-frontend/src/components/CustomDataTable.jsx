@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Search, Filter, ChevronRight, ChevronLeft, X, PackageSearch } from 'lucide-react';
 import CustomEmptyPlaceholder from './CustomEmptyPlaceholder';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useDebounce } from 'use-debounce'; // 🎯 Added import
 
 /**
  * CustomDataTable - Supports built-in or server-side pagination and loading states
@@ -15,7 +16,7 @@ export function CustomDataTable({
     filterContent,
     actionButton,
     renderDrawerContent,
-    // 🎯 Optional Server-side Pagination Props
+    // Optional Server-side Pagination Props
     isServerSide = false,
     totalRecords = 0,
     currentPage = 1,
@@ -28,28 +29,42 @@ export function CustomDataTable({
     const [localPage, setLocalPage] = useState(1);
     const [localLimit] = useState(10); // Default local page size
 
+    // 🎯 1. Place the debounce hook safely at the top level of the component body
+    const [debouncedSearchTerm] = useDebounce(searchTerm, 500);
+
+    // 🎯 2. Use an effect to watch the debounced output and trigger the search callback
+    useEffect(() => {
+        if (onSearch) {
+            onSearch(debouncedSearchTerm);
+        }
+    }, [debouncedSearchTerm, onSearch]);
+
+    // 🎯 3. Light event handler that only resets page state and updates input text instantly
     const handleSearchChange = (e) => {
         setSearchTerm(e.target.value);
-        setLocalPage(1); // Reset page on type search
-        if (onSearch) onSearch(e.target.value);
+        if (isServerSide && onPageChange) {
+            onPageChange(1); // Reset server-side page to 1 on type search
+        } else {
+            setLocalPage(1); // Reset client-side local page to 1 on type search
+        }
     };
 
-    // 1. Process client-side search data if not controlled by server
+    // Process client-side search data if not controlled by server
     const filteredData = onSearch 
         ? data 
         : data.filter(item => 
             Object.values(item).some(val => 
-            String(val).toLowerCase().includes(searchTerm.toLowerCase())
+                String(val).toLowerCase().includes(searchTerm.toLowerCase())
             )
         );
 
-    // 2. Compute Pagination State Parameters
+    // Compute Pagination State Parameters
     const activePage = isServerSide ? currentPage : localPage;
     const limit = isServerSide ? recordsPerPage : localLimit;
     const total = isServerSide ? totalRecords : filteredData.length;
     const totalPages = Math.max(1, Math.ceil(total / limit));
 
-    // 3. Slice data array locally if client-side paginated
+    // Slice data array locally if client-side paginated
     const paginatedData = isServerSide 
         ? filteredData 
         : filteredData.slice((activePage - 1) * limit, activePage * limit);
@@ -57,9 +72,9 @@ export function CustomDataTable({
     const handlePageClick = (newPage) => {
         if (newPage < 1 || newPage > totalPages) return;
         if (isServerSide && onPageChange) {
-        onPageChange(newPage);
+            onPageChange(newPage);
         } else {
-        setLocalPage(newPage);
+            setLocalPage(newPage);
         }
     };
 
@@ -67,7 +82,7 @@ export function CustomDataTable({
         <div className="space-y-4 w-full">
             {/* Control Action Bar */}
             <div className="flex w-full justify-between flex-col md:flex-row md:items-center md:justify-between gap-4 bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-                <div className="flex  flex-1 items-center gap-2 max-w-md bg-gray-50 px-3 py-2 rounded-lg border border-gray-200 focus-within:border-slate-400 transition-colors">
+                <div className="flex flex-1 items-center gap-2 max-w-md bg-gray-50 px-3 py-2 rounded-lg border border-gray-200 focus-within:border-slate-400 transition-colors">
                     <Search size={18} className="text-gray-400" />
                     <input 
                         type="text" 
@@ -105,15 +120,14 @@ export function CustomDataTable({
                         <thead>
                             <tr className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider border-b border-gray-200">
                                 {columns.map((col, index) => (
-                                <th key={index} className={`p-4 font-semibold ${col.className || ''}`}>
-                                    {col.header}
-                                </th>
+                                    <th key={index} className={`p-4 font-semibold ${col.className || ''}`}>
+                                        {col.header}
+                                    </th>
                                 ))}
                                 {renderDrawerContent && <th className="w-12"></th>}
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100 text-sm text-gray-700">
-                            {/* ⏳ 1. LOADING SKELETON STATE */}
                             {isLoading ? (
                                 Array.from({ length: limit }).map((_, rowIndex) => (
                                     <tr key={rowIndex} className="animate-pulse">
@@ -126,7 +140,6 @@ export function CustomDataTable({
                                     </tr>
                                 ))
                             ) : paginatedData.length === 0 ? (
-                                /* 🔍 2. EMPTY STATE */
                                 <tr>
                                     <td colSpan={columns.length + 1} className="p-8 text-center text-gray-400">
                                         <CustomEmptyPlaceholder
@@ -138,7 +151,6 @@ export function CustomDataTable({
                                     </td>
                                 </tr>
                             ) : (
-                                /* 📊 3. DATA MOUNT STATE */
                                 paginatedData.map((row, rowIndex) => (
                                     <tr 
                                         key={row.id || rowIndex}
@@ -162,7 +174,7 @@ export function CustomDataTable({
                     </table>
                 </div>
 
-                {/* 🔢 PAGINATION CONTROL FOOTER */}
+                {/* PAGINATION CONTROL FOOTER */}
                 <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6 select-none">
                     <div className="flex-1 flex justify-between sm:hidden">
                         <button
@@ -185,11 +197,11 @@ export function CustomDataTable({
                             <p className="text-sm text-gray-500">
                                 Showing{' '}
                                 <span className="font-medium">
-                                {total === 0 ? 0 : (activePage - 1) * limit + 1}
+                                    {total === 0 ? 0 : (activePage - 1) * limit + 1}
                                 </span>{' '}
                                 to{' '}
                                 <span className="font-medium">
-                                {Math.min(activePage * limit, total)}
+                                    {Math.min(activePage * limit, total)}
                                 </span>{' '}
                                 of <span className="font-medium">{total}</span> results
                             </p>
@@ -204,7 +216,6 @@ export function CustomDataTable({
                                     <ChevronLeft size={16} />
                                 </button>
                                 
-                                {/* Current / Total Page Tracker Matrix Indicator */}
                                 <span className="relative inline-flex items-center px-4 py-2 border border-gray-200 bg-gray-50 text-sm font-medium text-gray-700">
                                     Page {activePage} of {totalPages}
                                 </span>
@@ -224,7 +235,6 @@ export function CustomDataTable({
             
             <AnimatePresence>
                 {selectedRow && renderDrawerContent && (
-                    // 🎯 1. Backdrop Overlay (Fades In/Out)
                     <motion.div 
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
@@ -233,7 +243,6 @@ export function CustomDataTable({
                         className="fixed inset-0 bg-black/40 backdrop-blur-xs z-[100] flex justify-end" 
                         onClick={() => setSelectedRow(null)}
                     >
-                        {/* 🎯 2. Inner Panel Drawer (Slides In/Out from Right) */}
                         <motion.div 
                             initial={{ x: '100%' }}
                             animate={{ x: 0 }}

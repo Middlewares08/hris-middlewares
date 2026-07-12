@@ -1,9 +1,8 @@
-// database/models/role_permission/Module.js
 const BaseModel = require('../BaseModel');
 
-class Module extends BaseModel {
+class Position extends BaseModel {
     static get tableName() {
-        return 'role_permission.modules';
+        return 'lookups.positions';
     }
 
     static get idColumn() {
@@ -24,6 +23,7 @@ class Module extends BaseModel {
     $beforeInsert(queryContext) {
         super.$beforeInsert(queryContext);
         this.created_at = new Date().toISOString();
+
         if (this.name) {
             this.slug = this.generateSlug(this.name);
         }
@@ -41,19 +41,18 @@ class Module extends BaseModel {
     }
 
     static get relationMappings() {
-        const Permission = require('./Permission');
-
+        const Department = require('./Department');
         return {
-            permissions: {
-                relation: BaseModel.HasManyRelation,
-                modelClass: Permission,
+            department: {
+                relation: BaseModel.BelongsToOneRelation,
+                modelClass: Department,
                 join: {
-                    from: 'role_permission.modules.id',
-                    to: 'role_permission.permissions.module_id'
+                    from: 'lookups.positions.department_id',
+                    to: 'lookups.departments.id'
                 }
             }
         };
     }
 }
 
-module.exports = Module;
+module.exports = Position;

@@ -4,11 +4,11 @@ const crypto = require('crypto'); // Built into Node.js, no npm install needed
 
 class Credential extends BaseModel {
     static get tableName() { return 'employee.credentials'; }
-    // static get schema() { return 'employee'; }
     static get idColumn() { return 'id'; }
 
     async $beforeInsert(queryContext) {
         super.$beforeInsert(queryContext);
+        this.created_at = new Date().toISOString();
         
         if (queryContext.user) {
             this.created_by = queryContext.user.id;
@@ -36,7 +36,8 @@ class Credential extends BaseModel {
 
     async $beforeUpdate(opt, queryContext) {
         super.$beforeUpdate(opt, queryContext);
-        
+        this.updated_at = new Date().toISOString();
+
         if (queryContext.user) {
             this.updated_by = queryContext.user.id;
         }

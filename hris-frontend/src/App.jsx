@@ -9,6 +9,7 @@ import Employee from './pages/Employee/Employee'
 import Landing from './pages/Landing'
 import RolesAndPermission from './pages/Maintenance/RolesAndPermission'
 import Department from './pages/LookupSetting/Department'
+import Position from './pages/LookupSetting/Position'
 
 function App() {
 
@@ -42,11 +43,10 @@ function App() {
           <Route path="lookups">
             <Route path="departments" element={<Department />} />
           </Route>
+          <Route path="lookups">
+            <Route path="positions" element={<Position />} />
+          </Route>
 
-          {/* <Route path="payment-success" element={<PaymentSuccess />} />
-          <Route path="maintenance">
-            <Route path="roles-and-permission" element={<RolesPage />} />
-          </Route> */}
         </Route>
       </Routes>
     </>

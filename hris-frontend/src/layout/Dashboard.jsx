@@ -47,6 +47,11 @@ const Dashboard = () => {
                     label: 'Departments', 
                     path: '/dashboard/lookups/departments', 
                     permission: 'departments:view' 
+                },
+                {
+                    label: 'Position', 
+                    path: '/dashboard/lookups/positions', 
+                    permission: 'positions:view' 
                 }
             ]
         },
