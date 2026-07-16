@@ -1,4 +1,5 @@
 import moment from 'moment';
+import { v4 as uuidv4 } from 'uuid';
 
 export const calculateAge = (dateString) => {
     const now = new Date();
@@ -23,6 +24,8 @@ export const calculateAge = (dateString) => {
 
     return "Just now";
 };
+
+export const generateUUID = () => uuidv4();
 
 export const getBadgeColor = (name) => {
     const colors = ['bg-blue-500', 'bg-emerald-500', 'bg-violet-500', 'bg-amber-500', 'bg-rose-500', 'bg-cyan-500'];
@@ -55,4 +58,29 @@ export const formatCurrency = (amount, currency = 'PHP') => {
 export const capitalizeFirstLetter = (val) => {
     if (!val || typeof val !== 'string') return '';
     return val.charAt(0).toUpperCase() + val.slice(1).toLowerCase();
+};
+
+export const handleNumberInput = (value) => {
+    if (!value) return '';
+
+    // Allow only digits and a single decimal point
+    let cleaned = value.replace(/[^0-9.]/g, '');
+
+    // Prevent multiple decimal points (e.g., "100..0" -> "100.0")
+    const parts = cleaned.split('.');
+    if (parts.length > 2) {
+        cleaned = parts[0] + '.' + parts.slice(1).join('');
+    }
+
+    // Limit to 2 decimal places for currency/rates
+    if (parts[1] && parts[1].length > 2) {
+        cleaned = `${parts[0]}.${parts[1].slice(0, 2)}`;
+    }
+
+    // Fix double zeros or missing leading zero (e.g., ".5" -> "0.5")
+    if (cleaned.startsWith('.')) {
+        cleaned = '0' + cleaned;
+    }
+
+    return cleaned; // 🚀 CRITICAL: Must return the value!
 };

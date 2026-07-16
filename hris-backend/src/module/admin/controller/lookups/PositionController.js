@@ -5,19 +5,26 @@ const crypto = require('crypto');
 // ➕ CREATE
 const createPosition = async (req, res) => {
     try {
-        const { name, description, department } = req.body;
+        const { name, description, department, rate_type, rate } = req.body;
 
-        // Resolve internal department ID via provided public UUID vector
+        // Resolve internal department ID
         const dept = await Department.query().findOne({ uuid: department, is_deleted: false });
         if (!department) {
             return res.status(404).json({ success: false, message: 'Target department mapping missing.' });
+        }
+
+        // Simple validation guard
+        if (rate_type && !['hr', 'day'].includes(rate_type)) {
+            return res.status(400).json({ success: false, message: 'Invalid rate type specified.' });
         }
 
         const newPosition = await Position.query().insert({
             uuid: crypto.randomUUID(),
             name,
             description,
-            department_id: dept.id,
+            department_id: dept?.id,
+            rate_type: rate_type || null,
+            rate: rate ? parseFloat(rate) : null,
             created_by: req.user?.id ? parseInt(req.user.id, 10) : null
         });
 
@@ -26,6 +33,7 @@ const createPosition = async (req, res) => {
         return res.status(500).json({ success: false, message: error.message });
     }
 };
+
 /**
  * 🔍 READ (Paginated List & Search with Department Relation)
  */
@@ -100,7 +108,7 @@ const getPositionByUuid = async (req, res) => {
 const updatePosition = async (req, res) => {
     try {
         const { uuid } = req.params;
-        const { name, description, department } = req.body;
+        const { name, description, department, rate_type, rate } = req.body;
 
         const updateData = {
             name,
@@ -108,17 +116,26 @@ const updatePosition = async (req, res) => {
             updated_by: req.user?.id ? parseInt(req.user.id, 10) : null
         };
 
+        if (rate_type !== undefined) {
+            if (rate_type && !['hr', 'day'].includes(rate_type)) {
+                return res.status(400).json({ success: false, message: 'Invalid rate type specified.' });
+            }
+            updateData.rate_type = rate_type;
+        }
+
+        if (rate !== undefined) {
+            updateData.rate = rate ? parseFloat(rate) : null;
+        }
+
         if (name) {
-            // For static direct .patch() operations, call your model helper manually to keep the slug accurate
             const dummyInstance = new Position();
             updateData.slug = dummyInstance.generateSlug(name);
         }
 
-        // If the department association is modified, resolve the new structural ID linking field
         if (department) {
             const dept = await Department.query().findOne({ uuid: department, is_deleted: false });
             if (!dept) return res.status(404).json({ success: false, message: 'New target department mapping missing.' });
-            updateData.department_id = dept.id;
+            updateData.department_id = dept?.id;
         }
 
         const updatedRows = await Position.query()

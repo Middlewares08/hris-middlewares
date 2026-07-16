@@ -63,7 +63,7 @@ const CustomDropdown = ({
                             ? 'bg-gray-50 border-gray-200 text-gray-400 cursor-not-allowed' 
                             : error 
                                 ? 'bg-white border-red-500 text-gray-900 focus:border-red-500 focus:ring-1 focus:ring-red-500' 
-                                : 'bg-white border-gray-300 text-gray-900 hover:border-gray-400 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500'
+                                : 'bg-white border-gray-300 text-gray-900 hover:border-gray-400 focus:border-gray-500 focus:ring-1 focus:ring-gray-500'
                         }
                     `}
                 >
@@ -103,7 +103,7 @@ const CustomDropdown = ({
                                         className={`
                                             px-3 py-2 text-sm cursor-pointer transition-colors truncate
                                             ${isSelected 
-                                                ? 'bg-indigo-50 text-indigo-600 font-medium' 
+                                                ? 'bg-gray-50 text-gray-600 font-medium' 
                                                 : 'text-gray-700 hover:bg-gray-50'
                                             }
                                         `}
