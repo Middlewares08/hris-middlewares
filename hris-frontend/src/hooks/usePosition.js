@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 
 export function usePositions() {
     const [positions, setPositions] = useState([]);
+    const [positionList, setPositionsList] = useState([]);
     const [departments, setDepartments] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -39,6 +40,24 @@ export function usePositions() {
         }
     }, [currentPage, searchQuery]);
 
+    const fetchAllPositions = useCallback(async () => {
+        setError(null);
+        try {
+            const result = await positionService.getAllWithNoPagination({
+                search: searchQuery
+            });
+            
+            if (result.success) {
+                setPositionsList(result.data);
+            }
+        } catch (err) {
+            console.log(err)
+            setError(err.response?.data?.message || 'Failed to sync positions.');
+        } finally {
+            setLoading(false);
+        }
+    }, [searchQuery]);
+
     // Re-run lifecycle trigger when query state elements mutate
     useEffect(() => {
         let isMounted = true;
@@ -46,6 +65,7 @@ export function usePositions() {
         const executeFetch = async () => {
             if (isMounted) {
                 await fetchPositions();
+                await fetchAllPositions();
             }
         };
 
@@ -141,6 +161,7 @@ export function usePositions() {
 
     return {
         positions,
+        positionList,
         departments,
         loading,
         error,

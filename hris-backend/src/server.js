@@ -64,6 +64,11 @@ const lookupRoutes = require("../src/route/admin/lookupRoutes");
 app.use('/lookups', lookupRoutes);
 
 
+// EMPLOYEE
+const employeeRoutes = require("../src/route/admin/employeeRoutes");
+app.use('/employee', employeeRoutes);
+
+
 // ==========================================
 // Server Initialization
 // ==========================================

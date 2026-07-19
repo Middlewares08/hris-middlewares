@@ -27,6 +27,10 @@ class Role extends BaseModel {
         if (this.name) {
             this.slug = this.generateSlug(this.name);
         }
+
+        if (queryContext.user) {
+            this.created_by = queryContext.user.id;
+        }
     }
 
     // 🎯 Runs automatically right before a PUT / PATCH update operation hits the DB
@@ -37,6 +41,10 @@ class Role extends BaseModel {
         // If the user changed the position name, regenerate the slug path vector automatically
         if (this.name) {
             this.slug = this.generateSlug(this.name);
+        }
+
+        if (queryContext.user) {
+            this.updated_by = queryContext.user.id;
         }
     }
 
@@ -58,16 +66,19 @@ class Role extends BaseModel {
                     to: 'role_permission.permissions.id'
                 }
             },
-            // Many-to-Many relation to employees via employee_roles
             employees: {
                 relation: BaseModel.ManyToManyRelation,
                 modelClass: Employee,
                 join: {
+                    // 🎯 Now the owner table is employee.roles
                     from: 'role_permission.roles.id',
+                    
                     through: {
                         from: 'role_permission.employee_roles.role_id',
                         to: 'role_permission.employee_roles.employee_id'
                     },
+                    
+                    // 🎯 The target table is employee.employees
                     to: 'employee.employees.id'
                 }
             }

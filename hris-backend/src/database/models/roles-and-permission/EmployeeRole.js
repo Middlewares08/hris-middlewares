@@ -14,12 +14,19 @@ class EmployeeRole extends BaseModel {
     $beforeInsert(queryContext) {
         super.$beforeInsert(queryContext);
         this.created_at = new Date().toISOString();
+        if (queryContext.user) {
+            this.created_by = queryContext.user.id;
+        }
     }
 
     // 🎯 Runs automatically right before a PUT / PATCH update operation hits the DB
     $beforeUpdate(opt, queryContext) {
         super.$beforeUpdate(opt, queryContext);
         this.updated_at = new Date().toISOString();
+        
+        if (queryContext.user) {
+            this.updated_by = queryContext.user.id;
+        }
     }
 
     static get relationMappings() {

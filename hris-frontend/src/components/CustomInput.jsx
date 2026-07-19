@@ -2,6 +2,7 @@ import { forwardRef, useState } from 'react';
 import PropTypes from 'prop-types';
 import { Eye, EyeOff } from 'lucide-react';
 import clsx from 'clsx';
+import { BLANK } from '../utils/constants';
 
 const VARIANTS = {
     primary: 'border-gray-300 bg-gray-50 focus-within:ring-blue-500 focus-within:border-blue-500',
@@ -27,13 +28,21 @@ const CustomInput = forwardRef(({
     maxLength,
     minLength,
     showCharacterCount,
+    showCharacterMaxLength = true,
+    eliminateSpecialCharacterInCount = false,
+    maxLengthShowing,
     value,
     ...rest // 💡 Contains ONLY valid HTML attributes like value, onChange, placeholder, etc.
 }, ref) => {
     const [showPassword, setShowPassword] = useState(false);
     
     const isPasswordType = type === 'password';
-    const currentLength = value ? value.replace(/\s/g, '').length : 0;
+    const currentLength = value 
+    ? (eliminateSpecialCharacterInCount 
+            ? value.replace(/[^a-zA-Z0-9]/g, BLANK) // Strips out dashes, spaces, punctuation, etc.
+            : value.replace(/\s/g, BLANK)
+        ).length 
+    : 0;
 
     let variantStyle = VARIANTS[variant] || VARIANTS.primary;
     if (disabled) {
@@ -67,7 +76,7 @@ const CustomInput = forwardRef(({
             {label && (
                 <label className={clsx(
                     error && 'text-rose-400!',
-                    'block text-sm font-medium text-slate-700 w-full',
+                    'block text-xs font-medium text-slate-700 w-full',
                     labelPosition === 'left' && 'text-left',
                     labelPosition === 'middle' && 'text-center',
                     labelPosition === 'right' && 'text-right',
@@ -129,9 +138,9 @@ const CustomInput = forwardRef(({
                         <div className={clsx(
                             'text-xs ml-2 whitespace-nowrap', 
                             // Turn text red if they somehow exceed max length (useful for soft limits)
-                            maxLength && currentLength >= maxLength ? 'text-red-500' : 'text-gray-500'
+                            !showCharacterMaxLength && maxLength && currentLength >= maxLength ? 'text-red-500' : 'text-gray-500'
                         )}>
-                            {currentLength} {maxLength ? `/ ${maxLength}` : ''}
+                            {currentLength} { showCharacterMaxLength ? (maxLength ? `/ ${maxLength}` : BLANK ) : maxLengthShowing ? `/ ${maxLengthShowing}` : BLANK }
                         </div>
                     )}
                 </div>

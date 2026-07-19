@@ -1,19 +1,20 @@
-// database/models/role_permission/RolePermission.js
 const BaseModel = require('../BaseModel');
 
-class RolePermission extends BaseModel {
+class EmployeePosition extends BaseModel {
     static get tableName() {
-        return 'role_permission.role_permissions';
+        return 'employee.positions';
     }
 
+    // Since this is a junction table with a composite primary key,
+    // we tell Objection to look at both columns to identify unique rows.
     static get idColumn() {
-        return 'id';
+        return ['employee_id', 'position_id'];
     }
-
-    // 🎯 Runs automatically right before a POST / insert operation hits the DB
+     // 🎯 Runs automatically right before a POST / insert operation hits the DB
     $beforeInsert(queryContext) {
         super.$beforeInsert(queryContext);
         this.created_at = new Date().toISOString();
+
         if (queryContext.user) {
             this.created_by = queryContext.user.id;
         }
@@ -23,35 +24,36 @@ class RolePermission extends BaseModel {
     $beforeUpdate(opt, queryContext) {
         super.$beforeUpdate(opt, queryContext);
         this.updated_at = new Date().toISOString();
-       
+
         if (queryContext.user) {
             this.updated_by = queryContext.user.id;
         }
     }
 
     static get relationMappings() {
-        const Role = require('./Role');
-        const Permission = require('./Permission');
+        const Employee = require('./Employee');
+        const Position = require('../lookups/Position');
+        const Department = require('../lookups/Department');
 
         return {
-            role: {
+            employee: {
                 relation: BaseModel.BelongsToOneRelation,
-                modelClass: Role,
+                modelClass: Employee,
                 join: {
-                    from: 'role_permission.role_permissions.role_id',
-                    to: 'role_permission.roles.id'
+                    from: 'employee.positions.employee_id',
+                    to: 'employee.employees.id'
                 }
             },
-            permission: {
+            position: {
                 relation: BaseModel.BelongsToOneRelation,
-                modelClass: Permission,
+                modelClass: Position,
                 join: {
-                    from: 'role_permission.role_permissions.permission_id',
-                    to: 'role_permission.permissions.id'
+                    from: 'employee.positions.position_id',
+                    to: 'lookups.positions.id'
                 }
             }
         };
     }
 }
 
-module.exports = RolePermission;
+module.exports = EmployeePosition;

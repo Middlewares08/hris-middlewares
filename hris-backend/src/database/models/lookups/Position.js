@@ -49,7 +49,8 @@ class Position extends BaseModel {
                 join: {
                     from: 'lookups.positions.department_id',
                     to: 'lookups.departments.id'
-                }
+                },
+                modify: (builder) => builder.select('name', 'slug', 'uuid', 'code', 'description')
             }
         };
     }

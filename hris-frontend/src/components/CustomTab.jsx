@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { Link, useLocation } from 'react-router-dom';
+import { can } from '../utils/permissionCheck';
 
 const VARIANTS = {
     gray: {
@@ -23,9 +24,14 @@ function CustomTabs(props) {
     const variantTokens = VARIANTS[props?.variant] || VARIANTS.gray;
     const containerClass = props?.className || '';
 
+    // 🛡️ Filter tabs line-by-line based on permissions
+    const visibleTabs = (props?.tabs || []).filter(
+        (tab) => !tab.permission || can(tab.permission)
+    );
+
     return (
         <div className={`flex border-b border-slate-200 ${containerClass}`}>
-            {(props?.tabs || []).map((tab) => {
+            {visibleTabs.map((tab) => {
                 // Handle matching for exact sub-routes seamlessly
                 const isActive = location.pathname === tab.path;
                 const TabIcon = tab.icon;
@@ -53,7 +59,8 @@ CustomTabs.propTypes = {
         PropTypes.shape({
             label: PropTypes.string.isRequired,
             path: PropTypes.string.isRequired,
-            icon: PropTypes.elementType // Expects the uninstantiated component token reference (e.g., Tags, Boxes)
+            icon: PropTypes.elementType, // Expects the uninstantiated component token reference (e.g., Tags, Boxes)
+            permission: PropTypes.string // 🛡️ Added validation rule for optional permission property
         })
     ).isRequired
 };

@@ -7,7 +7,7 @@ import { can } from "../../utils/permissionCheck";
 import CustomModal from "../../components/CustomModal";
 import CustomInput from "../../components/CustomInput";
 import CustomButton from "../../components/CustomButton";
-import CustomForm from "../../components/CustomForm"; // 👈 Your wrapper component
+import CustomForm from "../../components/CustomForm";
 import NotFound from "../../components/NotFound";
 import { usePositions } from "../../hooks/usePosition";
 import CustomDropdown from "../../components/CustomDropdown";
@@ -169,7 +169,7 @@ function Position() {
             id="position-form"
             content={(errors, touched) => (
                 <>
-                    <div>
+                    <div className="scrollbar-y-visible overflow-y-auto max-h-[50vh] px-2">
                         <CustomInput
                             label="Position"
                             labelPosition='left'
@@ -253,19 +253,6 @@ function Position() {
                                 </p>
                             )}
                         </div>
-                    </div>
-
-                    <div className="flex justify-center gap-2 pt-4 border-t border-slate-100">
-                        <CustomButton 
-                            children={payload?.uuid ? 'Update Details' : 'Save Position'}
-                            type='submit'
-                            icon={MemoryStick}
-                            iconPosition='left'
-                            disabled={loading} 
-                            isLoading={loading}
-                            variant='primary'
-                            className='px-4 py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-lg text-sm font-semibold flex items-center gap-2 cursor-pointer disabled:opacity-50'
-                        />
                     </div>
                 </>
             )}
@@ -409,11 +396,25 @@ function Position() {
             <CustomModal
                 isOpen={onOpenModal} 
                 onClose={() => onCloseModal()} 
-                title={payload?.uuid ? 'Update Positio Details' : 'Create New Position'}
+                title={payload?.uuid ? 'Update Position Details' : 'Create New Position'}
                 hasRequiredFields={true}
                 size="md"
                 showCloseButton
                 children={renderModalContent()}
+                footer={
+                    <div className="flex justify-center! gap-2 pt-4 border-t border-slate-100">
+                        <CustomButton 
+                            children={payload?.uuid ? 'Update Details' : 'Save Position'}
+                            onClick={() => formikRef?.current?.submitForm()}
+                            icon={MemoryStick}
+                            iconPosition='left'
+                            disabled={loading} 
+                            isLoading={loading}
+                            variant='primary'
+                            className='px-4 py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-lg text-sm font-semibold flex items-center gap-2 cursor-pointer disabled:opacity-50'
+                        />
+                    </div>
+                }
             />
 
             <CustomModal

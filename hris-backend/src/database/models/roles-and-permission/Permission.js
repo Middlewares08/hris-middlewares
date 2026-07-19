@@ -74,13 +74,15 @@ class Permission extends BaseModel {
 
         const permissions = await this.query()
             .select('role_permission.permissions.slug')
-            .joinRelated('roles') // 💡 This automatically joins and aliases the table as 'roles'
+            .joinRelated('roles') // 💡 Automatically joins and aliases 'role_permissions' as 'roles_join' (or similar based on relation configuration)
             .innerJoin(
                 'role_permission.employee_roles as er', 
-                'roles.id', // 🎯 FIX: Use the short alias 'roles.id' instead of the full schema prefix
+                'roles.id', 
                 'er.role_id'
             )
             .where('role_permission.permissions.is_deleted', false)
+            // 🎯 FIX: Use the alias "roles_join" instead of "role_permission.role_permissions"
+            .where('roles_join.is_deleted', false) 
             .where('er.employee_id', id);
 
         return [...new Set(permissions.map(p => p.slug))];

@@ -8,6 +8,10 @@ class Demographic extends BaseModel {
   $beforeInsert(queryContext) {
     super.$beforeInsert(queryContext);
     this.created_at = new Date().toISOString();
+    this.date_of_birth = new Date();
+    this.gender = new Date().toISOString();
+    this.nationality = 'N/A';
+    
     if (queryContext.user) {
       this.created_by = queryContext.user.id;
     }

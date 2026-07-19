@@ -162,6 +162,38 @@ exports.seed = async function(knex) {
             created_by: 1,
             updated_by: null
         },
+        {
+            name: 'Statutory and Compliance',
+            slug: 'statutory-and-compliance',
+            description: 'Government contributions, tax tables, statutory brackets, and regulatory compliance settings.',
+            access_type: 'ADMIN',
+            created_by: 1,
+            updated_by: null
+        },
+        {
+            name: 'Identifications',
+            slug: 'identifications',
+            description: 'Employee verification records, passport details, government-issued IDs, and license tracking.',
+            access_type: 'ADMIN',
+            created_by: 1,
+            updated_by: null
+        },
+        {
+            name: 'Benefits',
+            slug: 'benefits',
+            description: 'Company-sponsored perks, healthcare plans, allowances, and enrollment program configurations.',
+            access_type: 'ADMIN',
+            created_by: 1,
+            updated_by: null
+        },
+        {
+            name: 'Resumé',
+            slug: 'resume',
+            description: 'Work history records, educational credentials, skill sets, and digital document attachments.',
+            access_type: 'ADMIN',
+            created_by: 1,
+            updated_by: null
+        }
     ];
 
     // 3. Loop through individual nodes and execute lookups

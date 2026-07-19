@@ -1,6 +1,6 @@
 'use client';
 import { useEffect } from 'react';
-import PropTypes from 'prop-types'; // Import PropTypes
+import PropTypes from 'prop-types'; 
 import { motion, AnimatePresence } from 'framer-motion';
 import { IoClose } from 'react-icons/io5';
 import { clsx } from 'clsx';
@@ -14,7 +14,8 @@ const CustomModal = ({
     childenClasses = '',
     size, 
     showCloseButton,
-    hasRequiredFields = false
+    hasRequiredFields = false,
+    footer
 }) => {
   
     // Close on Escape key
@@ -25,7 +26,6 @@ const CustomModal = ({
             }
         };
 
-        // Only add the listener if the modal is actually open
         if (isOpen) {
             window.addEventListener('keydown', handleEsc);
         }
@@ -63,12 +63,12 @@ const CustomModal = ({
                         exit={{ opacity: 0, scale: 0.9, y: 40 }}
                         transition={{ type: 'spring', damping: 25, stiffness: 300 }}
                         className={clsx(
-                            "relative w-full bg-white rounded-[2rem] shadow-2xl overflow-hidden border border-gray-100/50",
+                            "relative w-full bg-white rounded-[2rem] shadow-2xl border border-gray-100/50 flex flex-col overflow-visible",
                             sizes[size]
                         )}
                     >
                         {/* Header */}
-                        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-gray-50/20">
+                        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-gray-50/20 flex-shrink-0">
                             <CustomLabel
                                 variant='h3' 
                                 children={title}
@@ -87,10 +87,22 @@ const CustomModal = ({
                             )}
                         </div>
 
-                        {/* Content */}
-                        <div className={`${childenClasses} py-4 px-6 overflow-y-auto max-h-[85vh]`}>
+                        {/* Content Area */}
+                        {/* 🎯 Changed: Swap overflow-y-auto to dynamic overflow-y-visible. 
+                            We also add padding bottom (pb-24) to give the absolute list menu space to render inside the viewport. */}
+                        <div className={clsx(
+                            "py-4 pb-2 px-6 overflow-y-visible overflow-x-visible flex-1 max-h-[70vh]",
+                            childenClasses
+                        )}>
                             {children}
                         </div>
+
+                        {/* Optional Footer Container */}
+                        {footer && (
+                            <div className="px-6 py-4 bg-slate-50/50 border-t border-slate-100 flex items-center justify-end gap-3 flex-shrink-0 z-10">
+                                {footer}
+                            </div>
+                        )}
                     </motion.div>
                 </div>
             )}
@@ -120,9 +132,8 @@ CustomModal.propTypes = {
 
     /** Whether to show the 'X' button in the top right */
     showCloseButton: PropTypes.bool,
-
-    /** Whether to show the required field label */
-    hasRequiredFields: PropTypes.bool
+    hasRequiredFields: PropTypes.bool,
+    footer: PropTypes.node
 };
 
 export default CustomModal;

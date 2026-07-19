@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { ChevronDown, AlertCircle } from 'lucide-react';
 
 const CustomDropdown = ({
@@ -6,24 +7,77 @@ const CustomDropdown = ({
     options = [],
     value,
     onChange,
-    renderProps = 'name',  // The key to display in the UI list
-    returnProps = 'id',    // The key to return when selected
+    renderProps = 'name',  
+    returnProps = 'id',    
     isRequired = false,
     disabled = false,
     error = false,
     errorLabel = '',
-    icon: StartIcon,       // Optional: Pass an icon component from lucide-react
-    iconPosition = 'start', // 'start' | 'end'
+    icon: StartIcon,       
+    iconPosition = 'start', 
     placeholder = 'Select an option',
     className = ''
 }) => {
     const [isOpen, setIsOpen] = useState(false);
-    const dropdownRef = useRef(null);
+    const [mounted, setMounted] = useState(false); 
+    const [coords, setCoords] = useState(null); 
+    const [placement, setPlacement] = useState('bottom'); 
+    
+    const dropdownRef = useRef(null); 
+    const triggerRef = useRef(null);  
+    const listRef = useRef(null);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
+    const updateCoords = () => {
+        if (triggerRef.current) {
+            const rect = triggerRef.current.getBoundingClientRect();
+            const dropdownHeight = 250; 
+            const spaceBelow = window.innerHeight - rect.bottom;
+
+            if (spaceBelow < dropdownHeight && rect.top > dropdownHeight) {
+                setPlacement('top');
+                setCoords({
+                    bottom: window.innerHeight - rect.top, 
+                    left: rect.left,
+                    width: rect.width
+                });
+            } else {
+                setPlacement('bottom');
+                setCoords({
+                    top: rect.bottom, 
+                    left: rect.left,
+                    width: rect.width
+                });
+            }
+        }
+    };
+
+    useEffect(() => {
+        if (isOpen) {
+            updateCoords();
+            window.addEventListener('resize', updateCoords);
+            window.addEventListener('scroll', updateCoords, true);
+        } else {
+            setCoords(null);
+        }
+        return () => {
+            window.removeEventListener('resize', updateCoords);
+            window.removeEventListener('scroll', updateCoords, true);
+        };
+    }, [isOpen]);
 
     // Close dropdown when clicking outside
     useEffect(() => {
         const handleClickOutside = (event) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+            if (
+                dropdownRef.current && 
+                !dropdownRef.current.contains(event.target) &&
+                listRef.current &&
+                !listRef.current.contains(event.target)
+            ) {
                 setIsOpen(false);
             }
         };
@@ -31,8 +85,7 @@ const CustomDropdown = ({
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    // Find the currently selected option to show its text label
-    const selectedOption = options.find(opt => opt[returnProps] === value);
+    const selectedOption = Array.isArray(options) ? options.find(opt => opt[returnProps] === value) : null;
     const displayValue = selectedOption ? selectedOption[renderProps] : placeholder;
 
     const handleSelect = (option) => {
@@ -41,18 +94,20 @@ const CustomDropdown = ({
         setIsOpen(false);
     };
 
+    const hasOptions = Array.isArray(options) && options.length > 0;
+
     return (
         <div ref={dropdownRef} className={`w-full flex flex-col gap-1.5 ${className}`}>
             {/* Label Row */}
             {label && (
-                <label className={`text-sm font-medium ${disabled ? 'text-gray-400' : 'text-gray-700'}`}>
+                <label className={`text-xs font-medium ${disabled ? 'text-gray-400' : 'text-gray-700'}`}>
                     {label}
                     {isRequired && <span className="text-red-500 ml-1">*</span>}
                 </label>
             )}
 
-            {/* Dropdown Container */}
-            <div className="relative w-full">
+            {/* Dropdown Button Container */}
+            <div ref={triggerRef} className="relative w-full">
                 <button
                     type="button"
                     disabled={disabled}
@@ -67,9 +122,7 @@ const CustomDropdown = ({
                         }
                     `}
                 >
-                    {/* Inner Content Placement Layout */}
-                    <div className="flex items-center gap-2 overflow-hidden w-full">
-                        {/* Start Icon Vector */}
+                    <div className="flex items-center gap-2 scrollbar-y-visible overflow-y-auto w-full">
                         {StartIcon && iconPosition === 'start' && (
                             <StartIcon className={`w-4 h-4 flex-shrink-0 ${error ? 'text-red-500' : 'text-gray-400'}`} />
                         )}
@@ -80,7 +133,6 @@ const CustomDropdown = ({
                     </div>
 
                     <div className="flex items-center gap-1.5 flex-shrink-0">
-                        {/* End Icon Vector */}
                         {StartIcon && iconPosition === 'end' && (
                             <StartIcon className={`w-4 h-4 ${error ? 'text-red-500' : 'text-gray-400'}`} />
                         )}
@@ -88,11 +140,26 @@ const CustomDropdown = ({
                     </div>
                 </button>
 
-                {/* Options Menu Popover Panel */}
-                {isOpen && !disabled && (
-                    <ul className="text-left absolute z-50 w-full mt-1 max-h-60 overflow-auto bg-white border border-gray-200 rounded-lg shadow-lg py-1 outline-none">
-                        {options.length === 0 ? (
-                            <li className="px-3 py-2 text-sm text-gray-400 italic text-center">No options available</li>
+                {/* React Portal: Popover calendar container with responsive position styles */}
+                {isOpen && !disabled && mounted && coords && createPortal(
+                    <ul 
+                        ref={listRef}
+                        style={{
+                            position: 'fixed', 
+                            left: `${coords.left}px`,
+                            width: `${coords.width}px`,
+                            // 🎯 Fix: Clear previous layout bounds with auto values to prevent stretch/high-offset bugs
+                            ...(placement === 'top' 
+                                ? { bottom: `${coords.bottom}px`, top: 'auto', marginBottom: '4px' } 
+                                : { top: `${coords.top}px`, bottom: 'auto', marginTop: '4px' }
+                            )
+                        }}
+                        className="text-left z-[999999] max-h-60 scrollbar-y-visible overflow-y-auto bg-white border border-gray-200 rounded-lg shadow-2xl py-1 outline-none animate-in fade-in duration-100"
+                    >
+                        {!hasOptions ? (
+                            <li className="px-4 py-3 text-sm text-gray-400 italic text-center bg-gray-50/50">
+                                No options found
+                            </li>
                         ) : (
                             options.map((option, index) => {
                                 const isSelected = option[returnProps] === value;
@@ -103,7 +170,7 @@ const CustomDropdown = ({
                                         className={`
                                             px-3 py-2 text-sm cursor-pointer transition-colors truncate
                                             ${isSelected 
-                                                ? 'bg-gray-50 text-gray-600 font-medium' 
+                                                ? 'bg-blue-50 text-blue-600 font-semibold' 
                                                 : 'text-gray-700 hover:bg-gray-50'
                                             }
                                         `}
@@ -113,7 +180,8 @@ const CustomDropdown = ({
                                 );
                             })
                         )}
-                    </ul>
+                    </ul>,
+                    document.body
                 )}
             </div>
 

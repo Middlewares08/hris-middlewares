@@ -16,7 +16,8 @@ const {
     getPositions,
     getPositionByUuid,
     updatePosition,
-    deletePosition
+    deletePosition,
+    getPositionsWithNoPagination
 } = require('../../module/admin/controller/lookups/PositionController');
 
 const { verifyToken } = require('../../middleware/authMiddleware');
@@ -36,6 +37,6 @@ router.post('/positions', createPosition);
 router.get('/positions/:uuid', getPositionByUuid);
 router.put('/positions/:uuid', updatePosition);
 router.delete('/positions/:uuid', deletePosition);
-
+router.get('/positions/list/data', getPositionsWithNoPagination);
 
 module.exports = router;

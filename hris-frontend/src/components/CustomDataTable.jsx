@@ -115,7 +115,7 @@ export function CustomDataTable({
 
             {/* Main Data Structure Table */}
             <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-200">
-                <div className="overflow-x-auto">
+                <div className="scrollbar-x-visible overflow-x-auto">
                     <table className="w-full text-left border-collapse whitespace-nowrap">
                         <thead>
                             <tr className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider border-b border-gray-200">

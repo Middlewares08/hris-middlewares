@@ -46,20 +46,18 @@ class Department extends BaseModel {
         }
     }
 
-    static get jsonSchema() {
+    static get relationMappings() {
+        const Position = require('./Position');
         return {
-        type: 'object',
-        required: ['name', 'code'],
-        properties: {
-                id: { type: 'integer' },
-                uuid: { type: 'string', format: 'uuid' },
-                slug: { type: 'string' },
-                name: { type: 'string', minLength: 1, maxLength: 150 },
-                code: { type: 'string', minLength: 2, maxLength: 50 },
-                description: { type: ['string', 'null'], maxLength: 500 },
-                is_deleted: { type: 'boolean' },
-                created_by: { type: ['integer', 'null'] },
-                updated_by: { type: ['integer', 'null'] }
+            // 🎯 FIXED: Changed key name to 'positions' (plural) to represent what it holds
+            positions: {
+                // 🎯 FIXED: Changed to HasManyRelation since one department has multiple positions
+                relation: BaseModel.HasManyRelation,
+                modelClass: Position,
+                join: {
+                    from: 'lookups.departments.id',
+                    to: 'lookups.positions.department_id'
+                }
             }
         };
     }

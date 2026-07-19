@@ -157,7 +157,7 @@ const getCurrentProfile = async (req, res) => {
             // Return roles/permissions so your UI can control access layers to
         });
     } catch (error) {
-        return res.status(500).json({ message: 'Error retrieving profile context.' });
+        return res.status(500).json({ message: 'Error retrieving profile context.', err: error });
     }
 };
 

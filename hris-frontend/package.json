@@ -12,6 +12,7 @@
   "dependencies": {
     "@tanstack/react-query": "^5.101.0",
     "@tanstack/react-query-devtools": "^5.101.0",
+    "addresspinas": "^2.1.3",
     "axios": "^1.18.0",
     "clsx": "^2.1.1",
     "formik": "^2.4.9",

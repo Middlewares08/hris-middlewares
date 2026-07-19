@@ -12,7 +12,6 @@ import {
 } from 'lucide-react';
 import { useLogout } from '../hooks/useLogout';
 import Header from './Header';
-// 🎯 UPDATE: Importing your exact utility function name
 import { can } from '../utils/permissionCheck';
 
 const Dashboard = () => {
@@ -23,7 +22,6 @@ const Dashboard = () => {
     const location = useLocation();
     const logout = useLogout();
 
-    // 1. Raw layout blueprint structure containing checking rules
     const menuBlueprint = [
         { 
             icon: <LayoutDashboard className='hover:cursor-pointer' size={20} />, 
@@ -33,9 +31,21 @@ const Dashboard = () => {
         },
         { 
             icon: <GroupIcon className='hover:cursor-pointer' size={20}/>, 
-            label: 'Employee', 
-            path: '/dashboard/employees', 
-            permission: 'employee-management:view'
+            label: 'Employee Directory', 
+            path: '/dashboard/employee', 
+            permission: 'employee-management:view',
+            children: [
+                {
+                    label: 'Employee', 
+                    path: '/dashboard/employee/lists', 
+                    permission: 'employee-management:view' 
+                },
+                {
+                    label: 'Statutory & Compliance', 
+                    path: '/dashboard/employee/statutory-and-compliance', 
+                    permission: 'statutory-and-compliance:view' 
+                }
+            ]
         },
         { 
             icon: <CogIcon className='hover:cursor-pointer' size={20}/>, 
@@ -59,7 +69,7 @@ const Dashboard = () => {
             icon: <Wrench className='hover:cursor-pointer' size={20} />, 
             label: 'Maintenance', 
             path: '/dashboard/maintenance', 
-            permission: 'maintenance:view', // Optional parent node wrapper gate slug
+            permission: 'maintenance:view',
             children: [
                 { 
                     label: 'Roles & Permission', 
@@ -70,8 +80,6 @@ const Dashboard = () => {
         },
     ];
 
-    // 2. 🛡️ Dynamic filter pipeline step
-    // Evaluates permissions line-by-line and strips out unauthorized nodes or links
     const menuItems = menuBlueprint
         .filter(item => !item.permission || can(item.permission))
         .map(item => {
@@ -83,7 +91,6 @@ const Dashboard = () => {
             }
             return item;
         })
-        // Remove parent nodes if all their children were stripped away by the filter
         .filter(item => !item.children || item.children.length > 0);
 
     const handleNavClick = (item) => {
@@ -170,14 +177,16 @@ const Dashboard = () => {
                                 {!isCollapsed && item.children && isSubmenuOpen && (
                                     <div className="mt-1 ml-9 flex flex-col space-y-1 border-l border-slate-800 pl-2">
                                         {item.children.map((child) => {
-                                            const isChildActive = location.pathname === child.path;
+                                            // FIX: Check if current URL matches the path exactly OR starts with the path followed by a slash
+                                            const isChildActive = location.pathname === child.path || location.pathname.startsWith(child.path + '/');
+                                            
                                             return (
                                                 <button
                                                     key={child.label}
                                                     onClick={() => navigate(child.path)}
                                                     className={`w-full text-left py-2 px-3 rounded-md text-sm transition-all hover:cursor-pointer
                                                         ${isChildActive 
-                                                            ? 'font-semibold bg-gray-500 text-white' 
+                                                            ? 'bg-gray-500 text-white' 
                                                             : 'text-slate-500 hover:text-slate-200 hover:bg-slate-800/50'}`}
                                                 >
                                                     {child.label}

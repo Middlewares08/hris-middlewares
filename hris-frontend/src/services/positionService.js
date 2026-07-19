@@ -41,5 +41,14 @@ export const positionService = {
     delete: async (uuid) => {
         const response = await apiClient.delete(`${API_BASE_URL}/${uuid}`);
         return response.data;
-    }
+    },
+
+    /**
+     * Fetch paginated list based on backend matrix requirements
+     */
+    getAllWithNoPagination: async (params = {}) => {
+        const response = await apiClient.get(`${API_BASE_URL}/list/data`, { params });
+        return response.data;
+    },
+
 };

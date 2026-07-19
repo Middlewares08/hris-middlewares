@@ -174,10 +174,48 @@ const deletePosition = async (req, res) => {
     }
 };
 
+/**
+ * 🔍 READ All Positions (No Pagination + Search Filter)
+ */
+const getPositionsWithNoPagination = async (req, res) => {
+    try {
+        const { search } = req.query;
+
+        let query = Position.query()
+            .withGraphFetched('department')
+            .where('lookups.positions.is_deleted', false);
+
+        // Case-insensitive search filter
+        if (search) {
+            query = query.where((builder) => {
+                builder.where('lookups.positions.name', 'ilike', `%${search}%`)
+                       .orWhere('lookups.positions.description', 'ilike', `%${search}%`);
+            });
+        }
+
+        const positionsData = await query.orderBy('lookups.positions.name', 'asc');
+
+        // Fetch departments listing for form selection dropdowns
+        const departmentsData = await Department.query()
+            .where('lookups.departments.is_deleted', false)
+            .select('lookups.departments.name', 'lookups.departments.uuid', 'lookups.departments.id')
+            .orderBy('lookups.departments.name', 'asc');
+
+        return res.status(200).json({
+            success: true,
+            data: positionsData
+        });
+    } catch (error) {
+        console.error('Fetch positions error:', error);
+        return res.status(500).json({ success: false, message: 'Server error retrieving positions matrix.' });
+    }
+};
+
 module.exports = {
     createPosition,
     getPositions,
     getPositionByUuid,
     updatePosition,
-    deletePosition
+    deletePosition,
+    getPositionsWithNoPagination
 };

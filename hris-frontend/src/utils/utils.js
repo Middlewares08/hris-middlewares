@@ -84,3 +84,58 @@ export const handleNumberInput = (value) => {
 
     return cleaned; // 🚀 CRITICAL: Must return the value!
 };
+
+/**
+ * Utility to format numeric inputs into specific government ID structures.
+ * @param {string} value - The raw string input from the user.
+ * @param {string} type - The type of ID ('sss', 'philhealth', 'pagibig', 'tin').
+ * @returns {string} The formatted ID string with dashes and length caps.
+ */
+export const formatGovernmentId = (value, type) => {
+    // 1. Remove all non-numeric characters
+    const clean = value.replace(/\D/g, '');
+    
+    switch (type?.toLowerCase()) {
+        case 'sss': {
+            // Format: XX-XXXXXXX-X (Max 10 digits)
+            const truncated = clean.slice(0, 10);
+            const match = truncated.match(/^(\d{0,2})(\d{0,7})(\d{0,1})$/);
+            if (!match) return truncated;
+            return [match[1], match[2], match[3]].filter(Boolean).join('-');
+        }
+        
+        case 'philhealth': {
+            // Format: XX-XXXXXXXXX-X (Max 12 digits)
+            const truncated = clean.slice(0, 12);
+            const match = truncated.match(/^(\d{0,2})(\d{0,9})(\d{0,1})$/);
+            if (!match) return truncated;
+            return [match[1], match[2], match[3]].filter(Boolean).join('-');
+        }
+        
+        case 'pagibig': {
+            // Format: XXXX-XXXX-XXXX (Max 12 digits)
+            const truncated = clean.slice(0, 12);
+            const match = truncated.match(/^(\d{0,4})(\d{0,4})(\d{0,4})$/);
+            if (!match) return truncated;
+            return [match[1], match[2], match[3]].filter(Boolean).join('-');
+        }
+        
+        case 'tin': {
+            // Format: XXX-XXX-XXX-XXX (Max 12 digits)
+            const truncated = clean.slice(0, 12);
+            const match = truncated.match(/^(\d{0,3})(\d{0,3})(\d{0,3})(\d{0,3})$/);
+            if (!match) return truncated;
+            return [match[1], match[2], match[3], match[4]].filter(Boolean).join('-');
+        }
+        case 'phone': {
+            // Format: 09XX-XXX-XXXX (Max 11 digits)
+            const truncated = clean.slice(0, 11);
+            const match = truncated.match(/^(\d{0,4})(\d{0,3})(\d{0,4})$/);
+            if (!match) return truncated;
+            return [match[1], match[2], match[3]].filter(Boolean).join('-');
+        }
+        
+        default:
+            return clean;
+    }
+};
