@@ -1,5 +1,15 @@
 // database/models/employee/EmployeeGovernmentDetails.js
 const BaseModel = require('../BaseModel');
+const { encrypt, decrypt } = require('../../../utils/crypto');
+
+
+// ENCRYPT ON SAVE/UPDATE
+function processEncryption(instance) {
+    if (instance.tin_number) instance.tin_number = encrypt(instance.tin_number);
+    if (instance.sss_number) instance.sss_number = encrypt(instance.sss_number);
+    if (instance.philhealth_number) instance.philhealth_number = encrypt(instance.philhealth_number);
+    if (instance.pagibig_number) instance.pagibig_number = encrypt(instance.pagibig_number);
+}
 
 class GovernmentDetails extends BaseModel {
     static get tableName() { 
@@ -14,7 +24,7 @@ class GovernmentDetails extends BaseModel {
     $beforeInsert(queryContext) {
         super.$beforeInsert(queryContext);
         this.created_at = new Date().toISOString();
-
+        processEncryption(this);
         if (queryContext.user) {
             this.created_by = queryContext.user.id;
         }
@@ -23,7 +33,19 @@ class GovernmentDetails extends BaseModel {
     // Runs before updating to ensure timestamps sync up
     $beforeUpdate(opt, queryContext) {
         super.$beforeUpdate(opt, queryContext);
+        processEncryption(this);
         this.updated_at = new Date().toISOString();
+    }
+
+    $parseDatabaseJson(json) {
+        json = super.$parseDatabaseJson(json);
+
+        if (json.tin_number) json.tin_number = decrypt(json.tin_number);
+        if (json.sss_number) json.sss_number = decrypt(json.sss_number);
+        if (json.philhealth_number) json.philhealth_number = decrypt(json.philhealth_number);
+        if (json.pagibig_number) json.pagibig_number = decrypt(json.pagibig_number);
+
+        return json;
     }
 
     // Default modifiers to avoid messy inline select builders

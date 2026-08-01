@@ -59,11 +59,11 @@ export function useEmployeeBenefits() {
     /**
      * 🔄 UPSERT (Insert or Update Benefits)
      */
-    const handleUpsert = async (employeeId, payload) => {
+    const handleUpsert = async (employee_id, payload) => {
         setLoading(true);
         setError(null);
         try {
-            const result = await governmentDetailsService.upsert(employeeId, payload);
+            const result = await governmentDetailsService.upsert(employee_id, payload);
             if (result.success || result) {
                 toast.success("Government details updated successfully.");
                 await fetchBenefits(); // Refresh the list to reflect new data
@@ -71,6 +71,7 @@ export function useEmployeeBenefits() {
             }
         } catch (err) {
             const msg = err.response?.data?.message || 'Failed to update government details.';
+            toast.error(msg);
             setError(msg);
             throw new Error(msg, { cause: err });
         } finally {

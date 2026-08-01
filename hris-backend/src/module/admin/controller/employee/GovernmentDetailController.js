@@ -8,18 +8,17 @@ const getEmployeesWithBenefits = async (req, res) => {
         const offset = (parseInt(page, 10) - 1) * parseInt(limit, 10);
 
         let query = GovernmentDetails.query()
-            .joinRelated('employee')
+            .joinRelated('employee.[credentials, position]')
             .where('employee.is_deleted', false)
-            .withGraphFetched('employee.[credentials]');
+            .withGraphFetched('employee.[credentials, position.[department]]');
 
         // Apply optional search filter
         if (search) {
             query = query.where((builder) => {
-                builder.where('employee.employees.first_name', 'ilike', `%${search}%`)
-                       .orWhere('employee.employees.last_name', 'ilike', `%${search}%`);
+                builder.where('employee.first_name', 'ilike', `%${search}%`)
+                    .orWhere('employee.last_name', 'ilike', `%${search}%`);
             });
         }
-
         // Fetch Paginated Dataset using .range()
         const result = await query
             .orderBy('employee.last_name', 'asc')
@@ -45,11 +44,19 @@ const upsertGovernmentDetails = async (req, res) => {
 
         // Upsert logic: find existing record, or insert a new one
         const updatedDetails = await GovernmentDetails.query()
-            .insertGraph({
-                employee_id: employeeId,
-                ...payload
-            }, { insertMissing: true, updateRelations: true });
-
+            .upsertGraph({
+                employee_id: payload?.employee_id,
+                sss_number: payload?.sss_number,
+                pagibig_number: payload?.pagibig_number,
+                tin_number: payload?.tin_number,
+                philhealth_number: payload?.philhealth_number,
+                is_philhealth_exempt: payload?.is_philhealth_exempt,
+                is_pagibig_exempt: payload?.is_pagibig_exempt,
+                is_sss_exempt: payload?.is_sss_exempt,
+            }, {
+                insertMissing: true // Inserts if employee_id doesn't exist yet in the DB
+            });
+            
         return res.status(200).json({
             success: true,
             message: 'Government details updated successfully',

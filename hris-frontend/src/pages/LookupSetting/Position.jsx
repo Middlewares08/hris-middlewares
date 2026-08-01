@@ -119,7 +119,6 @@ function Position() {
     const handleOpenEditModal = (pos, closeDrawer, action) => {
         if (closeDrawer) closeDrawer(); // Close the side panel drawer safely
         
-        // ✅ Safe Slot: This code now fires strictly on-click
         setPayload({
             name: pos?.name,
             description: pos?.description,

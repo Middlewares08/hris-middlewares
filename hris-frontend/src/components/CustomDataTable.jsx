@@ -21,7 +21,8 @@ export function CustomDataTable({
     totalRecords = 0,
     currentPage = 1,
     recordsPerPage = 10,
-    onPageChange
+    onPageChange,
+    onRowClick,
 }) {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedRow, setSelectedRow] = useState(null);
@@ -154,7 +155,7 @@ export function CustomDataTable({
                                 paginatedData.map((row, rowIndex) => (
                                     <tr 
                                         key={row.id || rowIndex}
-                                        onClick={() => renderDrawerContent && setSelectedRow(row)}
+                                        onClick={() => [(renderDrawerContent && setSelectedRow(row)), (onRowClick && onRowClick(row))]}
                                         className={`transition-colors ${renderDrawerContent ? 'hover:bg-slate-50/80 cursor-pointer' : ''}`}
                                     >
                                         {columns.map((col, colIndex) => (
@@ -260,7 +261,7 @@ export function CustomDataTable({
                                     <X size={18} />
                                 </button>
                             </div>
-                            <div className="py-4 flex-1 overflow-y-auto">
+                            <div className="py-4 flex-1 max-h-[80vh] scrollbar-y-visible overflow-y-auto">
                                 {renderDrawerContent(selectedRow, () => setSelectedRow(null))}
                             </div>
                         </motion.div>

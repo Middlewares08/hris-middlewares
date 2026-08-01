@@ -10,6 +10,7 @@ import * as addresspinas from 'addresspinas';
 import { usePositions } from "../../hooks/usePosition";
 import { useMemo } from "react";
 import { formatGovernmentId } from "../../utils/utils";
+import clsx from "clsx";
 
 export const BasicInformation = ({ payload, onChange, errors, touched }) => {
 
@@ -53,8 +54,8 @@ export const BasicInformation = ({ payload, onChange, errors, touched }) => {
                         placeholder="Enter last name.."
                         value={payload?.lastname} 
                         onChange={(e) => onChange({ lastname: e.target.value })}
-                        error={errors.lastname && touched.lastname}
-                        errorLabel={errors.lastname}
+                        error={errors?.lastname && touched?.lastname}
+                        errorLabel={errors?.lastname}
                     />
 
                     <CustomInput
@@ -66,8 +67,8 @@ export const BasicInformation = ({ payload, onChange, errors, touched }) => {
                         placeholder="Enter first name.."
                         value={payload?.firstname}
                         onChange={(e) => onChange({ firstname: e.target.value })}
-                        error={errors.firstname && touched.firstname}
-                        errorLabel={errors.firstname}
+                        error={errors?.firstname && touched?.firstname}
+                        errorLabel={errors?.firstname}
                     />
 
                     <CustomInput
@@ -79,8 +80,8 @@ export const BasicInformation = ({ payload, onChange, errors, touched }) => {
                         placeholder="john_doe@email.com"
                         value={payload?.email}
                         onChange={(e) => onChange({ email: e.target.value })}
-                        error={errors.email && touched.email}
-                        errorLabel={errors.email}
+                        error={errors?.email && touched?.email}
+                        errorLabel={errors?.email}
                     />
                 </div>
             </div>
@@ -122,8 +123,8 @@ export const BasicInformation = ({ payload, onChange, errors, touched }) => {
                         maxDate={new Date()}
                         value={payload?.birth_date}
                         onChange={(date) => onChange({ birth_date: date })}
-                        error={errors.birth_date && touched.birth_date}
-                        errorLabel={errors.birth_date}
+                        error={errors?.birth_date && touched?.birth_date}
+                        errorLabel={errors?.birth_date}
                     />
                     <CustomDropdown
                         className="items-start! w-full "
@@ -134,8 +135,8 @@ export const BasicInformation = ({ payload, onChange, errors, touched }) => {
                         renderProps="label"
                         returnProps="value"
                         disabled={false}
-                        error={errors.gender && touched.gender}
-                        errorLabel={errors.gender}
+                        error={errors?.gender && touched?.gender}
+                        errorLabel={errors?.gender}
                         placeholder="Choose gender.."
                     />
                 </div>
@@ -267,8 +268,8 @@ export const Employement = ({ payload, onChange, errors, touched }) => {
                             renderProps="label"
                             returnProps="value"
                             placeholder="Select employment status/type"
-                            error={errors.employment_type && touched.employment_type}
-                            errorLabel={errors.employment_type}
+                            error={errors?.employment_type && touched?.employment_type}
+                            errorLabel={errors?.employment_type}
                         />
                         <CustomDatePicker
                             className="text-left!"
@@ -276,8 +277,8 @@ export const Employement = ({ payload, onChange, errors, touched }) => {
                             isRequired
                             value={payload?.date_hired}
                             onChange={(date) => onChange({ date_hired: date })}
-                            error={errors.date_hired && touched.date_hired}
-                            errorLabel={errors.date_hired}
+                            error={errors?.date_hired && touched?.date_hired}
+                            errorLabel={errors?.date_hired}
                         />
                     </div>
                     <div className="space-y-5">
@@ -291,8 +292,8 @@ export const Employement = ({ payload, onChange, errors, touched }) => {
                             renderProps="name"
                             returnProps="id"
                             placeholder="Select position.."
-                            error={errors.position && touched.position}
-                            errorLabel={errors.position}
+                            error={errors?.position && touched?.position}
+                            errorLabel={errors?.position}
                         />
 
                         { selectedPosition && 
@@ -321,10 +322,10 @@ export const Employement = ({ payload, onChange, errors, touched }) => {
 
 
 
-export const Benefits = ({ payload, onChange, errors, touched }) => {
+export const Benefits = ({ payload, onChange, errors, touched, addedClass = BLANK }) => {
 
     return (
-        <div className="scrollbar-y-visible overflow-y-auto max-h-[50vh] border-t border-t-slate-200 py-4 px-2">
+        <div className={clsx(addedClass, "scrollbar-y-visible overflow-y-auto max-h-[50vh] border-t border-t-slate-200 py-4 px-2")}>
             <CustomLabel
                 variant='h3' 
                 children='Employee Benifits' 
@@ -340,10 +341,10 @@ export const Benefits = ({ payload, onChange, errors, touched }) => {
                             maxLength={12}
                             placeholder="00-0000000-0"
                             disabled={payload?.is_sss_exempt}
-                            value={payload?.sss}
-                            onChange={(e) => onChange({ sss: formatGovernmentId(e.target.value, 'sss') })}
-                            error={errors.sss && touched.sss}
-                            errorLabel={errors.sss}
+                            value={payload?.sss_number}
+                            onChange={(e) => onChange({ sss_number: formatGovernmentId(e.target.value, 'sss') })}
+                            error={errors?.sss_number && touched?.sss_number}
+                            errorLabel={errors?.sss_number}
                             showCharacterCount
                             showCharacterMaxLength={false}
                             eliminateSpecialCharacterInCount={true}
@@ -373,11 +374,11 @@ export const Benefits = ({ payload, onChange, errors, touched }) => {
                             maxLength={14} 
                             placeholder="00-000000000-0"
                             disabled={payload?.is_philhealth_exempt}
-                            value={payload?.philhealth}
+                            value={payload?.philhealth_number}
                             // Format the text in real-time as the user types
-                            onChange={(e) => onChange({ philhealth: formatGovernmentId(e.target.value, 'philhealth') })}
-                            error={errors.philhealth && touched.philhealth}
-                            errorLabel={errors.philhealth}
+                            onChange={(e) => onChange({ philhealth_number: formatGovernmentId(e.target.value, 'philhealth') })}
+                            error={errors?.philhealth_number && touched?.philhealth_number}
+                            errorLabel={errors?.philhealth_number}
                             showCharacterCount
                             showCharacterMaxLength={false}
                             eliminateSpecialCharacterInCount={true}
@@ -407,10 +408,10 @@ export const Benefits = ({ payload, onChange, errors, touched }) => {
                             maxLength={14}
                             placeholder="0000-0000-0000"
                             disabled={payload?.is_pagibig_exempt}
-                            value={payload?.pagibig}
-                            onChange={(e) => onChange({ pagibig: formatGovernmentId(e.target.value, 'pagibig') })}
-                            error={errors.pagibig && touched.pagibig}
-                            errorLabel={errors.pagibig}
+                            value={payload?.pagibig_number}
+                            onChange={(e) => onChange({ pagibig_number: formatGovernmentId(e.target.value, 'pagibig') })}
+                            error={errors?.pagibig_number && touched?.pagibig_number}
+                            errorLabel={errors?.pagibig_number}
                             showCharacterCount
                             showCharacterMaxLength={false}
                             eliminateSpecialCharacterInCount={true}
@@ -439,10 +440,10 @@ export const Benefits = ({ payload, onChange, errors, touched }) => {
                             type="text"
                             maxLength={15}
                             placeholder="000-000-000-000"
-                            value={payload?.tin}
-                            onChange={(e) => onChange({ tin: formatGovernmentId(e.target.value, 'tin') })}
-                            error={errors.tin && touched.tin}
-                            errorLabel={errors.tin}
+                            value={payload?.tin_number}
+                            onChange={(e) => onChange({ tin_number: formatGovernmentId(e.target.value, 'tin') })}
+                            error={errors?.tin_number && touched?.tin_number}
+                            errorLabel={errors?.tin_number}
                             showCharacterCount
                             showCharacterMaxLength={false}
                             eliminateSpecialCharacterInCount={true}
@@ -474,8 +475,8 @@ export const ContactInformation = ({ payload, onChange, errors, touched }) => {
                     placeholder="0917-123-4567"
                     value={payload?.phone_number}
                     onChange={(e) => onChange({ phone_number: formatGovernmentId(e.target.value, 'phone') })}
-                    error={errors.phone_number && touched.phone_number}
-                    errorLabel={errors.phone_number}
+                    error={errors?.phone_number && touched?.phone_number}
+                    errorLabel={errors?.phone_number}
                     showCharacterCount
                     showCharacterMaxLength={false}
                     eliminateSpecialCharacterInCount={true}
@@ -489,8 +490,8 @@ export const ContactInformation = ({ payload, onChange, errors, touched }) => {
                     placeholder="john_doe@email.com"
                     value={payload?.personal_email}
                     onChange={(e) => onChange({ personal_email: e.target.value })}
-                    error={errors.personal_email && touched.personal_email}
-                    errorLabel={errors.personal_email}
+                    error={errors?.personal_email && touched?.personal_email}
+                    errorLabel={errors?.personal_email}
                 />
             </div>
 
@@ -509,8 +510,8 @@ export const ContactInformation = ({ payload, onChange, errors, touched }) => {
                     placeholder="Ex. John Doe"
                     value={payload?.emergency_contact_name}
                     onChange={(e) => onChange({ emergency_contact_name: e.target.value })}
-                    error={errors.emergency_contact_name && touched.emergency_contact_name}
-                    errorLabel={errors.emergency_contact_name}
+                    error={errors?.emergency_contact_name && touched?.emergency_contact_name}
+                    errorLabel={errors?.emergency_contact_name}
                 />
                 <CustomInput
                     className='mb-0'
@@ -521,8 +522,8 @@ export const ContactInformation = ({ payload, onChange, errors, touched }) => {
                     placeholder="0917-123-4567"
                     value={payload?.emergency_contact_phone}
                     onChange={(e) => onChange({ emergency_contact_phone: formatGovernmentId(e.target.value, 'phone') })}
-                    error={errors.emergency_contact_phone && touched.emergency_contact_phone}
-                    errorLabel={errors.emergency_contact_phone}
+                    error={errors?.emergency_contact_phone && touched?.emergency_contact_phone}
+                    errorLabel={errors?.emergency_contact_phone}
                     showCharacterCount
                     showCharacterMaxLength={false}
                     eliminateSpecialCharacterInCount={true}
@@ -538,8 +539,8 @@ export const ContactInformation = ({ payload, onChange, errors, touched }) => {
                     renderProps="label"
                     returnProps="value"
                     disabled={false}
-                    error={errors.emergency_contact_relationship && touched.emergency_contact_relationship}
-                    errorLabel={errors.emergency_contact_relationship}
+                    error={errors?.emergency_contact_relationship && touched?.emergency_contact_relationship}
+                    errorLabel={errors?.emergency_contact_relationship}
                     placeholder="Choose relationship.."
                 />
             </div>
