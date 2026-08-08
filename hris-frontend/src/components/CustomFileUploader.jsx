@@ -10,7 +10,9 @@ export function CustomFileUploader({
     multiple = false, 
     maxFiles = 5, 
     accept = "image/*,application/pdf", 
-    description = 'Images or PDFs up to 5MB' 
+    description = 'Images or PDFs up to 5MB',
+    isRequired = false,
+    disabled = false
 }) {
     const [isDragging, setIsDragging] = useState(false);
     const [previewTarget, setPreviewTarget] = useState(null);
@@ -110,7 +112,12 @@ export function CustomFileUploader({
 
     return (
         <div className="flex flex-col gap-2 w-full text-left  h-full justify-center">
-            {label && <label className="text-sm font-bold text-slate-700">{label}</label>}
+             {label && (
+                <label className={`text-xs font-medium ${disabled ? 'text-gray-400' : 'text-gray-700'}`}>
+                    {label}
+                    {isRequired && <span className="text-red-500 ml-1">*</span>}
+                </label>
+            )}
             
             {shouldShowUploader ? (
                 <div

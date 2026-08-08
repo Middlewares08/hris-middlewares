@@ -114,3 +114,11 @@ export const RELATIONSHIP_OPTIONS = [
   { label: 'Friend', value: 'friend' },
   { label: 'Other', value: 'other' }
 ].sort((a, b) => a.label.localeCompare(b.label));
+
+export const DOCUMENT_TYPES = [
+    { label: 'Resume', value: 'resume' },
+    { label: 'Medical', value: 'medical' },
+    { label: 'NBI', value: 'nbi' },
+    { label: 'Other document', value: 'other' },
+
+];

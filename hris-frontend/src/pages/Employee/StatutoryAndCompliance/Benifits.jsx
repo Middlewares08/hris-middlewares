@@ -9,7 +9,6 @@ import CustomModal from "../../../components/CustomModal";
 import { MemoryStick } from "lucide-react";
 import { Benefits } from "../AddEmployee";
 import { BLANK } from "../../../utils/constants";
-import { toast } from "sonner";
 import CustomForm from "../../../components/CustomForm";
 import { benefitValidationSchema } from "../../../validation/benefit-validation";
 
@@ -117,19 +116,16 @@ function Benifits() {
     const onHandleUpsert = async () => {
         try {
             await handleUpsert(payload?.employee_id, payload);
-            setOnUpdateModal(false);
         } catch (err) {
             setOnUpdateModal(false);
-            toast.
             console.error("Form transmission failed:", err);
         } finally {
             setOnUpdateModal(false);
         }
     }
 
-    const renderDrawerContent = (employee, closeDrawer) => {  
-    
-        return (<>
+    const renderDrawerContent = (employee, closeDrawer) => (
+        <>
             <div className="space-y-6 pt-2 text-left">
                 <div className="flex items-center gap-4">
                     <div className="w-14 h-14 bg-indigo-50 border border-indigo-200 text-indigo-700 rounded-full flex items-center justify-center font-bold text-xl uppercase">
@@ -212,18 +208,17 @@ function Benifits() {
                 </div>
             </div>
         </>
-        )
-    }
-
+    )
+    
     return (
         <div className="max-w-7xl mx-auto space-y-6">
             <div className="flex justify-between border-b border-slate-100 pb-4">
                 <CustomLabel
                     variant='h2' 
-                    children='Identifications' 
+                    children='Government Benefits' 
                     addedClass='font-bold text-slate-700!' 
                     descriptionClass='text-sm text-slate-500'
-                    description="Manage employee identification records."
+                    description="Manage employee benefit records."
                 />
             </div>
 
@@ -240,7 +235,6 @@ function Benifits() {
                 onSearch={handleSearch}
                 renderDrawerContent={(employee, closeDrawer) => renderDrawerContent(employee, closeDrawer)}
             />
-
 
             <CustomModal
                 isOpen={onUpdateModal} 
