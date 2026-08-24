@@ -67,7 +67,7 @@ const verifyOtp = async (req, res) => {
                 'employee.employees.last_name',
                 'employee.employees.preferred_name'
             )
-            .withGraphFetched('[contact, demographics]') // Pulls secondary records cleanly
+            .withGraphFetched('[contact, demographics, position.[department]]') // Pulls secondary records cleanly
             .first();
 
         // Guard clause if user doesn't exist
@@ -103,11 +103,12 @@ const verifyOtp = async (req, res) => {
             accessToken,
             user: {
                 id: user.id,
-                // firstName: user.first_name,
-                // lastName: user.last_name,
+                firstName: user.first_name,
+                lastName: user.last_name,
                 fullName: user.first_name + ' ' + user.last_name,
                 // preferredName: user.preferred_name,
                 email: email,
+                position: user?.position,
                 permissions: permissionsList
                 // contact: user.contact || null,
                 // demographics: user.demographics || null
@@ -141,10 +142,9 @@ const refresh = async (req, res) => {
 
 const getCurrentProfile = async (req, res) => {
     try {
-        // req.userId comes directly out of your JWT verification middleware layer
         const user = await Employee.query()
-            .findById(req.userId)
-            .withGraphFetched('[contact, demographics, credentials]'); // Eager load permissions
+            .findById(req.user.id)
+            .withGraphFetched('[contact, demographics, credentials, position.[department]]'); // Eager load permissions
 
         if (!user) {
             return res.status(404).json({ message: 'User not found.' });
@@ -152,8 +152,12 @@ const getCurrentProfile = async (req, res) => {
 
         return res.status(200).json({
             fullName: user.first_name + ' ' + user.last_name,
+            firstName: user.first_name,
+            lastName: user.last_name,
             preferredName: user.preferred_name,
             email: user.credentials.email,
+            position: user?.position,
+
             // Return roles/permissions so your UI can control access layers to
         });
     } catch (error) {

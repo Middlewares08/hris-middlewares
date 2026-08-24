@@ -11,8 +11,19 @@ const PORT = process.env.PORT || 4000;
 // Global Middleware / Plugins
 // ==========================================
 app.use(helmet()); // Secure HTTP headers to shield against common vulnerabilities
+
+const allowedOrigins = process.env.CLIENT_URL
+    ? process.env.CLIENT_URL.split(',').map((origin) => origin.trim())
+    : ['http://localhost:5173', 'http://localhost:5175'];
+
 app.use(cors({
-    origin: process.env.CLIENT_URL || 'http://localhost:5173', // Only allow your React frontend to connect
+    origin: (origin, callback) => {
+        if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    }, // Only allow your React frontend(s) to connect
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']

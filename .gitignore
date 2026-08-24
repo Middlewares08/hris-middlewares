@@ -3,5 +3,6 @@ dist/
 .DS_Store
 
 # Block environment configuration files from tracking
-hris-frontend/.env
-hris-backend/.env
+.env
+.env.*
+!.env.example
