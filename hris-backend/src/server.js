@@ -85,6 +85,11 @@ const attendanceRoutes = require("../src/route/admin/attendanceRoutes");
 app.use('/attendance', attendanceRoutes);
 
 
+// LEAVE REQUESTS
+const leaveRequestRoutes = require("../src/route/admin/leaveRequestRoutes");
+app.use('/leave-requests', leaveRequestRoutes);
+
+
 // ACTIVITY LOGS
 const activityLogRoutes = require("../src/route/admin/activityLogRoutes");
 app.use('/activity-logs', activityLogRoutes);
