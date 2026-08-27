@@ -16,6 +16,12 @@ import Resume from './pages/Employee/StatutoryAndCompliance/Resume'
 import Benifits from './pages/Employee/StatutoryAndCompliance/Benifits'
 import { can } from './utils/permissionCheck'
 import Index from './pages/Employee/StatutoryAndCompliance/Index'
+import PayComponents from './pages/Payroll/PayComponents'
+import EmployeeCompensation from './pages/Payroll/EmployeeCompensation'
+import StatutoryTables from './pages/Payroll/StatutoryTables'
+import PayPeriods from './pages/Payroll/PayPeriods'
+import PayrollRuns from './pages/Payroll/PayrollRuns'
+import PayrollRunDetail from './pages/Payroll/PayrollRunDetail'
 
 const ProtectedElement = ({ element, permission }) => {
     return can(permission) ? element : <Navigate to="/dashboard" replace />;
@@ -78,6 +84,15 @@ function App() {
           </Route>
           <Route path="lookups">
             <Route path="positions" element={<Position />} />
+          </Route>
+
+          <Route path="payroll">
+            <Route path="runs" element={<ProtectedElement element={<PayrollRuns />} permission="run-payroll:view" />} />
+            <Route path="runs/:uuid" element={<ProtectedElement element={<PayrollRunDetail />} permission="run-payroll:view" />} />
+            <Route path="periods" element={<ProtectedElement element={<PayPeriods />} permission="run-payroll:view" />} />
+            <Route path="components" element={<ProtectedElement element={<PayComponents />} permission="payroll-and-compensation:view" />} />
+            <Route path="compensation" element={<ProtectedElement element={<EmployeeCompensation />} permission="payroll-and-compensation:view" />} />
+            <Route path="statutory-tables" element={<ProtectedElement element={<StatutoryTables />} permission="statutory-and-compliance:view" />} />
           </Route>
 
         </Route>

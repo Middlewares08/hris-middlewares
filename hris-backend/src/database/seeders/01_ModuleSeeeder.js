@@ -123,6 +123,14 @@ exports.seed = async function(knex) {
             updated_by: null
         },
         {
+            name: 'Announcements',
+            slug: 'announcements',
+            description: 'Company-wide announcements broadcast to the employee dashboard feed.',
+            access_type: 'ADMIN',
+            created_by: 1,
+            updated_by: null
+        },
+        {
             name: 'Maintenance',
             slug: 'maintenance',
             description: 'Core system maintenance workspace structures and foundational business configurations.',

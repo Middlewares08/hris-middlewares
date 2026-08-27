@@ -95,6 +95,16 @@ const activityLogRoutes = require("../src/route/admin/activityLogRoutes");
 app.use('/activity-logs', activityLogRoutes);
 
 
+// ANNOUNCEMENTS
+const announcementRoutes = require("../src/route/admin/announcementRoutes");
+app.use('/announcements', announcementRoutes);
+
+
+// PAYROLL
+const payrollRoutes = require("../src/route/admin/payrollRoutes");
+app.use('/payroll', payrollRoutes);
+
+
 // ==========================================
 // Server Initialization
 // ==========================================

@@ -8,7 +8,8 @@ import {
     LogOut,
     ChevronDown,
     GroupIcon,
-    CogIcon
+    CogIcon,
+    Wallet
 } from 'lucide-react';
 import { useLogout } from '../hooks/useLogout';
 import Header from './Header';
@@ -65,9 +66,21 @@ const Dashboard = () => {
                 }
             ]
         },
-        { 
-            icon: <Wrench className='hover:cursor-pointer' size={20} />, 
-            label: 'Maintenance', 
+        {
+            icon: <Wallet className='hover:cursor-pointer' size={20} />,
+            label: 'Payroll & Compensation',
+            path: '/dashboard/payroll',
+            children: [
+                { label: 'Payroll Runs', path: '/dashboard/payroll/runs', permission: 'run-payroll:view' },
+                { label: 'Pay Periods', path: '/dashboard/payroll/periods', permission: 'run-payroll:view' },
+                { label: 'Employee Compensation', path: '/dashboard/payroll/compensation', permission: 'payroll-and-compensation:view' },
+                { label: 'Pay Components', path: '/dashboard/payroll/components', permission: 'payroll-and-compensation:view' },
+                { label: 'Statutory Tables', path: '/dashboard/payroll/statutory-tables', permission: 'statutory-and-compliance:view' },
+            ]
+        },
+        {
+            icon: <Wrench className='hover:cursor-pointer' size={20} />,
+            label: 'Maintenance',
             path: '/dashboard/maintenance', 
             permission: 'maintenance:view',
             children: [
