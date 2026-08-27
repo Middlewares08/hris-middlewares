@@ -14,7 +14,7 @@ app.use(helmet()); // Secure HTTP headers to shield against common vulnerabiliti
 
 const allowedOrigins = process.env.CLIENT_URL
     ? process.env.CLIENT_URL.split(',').map((origin) => origin.trim())
-    : ['http://localhost:5173', 'http://localhost:5175'];
+    : ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175'];
 
 app.use(cors({
     origin: (origin, callback) => {
@@ -78,6 +78,16 @@ app.use('/lookups', lookupRoutes);
 // EMPLOYEE
 const employeeRoutes = require("../src/route/admin/employeeRoutes");
 app.use('/employee', employeeRoutes);
+
+
+// ATTENDANCE
+const attendanceRoutes = require("../src/route/admin/attendanceRoutes");
+app.use('/attendance', attendanceRoutes);
+
+
+// ACTIVITY LOGS
+const activityLogRoutes = require("../src/route/admin/activityLogRoutes");
+app.use('/activity-logs', activityLogRoutes);
 
 
 // ==========================================

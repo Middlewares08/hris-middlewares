@@ -21,22 +21,23 @@ const {
 } = require('../../module/admin/controller/lookups/PositionController');
 
 const { verifyToken } = require('../../middleware/authMiddleware');
+const { requirePermission } = require('../../middleware/permissionMiddleware');
 
 router.use(verifyToken);
 
 // DEPARTMENT
-router.get('/departments', getAllDepartments);
-router.get('/departments/:uuid', getDepartmentByUuid); // 🎯 Swapped parameter token
-router.post('/departments/', createDepartment);
-router.put('/departments/:uuid', updateDepartment);    // 🎯 Swapped parameter token
-router.delete('/departments/:uuid', deleteDepartment); // 🎯 Swapped parameter token
+router.get('/departments', requirePermission('departments:view'), getAllDepartments);
+router.get('/departments/:uuid', requirePermission('departments:view'), getDepartmentByUuid);
+router.post('/departments/', requirePermission('departments:create'), createDepartment);
+router.put('/departments/:uuid', requirePermission('departments:edit'), updateDepartment);
+router.delete('/departments/:uuid', requirePermission('departments:delete'), deleteDepartment);
 
 // POSITION
-router.get('/positions', getPositions);
-router.post('/positions', createPosition);
-router.get('/positions/:uuid', getPositionByUuid);
-router.put('/positions/:uuid', updatePosition);
-router.delete('/positions/:uuid', deletePosition);
-router.get('/positions/list/data', getPositionsWithNoPagination);
+router.get('/positions', requirePermission('positions:view'), getPositions);
+router.post('/positions', requirePermission('positions:create'), createPosition);
+router.get('/positions/:uuid', requirePermission('positions:view'), getPositionByUuid);
+router.put('/positions/:uuid', requirePermission('positions:edit'), updatePosition);
+router.delete('/positions/:uuid', requirePermission('positions:delete'), deletePosition);
+router.get('/positions/list/data', requirePermission('positions:view'), getPositionsWithNoPagination);
 
 module.exports = router;
