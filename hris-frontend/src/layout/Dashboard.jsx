@@ -9,7 +9,9 @@ import {
     ChevronDown,
     GroupIcon,
     CogIcon,
-    Wallet
+    Wallet,
+    Megaphone,
+    Clock
 } from 'lucide-react';
 import { useLogout } from '../hooks/useLogout';
 import Header from './Header';
@@ -77,6 +79,18 @@ const Dashboard = () => {
                 { label: 'Pay Components', path: '/dashboard/payroll/components', permission: 'payroll-and-compensation:view' },
                 { label: 'Statutory Tables', path: '/dashboard/payroll/statutory-tables', permission: 'statutory-and-compliance:view' },
             ]
+        },
+        {
+            icon: <Megaphone className='hover:cursor-pointer' size={20} />,
+            label: 'Announcements',
+            path: '/dashboard/announcements',
+            permission: 'announcements:view',
+        },
+        {
+            icon: <Clock className='hover:cursor-pointer' size={20} />,
+            label: 'Overtime Tracker',
+            path: '/dashboard/overtime',
+            permission: 'overtime-tracker:view',
         },
         {
             icon: <Wrench className='hover:cursor-pointer' size={20} />,

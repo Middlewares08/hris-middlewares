@@ -22,6 +22,8 @@ import StatutoryTables from './pages/Payroll/StatutoryTables'
 import PayPeriods from './pages/Payroll/PayPeriods'
 import PayrollRuns from './pages/Payroll/PayrollRuns'
 import PayrollRunDetail from './pages/Payroll/PayrollRunDetail'
+import Announcements from './pages/Announcement/Announcements'
+import OvertimeRequests from './pages/Overtime/OvertimeRequests'
 
 const ProtectedElement = ({ element, permission }) => {
     return can(permission) ? element : <Navigate to="/dashboard" replace />;
@@ -74,6 +76,10 @@ function App() {
             </Route>
           </Route>
          
+
+          <Route path="announcements" element={<ProtectedElement element={<Announcements />} permission="announcements:view" />} />
+
+          <Route path="overtime" element={<ProtectedElement element={<OvertimeRequests />} permission="overtime-tracker:view" />} />
 
           <Route path="maintenance">
             <Route path="roles-and-permission" element={<RolesAndPermission />} />

@@ -90,6 +90,11 @@ const leaveRequestRoutes = require("../src/route/admin/leaveRequestRoutes");
 app.use('/leave-requests', leaveRequestRoutes);
 
 
+// OVERTIME REQUESTS
+const overtimeRequestRoutes = require("../src/route/admin/overtimeRequestRoutes");
+app.use('/overtime-requests', overtimeRequestRoutes);
+
+
 // ACTIVITY LOGS
 const activityLogRoutes = require("../src/route/admin/activityLogRoutes");
 app.use('/activity-logs', activityLogRoutes);

@@ -8,5 +8,17 @@ export const systemService = {
     initializeSystem: async () => {
         const { data } = await apiClient.post('/system/init');
         return data;
-    }
+    },
+
+    /** All application settings / feature flags (admin). Returns { values, rows }. */
+    getSettings: async () => {
+        const { data } = await apiClient.get('/system/settings');
+        return data;
+    },
+
+    /** Set one known setting key. */
+    updateSetting: async (key, value) => {
+        const { data } = await apiClient.put(`/system/settings/${key}`, { value });
+        return data;
+    },
 };

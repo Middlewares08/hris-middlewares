@@ -26,6 +26,8 @@ const EmployeeCompensation = require('../../../database/models/payroll/EmployeeC
 const EmployeeComponentAssignment = require('../../../database/models/payroll/EmployeeComponentAssignment');
 const StatutoryTable = require('../../../database/models/payroll/StatutoryTable');
 const Employee = require('../../../database/models/employee/Employee');
+const OvertimeRequest = require('../../../database/models/attendance/OvertimeRequest');
+const Setting = require('../../../database/models/system/Setting');
 
 const LATE_CUTOFF = '09:15'; // mirrors attendance/Attendance.js
 const THIRTEENTH_MONTH_TAX_EXEMPT_CEILING = 90000; // NIRC sec. 32(B)(7)(e)
@@ -81,6 +83,9 @@ async function calculateRun(runRef, { employeeIds = null, actorId = null } = {})
     ]);
     const statutory = { sss, phic, hdmf, wtax };
 
+    // Feature flag — when Overtime is off, approved OT filings are ignored by payroll.
+    const otEnabled = await Setting.getBool('overtime.enabled', true);
+
     const componentRows = await PayComponent.query().where('is_deleted', false);
     const componentByCode = new Map(componentRows.map((c) => [c.code, c]));
 
@@ -109,7 +114,7 @@ async function calculateRun(runRef, { employeeIds = null, actorId = null } = {})
             try {
                 const result = await buildEmployeePayslip({
                     trx, run, period, periodStart, periodEnd, perMonth,
-                    employeeId, componentByCode, statutory, actorId,
+                    employeeId, componentByCode, statutory, otEnabled, actorId,
                 });
                 if (result.skipped) skipped.push({ employee_id: employeeId, reason: result.reason });
                 else processed.push(result.summary);
@@ -162,7 +167,7 @@ async function calculateRun(runRef, { employeeIds = null, actorId = null } = {})
  * ========================================================== */
 
 async function buildEmployeePayslip(ctx) {
-    const { trx, run, periodStart, periodEnd, perMonth, employeeId, componentByCode, statutory, actorId } = ctx;
+    const { trx, run, periodStart, periodEnd, perMonth, employeeId, componentByCode, statutory, otEnabled, actorId } = ctx;
 
     const employee = await Employee.query(trx)
         .findById(employeeId)
@@ -215,7 +220,7 @@ async function buildEmployeePayslip(ctx) {
         basicAmount = gross13;
     } else {
         // --- Attendance aggregates for the covered period ---
-        att = await aggregateAttendance(trx, employeeId, periodStart, periodEnd);
+        att = await aggregateAttendance(trx, employeeId, periodStart, periodEnd, otEnabled);
 
         // --- Basic pay ---
         const basic = computeBasicPay({ comp, monthlyEq, perMonth, att, dailyRate, hourlyRate });
@@ -393,7 +398,7 @@ async function buildEmployeePayslip(ctx) {
  * Attendance
  * ========================================================== */
 
-async function aggregateAttendance(trx, employeeId, start, end) {
+async function aggregateAttendance(trx, employeeId, start, end, otEnabled = false) {
     const rows = await trx('attendance.attendance_logs')
         .where('employee_id', employeeId)
         .andWhere('is_deleted', false)
@@ -420,13 +425,19 @@ async function aggregateAttendance(trx, employeeId, start, end) {
         }
     }
 
+    // OT is never inferred from long punches — only approved filings count, and only
+    // while the Overtime feature flag is on.
+    const overtimeHours = otEnabled
+        ? await OvertimeRequest.approvedHoursForPeriod(trx, employeeId, start, end)
+        : 0;
+
     return {
         worked_days: round2(workedDays),
         worked_hours: round2(workedHours),
         absent_days: round2(absentDays),
         late_minutes: Math.round(lateMinutes),
         undertime_minutes: 0,
-        overtime_hours: 0, // OT is filed/approved elsewhere — never auto-derived
+        overtime_hours: round2(overtimeHours),
     };
 }
 
