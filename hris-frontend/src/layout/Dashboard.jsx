@@ -44,9 +44,14 @@ const Dashboard = () => {
                     permission: 'employee-management:view' 
                 },
                 {
-                    label: 'Statutory & Compliance', 
-                    path: '/dashboard/employee/statutory-and-compliance', 
-                    permission: 'statutory-and-compliance:view' 
+                    label: 'Statutory & Compliance',
+                    path: '/dashboard/employee/statutory-and-compliance',
+                    permission: 'statutory-and-compliance:view'
+                },
+                {
+                    label: 'Documents',
+                    path: '/dashboard/employee/documents',
+                    permission: 'employee-documents:view'
                 }
             ]
         },

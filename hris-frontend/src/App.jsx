@@ -24,6 +24,7 @@ import PayrollRuns from './pages/Payroll/PayrollRuns'
 import PayrollRunDetail from './pages/Payroll/PayrollRunDetail'
 import Announcements from './pages/Announcement/Announcements'
 import OvertimeRequests from './pages/Overtime/OvertimeRequests'
+import EmployeeDocuments from './pages/Employee/Documents'
 
 const ProtectedElement = ({ element, permission }) => {
     return can(permission) ? element : <Navigate to="/dashboard" replace />;
@@ -53,10 +54,14 @@ function App() {
 
           {/* Matches "/dashboard/employee" */}
           <Route path="employee">
-            <Route 
+            <Route
               index
                path="lists"
-              element={<ProtectedElement element={<Employee />} permission="employee-management:view" />} 
+              element={<ProtectedElement element={<Employee />} permission="employee-management:view" />}
+            />
+            <Route
+              path="documents"
+              element={<ProtectedElement element={<EmployeeDocuments />} permission="employee-documents:view" />}
             />
             <Route path="/dashboard/employee/statutory-and-compliance" element={<StatutoryAndCompliance />}>
               <Route index element={<Index />} />

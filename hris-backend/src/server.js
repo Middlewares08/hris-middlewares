@@ -95,6 +95,11 @@ const overtimeRequestRoutes = require("../src/route/admin/overtimeRequestRoutes"
 app.use('/overtime-requests', overtimeRequestRoutes);
 
 
+// EMPLOYEE DOCUMENTS (library + requests, self-service + admin)
+const documentRoutes = require("../src/route/admin/documentRoutes");
+app.use('/documents', documentRoutes);
+
+
 // ACTIVITY LOGS
 const activityLogRoutes = require("../src/route/admin/activityLogRoutes");
 app.use('/activity-logs', activityLogRoutes);
