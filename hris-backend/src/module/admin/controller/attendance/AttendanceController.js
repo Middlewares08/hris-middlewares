@@ -1,5 +1,6 @@
 const Attendance = require('../../../../database/models/attendance/Attendance');
 const { logActivity } = require('../../../../utils/activityLogger');
+const { verifyFacePunch } = require('../../../../utils/facePunch');
 
 const formatTime = (iso) => new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 
@@ -153,11 +154,16 @@ const clockIn = async (req, res) => {
             return res.status(409).json({ success: false, message: 'You have already clocked in today.' });
         }
 
+        const face = await verifyFacePunch({ req, employeeId });
+        if (face.required && !face.ok) {
+            return res.status(face.status).json({ success: false, message: face.message, faceRequired: true });
+        }
+
         const log = await Attendance.query().insertAndFetch({
             employee_id: employeeId,
             log_date: today,
             time_in: new Date().toISOString(),
-            source: req.body?.source || 'web',
+            source: face.ok ? 'biometric' : (req.body?.source || 'web'),
             created_by: employeeId
         });
 
@@ -166,7 +172,12 @@ const clockIn = async (req, res) => {
             action: 'attendance.clock_in',
             category: 'attendance',
             description: `Clocked in at ${formatTime(log.time_in)}`,
-            metadata: { attendance_uuid: log.uuid, log_date: today, status: log.status },
+            metadata: {
+                attendance_uuid: log.uuid,
+                log_date: today,
+                status: log.status,
+                ...(face.ok ? { face_similarity: face.similarity, face_method: face.method, ...(face.livenessConfidence != null ? { liveness_confidence: face.livenessConfidence } : {}) } : {}),
+            },
             req
         });
 
@@ -199,6 +210,11 @@ const clockOut = async (req, res) => {
             return res.status(409).json({ success: false, message: 'You have already clocked out today.' });
         }
 
+        const face = await verifyFacePunch({ req, employeeId });
+        if (face.required && !face.ok) {
+            return res.status(face.status).json({ success: false, message: face.message, faceRequired: true });
+        }
+
         const log = await Attendance.query().patchAndFetchById(existing.id, {
             time_out: new Date().toISOString(),
             updated_by: employeeId
@@ -209,7 +225,12 @@ const clockOut = async (req, res) => {
             action: 'attendance.clock_out',
             category: 'attendance',
             description: `Clocked out at ${formatTime(log.time_out)}`,
-            metadata: { attendance_uuid: log.uuid, log_date: today, worked_hours: log.worked_hours },
+            metadata: {
+                attendance_uuid: log.uuid,
+                log_date: today,
+                worked_hours: log.worked_hours,
+                ...(face.ok ? { face_similarity: face.similarity, face_method: face.method, ...(face.livenessConfidence != null ? { liveness_confidence: face.livenessConfidence } : {}) } : {}),
+            },
             req
         });
 

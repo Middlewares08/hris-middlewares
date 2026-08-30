@@ -11,7 +11,8 @@ import {
     CogIcon,
     Wallet,
     Megaphone,
-    Clock
+    Clock,
+    ScanFace
 } from 'lucide-react';
 import { useLogout } from '../hooks/useLogout';
 import Header from './Header';
@@ -43,11 +44,11 @@ const Dashboard = () => {
                     path: '/dashboard/employee/lists', 
                     permission: 'employee-management:view' 
                 },
-                {
-                    label: 'Statutory & Compliance',
-                    path: '/dashboard/employee/statutory-and-compliance',
-                    permission: 'statutory-and-compliance:view'
-                },
+                // {
+                //     label: 'Statutory & Compliance',
+                //     path: '/dashboard/employee/statutory-and-compliance',
+                //     permission: 'statutory-and-compliance:view'
+                // },
                 {
                     label: 'Documents',
                     path: '/dashboard/employee/documents',
@@ -96,6 +97,12 @@ const Dashboard = () => {
             label: 'Overtime Tracker',
             path: '/dashboard/overtime',
             permission: 'overtime-tracker:view',
+        },
+        {
+            icon: <ScanFace className='hover:cursor-pointer' size={20} />,
+            label: 'Attendance Kiosk',
+            path: '/dashboard/attendance-kiosk',
+            permission: 'attendance-kiosk:view',
         },
         {
             icon: <Wrench className='hover:cursor-pointer' size={20} />,

@@ -15,10 +15,13 @@ const {
 
 const { verifyToken } = require('../../middleware/authMiddleware');
 const { requirePermission } = require('../../middleware/permissionMiddleware');
+const { singleFile } = require('../../middleware/uploadMiddleware');
 
-// SELF-SERVICE — just needs to know who the caller is, no admin permission required
-router.post('/clock-in', verifyToken, clockIn);
-router.post('/clock-out', verifyToken, clockOut);
+// SELF-SERVICE — just needs to know who the caller is, no admin permission required.
+// `singleFile('image')` parses an optional face-verification photo (multipart);
+// JSON / base64 bodies pass straight through.
+router.post('/clock-in', verifyToken, singleFile('image'), clockIn);
+router.post('/clock-out', verifyToken, singleFile('image'), clockOut);
 router.get('/me', verifyToken, getMyAttendance); // 🎯 Must be declared before '/:uuid' or it'll be swallowed as a uuid param
 
 // ATTENDANCE LOGS (admin/manager access, gated by the 'Attendance Logs' module permissions)

@@ -13,6 +13,8 @@ import { BLANK } from '../../utils/constants';
 import { basicInfoValidationSchema, employmentValidationSchema } from '../../validation/employee-validation';
 import CustomForm from '../../components/CustomForm';
 import { useRef } from 'react';
+import FaceRecognitionSection from './FaceRecognitionSection';
+import FaceClockInToggle from './FaceClockInToggle';
 
 const Employees = () => {
     const basicInfoRef = useRef(null);
@@ -295,6 +297,10 @@ const Employees = () => {
                         </span>
                     </div>
                 </div>
+
+                <hr className="border-gray-100" />
+
+                <FaceRecognitionSection employee={employee} />
             </div>
         );
     };
@@ -338,6 +344,9 @@ const Employees = () => {
                     <ShieldAlert size={16} /> {error}
                 </div>
             )}
+
+            <FaceClockInToggle />
+
 
             {/* Custom Server-Side DataTable */}
             <CustomDataTable

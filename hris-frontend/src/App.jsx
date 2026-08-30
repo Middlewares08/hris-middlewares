@@ -25,6 +25,8 @@ import PayrollRunDetail from './pages/Payroll/PayrollRunDetail'
 import Announcements from './pages/Announcement/Announcements'
 import OvertimeRequests from './pages/Overtime/OvertimeRequests'
 import EmployeeDocuments from './pages/Employee/Documents'
+import KioskView from './pages/Kiosk/KioskView'
+import KioskAdmin from './pages/Kiosk/KioskAdmin'
 
 const ProtectedElement = ({ element, permission }) => {
     return can(permission) ? element : <Navigate to="/dashboard" replace />;
@@ -38,6 +40,9 @@ function App() {
       <Routes>
         <Route path="/auth/login" element={<Login />} />
         <Route path="/"  element={<Landing />} />
+
+        {/* Unattended attendance kiosk — its own device token, no admin login */}
+        <Route path="/kiosk" element={<KioskView />} />
 
         <Route
           path="/dashboard"
@@ -81,6 +86,8 @@ function App() {
             </Route>
           </Route>
          
+
+          <Route path="attendance-kiosk" element={<ProtectedElement element={<KioskAdmin />} permission="attendance-kiosk:view" />} />
 
           <Route path="announcements" element={<ProtectedElement element={<Announcements />} permission="announcements:view" />} />
 

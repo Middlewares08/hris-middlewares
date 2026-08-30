@@ -10,27 +10,29 @@ const {
 const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 
 /* ============================================================
- * AWS S3 object storage for employee documents.
+ * AWS S3 object storage.
  *
- * Local vs live are the SAME bucket, split by AWS_S3_KEY_PREFIX
- * ("local/…" on a dev machine, "live/…" in production) so the two
- * environments never collide. Point a dev box at its own bucket by
- * just changing AWS_S3_BUCKET instead.
+ * The document library uses AWS_S3_BUCKET. Other features can point at
+ * their own bucket by passing `{ bucket, prefix }` to any function below
+ * (see FACE_S3_BUCKET, used by the face-recognition module) — one client
+ * is cached per region/bucket-agnostic config, the bucket is just a param.
+ *
+ * Local vs live are SEPARATE buckets, set per environment via .env.
  * ========================================================== */
 
 const REGION = process.env.AWS_REGION || 'ap-southeast-1';
 const BUCKET = process.env.AWS_S3_BUCKET || '';
-// Optional folder every object is nested under. Leave AWS_S3_KEY_PREFIX blank
-// when local and live already use separate buckets (hris-local / hris-live).
+// Optional folder every object is nested under (blank when local/live use separate buckets).
 const PREFIX = String(process.env.AWS_S3_KEY_PREFIX || '').replace(/^\/+|\/+$/g, '');
 const PRESIGN_EXPIRES = parseInt(process.env.AWS_S3_PRESIGN_EXPIRES, 10) || 3600;
+
+// Dedicated bucket for facial-biometric reference images (face-recognition module).
+const FACE_S3_BUCKET = process.env.FACE_S3_BUCKET || '';
+const FACE_S3_KEY_PREFIX = String(process.env.FACE_S3_KEY_PREFIX || '').replace(/^\/+|\/+$/g, '');
 
 let _client = null;
 
 const client = () => {
-    if (!BUCKET) {
-        throw new Error('AWS_S3_BUCKET is not configured — check your .env.');
-    }
     if (!_client) {
         _client = new S3Client({
             region: REGION,
@@ -48,16 +50,25 @@ const client = () => {
     return _client;
 };
 
+/** Resolve the effective bucket for a call, throwing a clear error when unset. */
+const resolveBucket = (bucket) => {
+    const b = bucket || BUCKET;
+    if (!b) {
+        throw new Error('No S3 bucket configured — check AWS_S3_BUCKET / FACE_S3_BUCKET in your .env.');
+    }
+    return b;
+};
+
 /** Filesystem-safe, length-capped version of an uploaded file name. */
 const safeName = (name = 'file') =>
     (path.basename(String(name)).replace(/[^\w.\-]+/g, '_').slice(-120) || 'file');
 
 /**
- * Build an object key (optionally under AWS_S3_KEY_PREFIX), e.g.
+ * Build an object key (optionally under a prefix), e.g.
  *   documents/employee/42/9f2c1b…-nbi_clearance.pdf
  */
-const buildKey = (segments = [], fileName = 'file') => {
-    const clean = [PREFIX, ...segments]
+const buildKey = (segments = [], fileName = 'file', prefix = PREFIX) => {
+    const clean = [prefix, ...segments]
         .map((s) => String(s).replace(/[^\w\-]+/g, ''))
         .filter(Boolean);
     return [...clean, `${crypto.randomUUID()}-${safeName(fileName)}`].join('/');
@@ -71,13 +82,14 @@ const isStoredKey = (v) =>
 
 /**
  * Upload a buffer to S3 and return the stored object key.
- * @param {{ buffer: Buffer, contentType?: string, keySegments?: Array, fileName?: string }} opts
+ * @param {{ buffer: Buffer, contentType?: string, keySegments?: Array, fileName?: string, bucket?: string, prefix?: string }} opts
  */
-async function uploadBuffer({ buffer, contentType, keySegments = [], fileName = 'file' }) {
-    const Key = buildKey(keySegments, fileName);
+async function uploadBuffer({ buffer, contentType, keySegments = [], fileName = 'file', bucket, prefix }) {
+    const Bucket = resolveBucket(bucket);
+    const Key = buildKey(keySegments, fileName, prefix ?? PREFIX);
     await client().send(
         new PutObjectCommand({
-            Bucket: BUCKET,
+            Bucket,
             Key,
             Body: buffer,
             ContentType: contentType || 'application/octet-stream',
@@ -86,10 +98,18 @@ async function uploadBuffer({ buffer, contentType, keySegments = [], fileName = 
     return Key;
 }
 
+/** Fetch an object's bytes as a Buffer (used for face verification). */
+async function getObjectBuffer(key, { bucket } = {}) {
+    const out = await client().send(
+        new GetObjectCommand({ Bucket: resolveBucket(bucket), Key: key }),
+    );
+    return Buffer.from(await out.Body.transformToByteArray());
+}
+
 /** Short-lived presigned GET URL for an object key. */
-async function getPresignedUrl(key, { expiresIn = PRESIGN_EXPIRES, download = false, fileName } = {}) {
+async function getPresignedUrl(key, { expiresIn = PRESIGN_EXPIRES, download = false, fileName, bucket } = {}) {
     const command = new GetObjectCommand({
-        Bucket: BUCKET,
+        Bucket: resolveBucket(bucket),
         Key: key,
         ...(download
             ? { ResponseContentDisposition: `attachment; filename="${safeName(fileName || key)}"` }
@@ -99,10 +119,10 @@ async function getPresignedUrl(key, { expiresIn = PRESIGN_EXPIRES, download = fa
 }
 
 /** Best-effort delete — never throws (callers treat storage cleanup as non-critical). */
-async function deleteObject(key) {
+async function deleteObject(key, { bucket } = {}) {
     if (!isStoredKey(key)) return;
     try {
-        await client().send(new DeleteObjectCommand({ Bucket: BUCKET, Key: key }));
+        await client().send(new DeleteObjectCommand({ Bucket: resolveBucket(bucket), Key: key }));
     } catch (err) {
         console.error('S3 deleteObject failed for', key, '-', err.message);
     }
@@ -114,11 +134,11 @@ async function deleteObject(key) {
  *  - S3 object key          → short-lived presigned GET URL
  *  - already an absolute URL → returned unchanged
  */
-async function resolveFileUrl(fileLink, { fileName, download = false } = {}) {
+async function resolveFileUrl(fileLink, { fileName, download = false, bucket } = {}) {
     if (!fileLink) return null;
     if (isDataUri(fileLink) || isHttpUrl(fileLink)) return fileLink;
     try {
-        return await getPresignedUrl(fileLink, { fileName, download });
+        return await getPresignedUrl(fileLink, { fileName, download, bucket });
     } catch (err) {
         console.error('Presign failed for', fileLink, '-', err.message);
         return null;
@@ -128,10 +148,13 @@ async function resolveFileUrl(fileLink, { fileName, download = false } = {}) {
 module.exports = {
     S3_BUCKET: BUCKET,
     S3_KEY_PREFIX: PREFIX,
+    FACE_S3_BUCKET,
+    FACE_S3_KEY_PREFIX,
     isDataUri,
     isStoredKey,
     buildKey,
     uploadBuffer,
+    getObjectBuffer,
     getPresignedUrl,
     deleteObject,
     resolveFileUrl,

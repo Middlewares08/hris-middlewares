@@ -10,4 +10,14 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
+  optimizeDeps: {
+    // The kiosk's Face Liveness check is lazy-imported, so Vite would only
+    // discover these on first visit to /kiosk and then 504 the in-flight
+    // request while it re-optimizes. Pre-bundle them at startup instead.
+    include: [
+      'aws-amplify',
+      '@aws-amplify/ui-react',
+      '@aws-amplify/ui-react-liveness',
+    ],
+  },
 });

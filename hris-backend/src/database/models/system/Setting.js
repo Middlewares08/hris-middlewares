@@ -7,6 +7,15 @@ const BaseModel = require('../BaseModel');
  */
 const REGISTRY = {
     'overtime.enabled': { type: 'boolean', default: true, public: true },
+    // When on, an enrolled employee must pass face verification to clock in/out.
+    // Employees without an active face enrollment are unaffected (gradual rollout).
+    'face.clockin_enabled': { type: 'boolean', default: false, public: true },
+    // When on (and face.clockin_enabled is on, and FACE_LIVENESS_ROLE_ARN is set),
+    // the face check is an active liveness challenge rather than a single photo.
+    'face.liveness_enabled': { type: 'boolean', default: false, public: true },
+    // Master switch for the shared attendance kiosk (1:N face identification).
+    // Admin-only: the kiosk reads it through its own token-authed /kiosk/config.
+    'face.kiosk_enabled': { type: 'boolean', default: false, public: false },
 };
 
 class Setting extends BaseModel {

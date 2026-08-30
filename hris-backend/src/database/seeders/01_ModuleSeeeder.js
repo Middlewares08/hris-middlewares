@@ -43,6 +43,22 @@ exports.seed = async function(knex) {
             updated_by: null
         },
         {
+            name: 'Face Recognition',
+            slug: 'face-recognition',
+            description: 'Facial biometric enrollment for time & attendance clock-in.',
+            access_type: 'ADMIN',
+            created_by: 1,
+            updated_by: null
+        },
+        {
+            name: 'Attendance Kiosk',
+            slug: 'attendance-kiosk',
+            description: 'Shared face-recognition clock-in/out kiosk devices.',
+            access_type: 'ADMIN',
+            created_by: 1,
+            updated_by: null
+        },
+        {
             name: 'Shift & Rostering',
             slug: 'shift-and-rostering',
             description: 'Schedules, holidays, rotations.',

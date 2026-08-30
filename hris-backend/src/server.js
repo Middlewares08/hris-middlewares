@@ -26,7 +26,7 @@ app.use(cors({
     }, // Only allow your React frontend(s) to connect
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-Kiosk-Token']
 }));
 
 app.use(express.json()); // Parses incoming json request payloads automatically
@@ -83,6 +83,21 @@ app.use('/employee', employeeRoutes);
 // ATTENDANCE
 const attendanceRoutes = require("../src/route/admin/attendanceRoutes");
 app.use('/attendance', attendanceRoutes);
+
+
+// FACE RECOGNITION (biometric enrollment for clock-in)
+const faceEnrollmentRoutes = require("../src/route/admin/faceEnrollmentRoutes");
+app.use('/face-enrollment', faceEnrollmentRoutes);
+
+
+// FACE LIVENESS (anti-spoofing challenge sessions)
+const faceLivenessRoutes = require("../src/route/admin/faceLivenessRoutes");
+app.use('/face-liveness', faceLivenessRoutes);
+
+
+// ATTENDANCE KIOSK (shared face-recognition clock-in/out device)
+const kioskRoutes = require("../src/route/admin/kioskRoutes");
+app.use('/kiosk', kioskRoutes);
 
 
 // LEAVE REQUESTS
