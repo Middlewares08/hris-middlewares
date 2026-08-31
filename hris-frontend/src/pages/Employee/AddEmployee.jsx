@@ -249,7 +249,6 @@ export const Employement = ({ payload, onChange, errors, touched }) => {
         return positionList.find(prev => prev?.id === payload?.position) || null;
     }, [payload?.position, positionList]);
 
-    console.log('errors, touched: ',errors, touched)
     return (
         <>
         
