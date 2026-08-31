@@ -15,7 +15,11 @@ export const basicInfoValidationSchema = yup.object().shape({
         .string()
         .trim()
         .required("Email address is required")
-        .email("Please enter a valid email address")
+        .email("Please enter a valid email address"),
+    birth_date: yup
+        .mixed()
+        .required("Birthdate is required")
+        .test("not-empty", "Birthdate is required", (value) => value !== null && value !== undefined && value !== "")
 });
 
 
@@ -28,7 +32,15 @@ export const employmentValidationSchema = yup.object().shape({
         .required("Date hired is required"),
     position: yup
         .number()
-        .required("Position is required")
+        .required("Position is required"),
+    pay_rate: yup
+        .number()
+        .typeError("Pay rate must be a number")
+        .required("Pay rate is required")
+        .min(0, "Pay rate cannot be negative"),
+    rate_type: yup
+        .string()
+        .required("Rate type is required")
 });
 
 

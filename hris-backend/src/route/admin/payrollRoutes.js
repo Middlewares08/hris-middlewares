@@ -33,6 +33,9 @@ const PROCESS = 'run-payroll';
  * ---------------------------------------------------------------- */
 router.get('/payslips/me', verifyToken, Payslip.getMine);
 router.get('/payslips/me/:uuid', verifyToken, Payslip.getMineByUuid);
+// The nearest upcoming pay date — drives the employee dashboard "Next Payday" tile.
+// Declared before '/periods/:uuid' so 'next' isn't captured as a uuid param.
+router.get('/periods/next', verifyToken, Period.getNext);
 
 /* ---------------------------------------------------------------- *
  * PAY COMPONENTS

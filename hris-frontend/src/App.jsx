@@ -24,9 +24,12 @@ import PayrollRuns from './pages/Payroll/PayrollRuns'
 import PayrollRunDetail from './pages/Payroll/PayrollRunDetail'
 import Announcements from './pages/Announcement/Announcements'
 import OvertimeRequests from './pages/Overtime/OvertimeRequests'
+import AttendanceLogs from './pages/Attendance/AttendanceLogs'
 import EmployeeDocuments from './pages/Employee/Documents'
+import BankDetails from './pages/Employee/BankDetails'
 import KioskView from './pages/Kiosk/KioskView'
 import KioskAdmin from './pages/Kiosk/KioskAdmin'
+import NotFound from './components/NotFound'
 
 const ProtectedElement = ({ element, permission }) => {
     return can(permission) ? element : <Navigate to="/dashboard" replace />;
@@ -68,6 +71,22 @@ function App() {
               path="documents"
               element={<ProtectedElement element={<EmployeeDocuments />} permission="employee-documents:view" />}
             />
+            <Route
+              path="compensation"
+              element={<ProtectedElement element={<EmployeeCompensation />} permission="payroll-and-compensation:view" />}
+            />
+            <Route
+              path="bank-details"
+              element={<ProtectedElement element={<BankDetails />} permission="payroll-and-compensation:view" />}
+            />
+            <Route
+              path="departments"
+              element={<ProtectedElement element={<Department />} permission="departments:view" />}
+            />
+            <Route
+              path="positions"
+              element={<ProtectedElement element={<Position />} permission="positions:view" />}
+            />
             <Route path="/dashboard/employee/statutory-and-compliance" element={<StatutoryAndCompliance />}>
               <Route index element={<Index />} />
               
@@ -93,15 +112,10 @@ function App() {
 
           <Route path="overtime" element={<ProtectedElement element={<OvertimeRequests />} permission="overtime-tracker:view" />} />
 
+          <Route path="attendance-logs" element={<ProtectedElement element={<AttendanceLogs />} permission="attendance-logs:view" />} />
+
           <Route path="maintenance">
             <Route path="roles-and-permission" element={<RolesAndPermission />} />
-          </Route>
-
-          <Route path="lookups">
-            <Route path="departments" element={<Department />} />
-          </Route>
-          <Route path="lookups">
-            <Route path="positions" element={<Position />} />
           </Route>
 
           <Route path="payroll">
@@ -109,11 +123,13 @@ function App() {
             <Route path="runs/:uuid" element={<ProtectedElement element={<PayrollRunDetail />} permission="run-payroll:view" />} />
             <Route path="periods" element={<ProtectedElement element={<PayPeriods />} permission="run-payroll:view" />} />
             <Route path="components" element={<ProtectedElement element={<PayComponents />} permission="payroll-and-compensation:view" />} />
-            <Route path="compensation" element={<ProtectedElement element={<EmployeeCompensation />} permission="payroll-and-compensation:view" />} />
             <Route path="statutory-tables" element={<ProtectedElement element={<StatutoryTables />} permission="statutory-and-compliance:view" />} />
           </Route>
 
         </Route>
+
+        {/* Any unmatched path — full-screen 404, outside the dashboard shell */}
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </>
   )

@@ -1,35 +1,53 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronDown, AlertCircle } from 'lucide-react';
+import { ChevronDown, AlertCircle, Search } from 'lucide-react';
 
 const CustomDropdown = ({
     label,
     options = [],
     value,
     onChange,
-    renderProps = 'name',  
-    returnProps = 'id',    
+    renderProps = 'name',
+    returnProps = 'id',
     isRequired = false,
     disabled = false,
     error = false,
     errorLabel = '',
-    icon: StartIcon,       
-    iconPosition = 'start', 
+    icon: StartIcon,
+    iconPosition = 'start',
     placeholder = 'Select an option',
-    className = ''
+    className = '',
+    searchable = false,
+    searchPlaceholder = 'Search...'
 }) => {
     const [isOpen, setIsOpen] = useState(false);
-    const [mounted, setMounted] = useState(false); 
-    const [coords, setCoords] = useState(null); 
-    const [placement, setPlacement] = useState('bottom'); 
-    
-    const dropdownRef = useRef(null); 
-    const triggerRef = useRef(null);  
+    const [mounted, setMounted] = useState(false);
+    const [coords, setCoords] = useState(null);
+    const [placement, setPlacement] = useState('bottom');
+    const [query, setQuery] = useState('');
+
+    const dropdownRef = useRef(null);
+    const triggerRef = useRef(null);
     const listRef = useRef(null);
+    const searchRef = useRef(null);
 
     useEffect(() => {
         setMounted(true);
     }, []);
+
+    // Focus the search box when the menu opens (no state change → safe in an effect).
+    useEffect(() => {
+        if (isOpen && searchable) {
+            const id = setTimeout(() => searchRef.current?.focus(), 0);
+            return () => clearTimeout(id);
+        }
+        return undefined;
+    }, [isOpen, searchable]);
+
+    const closeMenu = () => {
+        setIsOpen(false);
+        setQuery('');
+    };
 
     const updateCoords = () => {
         if (triggerRef.current) {
@@ -73,12 +91,13 @@ const CustomDropdown = ({
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (
-                dropdownRef.current && 
+                dropdownRef.current &&
                 !dropdownRef.current.contains(event.target) &&
                 listRef.current &&
                 !listRef.current.contains(event.target)
             ) {
                 setIsOpen(false);
+                setQuery('');
             }
         };
         document.addEventListener('mousedown', handleClickOutside);
@@ -91,10 +110,17 @@ const CustomDropdown = ({
     const handleSelect = (option) => {
         if (disabled) return;
         onChange(option[returnProps]);
-        setIsOpen(false);
+        closeMenu();
     };
 
-    const hasOptions = Array.isArray(options) && options.length > 0;
+    const filteredOptions = useMemo(() => {
+        if (!Array.isArray(options)) return [];
+        if (!searchable || !query.trim()) return options;
+        const q = query.trim().toLowerCase();
+        return options.filter((opt) => String(opt[renderProps] ?? '').toLowerCase().includes(q));
+    }, [options, searchable, query, renderProps]);
+
+    const hasOptions = filteredOptions.length > 0;
 
     return (
         <div ref={dropdownRef} className={`w-full flex flex-col gap-1.5 ${className}`}>
@@ -111,7 +137,7 @@ const CustomDropdown = ({
                 <button
                     type="button"
                     disabled={disabled}
-                    onClick={() => setIsOpen(!isOpen)}
+                    onClick={() => (isOpen ? closeMenu() : setIsOpen(true))}
                     className={`
                         w-full flex items-center justify-between gap-2 px-3 py-2 text-sm rounded-lg border transition-all duration-200 outline-none
                         ${disabled 
@@ -156,12 +182,27 @@ const CustomDropdown = ({
                         }}
                         className="text-left z-[999999] max-h-60 scrollbar-y-visible overflow-y-auto bg-white border border-gray-200 rounded-lg shadow-2xl py-1 outline-none animate-in fade-in duration-100"
                     >
+                        {searchable && (
+                            <li className="sticky top-0 z-10 border-b border-gray-100 bg-white px-2 pb-2 pt-1">
+                                <div className="flex items-center gap-2 rounded-md border border-gray-200 px-2 py-1.5 focus-within:border-gray-400">
+                                    <Search className="h-3.5 w-3.5 flex-shrink-0 text-gray-400" />
+                                    <input
+                                        ref={searchRef}
+                                        type="text"
+                                        value={query}
+                                        onChange={(e) => setQuery(e.target.value)}
+                                        placeholder={searchPlaceholder}
+                                        className="w-full text-sm outline-none placeholder:text-gray-400"
+                                    />
+                                </div>
+                            </li>
+                        )}
                         {!hasOptions ? (
                             <li className="px-4 py-3 text-sm text-gray-400 italic text-center bg-gray-50/50">
                                 No options found
                             </li>
                         ) : (
-                            options.map((option, index) => {
+                            filteredOptions.map((option, index) => {
                                 const isSelected = option[returnProps] === value;
                                 return (
                                     <li

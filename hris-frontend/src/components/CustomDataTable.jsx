@@ -141,8 +141,8 @@ export function CustomDataTable({
                                     </tr>
                                 ))
                             ) : paginatedData.length === 0 ? (
-                                <tr>
-                                    <td colSpan={columns.length + 1} className="p-8 text-center text-gray-400">
+                                <tr className='cursor-pointer'>
+                                    <td colSpan={columns.length + 1} className="p-8 text-center text-gray-400 cursor-pointer">
                                         <CustomEmptyPlaceholder
                                             title="No data found."
                                             description="No record loaded from the server."
@@ -156,7 +156,7 @@ export function CustomDataTable({
                                     <tr 
                                         key={row.id || rowIndex}
                                         onClick={() => [(renderDrawerContent && setSelectedRow(row)), (onRowClick && onRowClick(row))]}
-                                        className={`transition-colors ${renderDrawerContent ? 'hover:bg-slate-50/80 cursor-pointer' : ''}`}
+                                        className={`transition-colors cursor-pointer ${renderDrawerContent ? 'hover:bg-slate-50/80 cursor-pointer' : ''}`}
                                     >
                                         {columns.map((col, colIndex) => (
                                             <td key={colIndex} className={`p-4 ${col.className || ''}`} onClick={(e) => col.stopClickPropagation && e.stopPropagation()}>

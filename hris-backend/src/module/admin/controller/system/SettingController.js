@@ -57,6 +57,12 @@ const updateSetting = async (req, res) => {
                 return res.status(400).json({ success: false, message: `${key} must be a boolean.` });
             }
         }
+        if (meta.type === 'number') {
+            value = Number(value);
+            if (!Number.isFinite(value) || value < 0) {
+                return res.status(400).json({ success: false, message: `${key} must be a non-negative number.` });
+            }
+        }
 
         const saved = await Setting.set(key, value, actorId(req));
 

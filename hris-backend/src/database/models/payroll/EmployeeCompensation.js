@@ -31,6 +31,52 @@ class EmployeeCompensation extends AuditModel {
         }
     }
 
+    /**
+     * Upsert the single active compensation row for an employee, superseding the
+     * current one (closes it the day before the new effective date). Mirrors the
+     * logic in EmployeeCompensationController.create so the employee create/edit
+     * flow can set pay in one place. Runs entirely on the supplied transaction.
+     */
+    static async setActive(trx, {
+        employeeId,
+        pay_rate,
+        rate_type = 'monthly',
+        effective_date,
+        working_days_per_month = 22,
+        working_hours_per_day = 8,
+        pay_frequency = 'semi_monthly',
+        actorId = null,
+    }) {
+        const effDate = String(effective_date || '').substring(0, 10) || new Date().toISOString().substring(0, 10);
+        const type = RATE_TYPES.includes(rate_type) ? rate_type : 'monthly';
+
+        await EmployeeCompensation.query(trx)
+            .patch({
+                is_active: false,
+                end_date: EmployeeCompensation.raw('LEAST(COALESCE(end_date, ?::date - 1), ?::date - 1)', [effDate, effDate]),
+                updated_by: actorId,
+            })
+            .where({ employee_id: employeeId, is_active: true, is_deleted: false });
+
+        return EmployeeCompensation.query(trx).insertAndFetch({
+            employee_id: employeeId,
+            pay_rate: Number(pay_rate) || 0,
+            rate_type: type,
+            monthly_equivalent: EmployeeCompensation.deriveMonthlyEquivalent({
+                pay_rate, rate_type: type,
+                working_days_per_month, working_hours_per_day,
+            }),
+            working_days_per_month,
+            working_hours_per_day,
+            pay_frequency,
+            currency: 'PHP',
+            payment_method: 'bank_transfer',
+            effective_date: effDate,
+            is_active: true,
+            created_by: actorId,
+        });
+    }
+
     /** The active compensation for an employee as of `onDate`. */
     static activeForEmployee(employeeId, onDate, trx) {
         const date = String(onDate || '').substring(0, 10) || new Date().toISOString().substring(0, 10);

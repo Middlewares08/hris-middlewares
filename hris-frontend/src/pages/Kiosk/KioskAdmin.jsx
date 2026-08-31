@@ -1,8 +1,7 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
-    ScanFace,
     ExternalLink,
     Plus,
     Trash2,
@@ -10,14 +9,19 @@ import {
     RefreshCw,
     ShieldCheck,
     MonitorSmartphone,
+    ScanFace,
 } from 'lucide-react';
 import moment from 'moment';
 import CustomButton from '../../components/CustomButton';
 import CustomModal from '../../components/CustomModal';
+import CustomInput from '../../components/CustomInput';
+import CustomForm from '../../components/CustomForm';
 import Loading from '../../components/Loading';
 import { kioskAdminService } from '../../services/kioskServices';
 import { useSettings } from '../../hooks/useSystem';
 import { can } from '../../utils/permissionCheck';
+import CustomLabel from '../../components/CustomLabel';
+import { kioskDeviceValidationSchema } from '../../validation/kiosk-device-validation';
 
 const KIOSK_URL = `${window.location.origin}/kiosk`;
 
@@ -64,6 +68,7 @@ export default function KioskAdmin() {
     const [modalOpen, setModalOpen] = useState(false);
     const [form, setForm] = useState({ name: '', location: '' });
     const [newToken, setNewToken] = useState(null); // { token, name }
+    const formikRef = useRef(null);
 
     const createMut = useMutation({
         mutationFn: kioskAdminService.createDevice,
@@ -106,29 +111,28 @@ export default function KioskAdmin() {
         setForm({ name: '', location: '' });
     };
 
+    const submitDevice = () => {
+        createMut.mutate({ name: form.name.trim(), location: form.location.trim() });
+    };
+
     return (
-        <div className="space-y-6">
-            <div className="flex flex-wrap items-start justify-between gap-4">
-                <div className="flex items-center gap-3">
-                    <div className="rounded-xl bg-indigo-50 p-2.5 text-indigo-600">
-                        <ScanFace size={20} />
-                    </div>
-                    <div>
-                        <h1 className="text-lg font-bold text-slate-800">Attendance Kiosk</h1>
-                        <p className="text-sm text-slate-500">
-                            A shared screen that identifies employees by face and clocks them in / out.
-                        </p>
-                    </div>
-                </div>
+        <div className="space-y-6 text-left">
+            <div className="flex items-start justify-between gap-4 border-b border-slate-100 pb-4">
+                <CustomLabel
+                    variant='h2' 
+                    children='Attendance Kiosk' 
+                    addedClass='font-bold text-slate-700!' 
+                    descriptionClass='text-xs text-slate-500'
+                    description="A shared screen that identifies employees by face and clocks them in/out."
+                />
                 <CustomButton
-                    size="sm"
-                    icon={ExternalLink}
-                    iconPosition="left"
-                    className="w-auto! px-4"
+                    children='Launch Kiosk'
                     onClick={() => window.open('/kiosk', '_blank', 'noopener')}
-                >
-                    Launch Kiosk
-                </CustomButton>
+                    icon={ExternalLink}
+                    iconPosition='left'
+                    type='button'
+                    className='flex py-4 px-3 items-center gap-2 hover:cursor-pointer px-4 bg-slate-700 text-white rounded-lg text-sm font-medium hover:bg-slate-600 transition-colors shadow-xs'
+                />
             </div>
 
             {/* Master switch */}
@@ -158,14 +162,13 @@ export default function KioskAdmin() {
                         </div>
                     </div>
                     <CustomButton
+                        children='Re-index'
                         size="sm"
-                        className="w-auto! px-4"
+                        className='flex py-2 items-center gap-2 hover:cursor-pointer px-4 bg-slate-100 text-slate-600 hover:text-white border border-slate-200 rounded-lg text-sm font-medium hover:bg-slate-600 transition-colors shadow-xs'
                         disabled={!canEdit}
                         isLoading={reindexMut.isPending}
                         onClick={() => reindexMut.mutate()}
-                    >
-                        Re-index
-                    </CustomButton>
+                    />
                 </div>
             </div>
 
@@ -178,14 +181,13 @@ export default function KioskAdmin() {
                     </div>
                     {canCreate && (
                         <CustomButton
+                            children='Register device'
                             size="sm"
                             icon={Plus}
                             iconPosition="left"
-                            className="w-auto! px-3"
+                            className='flex py-2 items-center gap-2 hover:cursor-pointer px-4 bg-slate-700 text-white rounded-lg text-sm font-medium hover:bg-slate-600 transition-colors shadow-xs'
                             onClick={() => setModalOpen(true)}
-                        >
-                            Register device
-                        </CustomButton>
+                        />
                     )}
                 </div>
 
@@ -253,39 +255,35 @@ export default function KioskAdmin() {
             <CustomModal
                 isOpen={modalOpen}
                 onClose={closeModal}
-                title={newToken ? 'Device registered' : 'Register kiosk device'}
+                title={newToken ? 'Device registered' : 'Register Kiosk Device'}
                 size="md"
                 showCloseButton
                 footer={
-                    newToken ? (
-                        <CustomButton size="sm" className="w-auto! px-5" onClick={closeModal}>
-                            Done
-                        </CustomButton>
-                    ) : (
+                    !newToken && (
                         <>
                             <CustomButton
+                                children='Cancel'
                                 size="sm"
                                 onClick={closeModal}
-                                className="w-auto! px-4 bg-white! text-slate-600! border border-slate-200 hover:bg-slate-50!"
-                            >
-                                Cancel
-                            </CustomButton>
+                                className='flex py-2 items-center gap-2 hover:cursor-pointer px-4 bg-slate-100 text-slate-600 hover:text-white border border-slate-200 rounded-lg text-sm font-medium hover:bg-slate-600 transition-colors shadow-xs'
+                            />
                             <CustomButton
+                                children='Register'
                                 size="sm"
-                                className="w-auto! px-5"
+                                className='flex py-2 items-center gap-2 hover:cursor-pointer px-6 bg-slate-700 text-white rounded-lg text-sm font-medium hover:bg-slate-600 transition-colors shadow-xs'
                                 isLoading={createMut.isPending}
-                                disabled={!form.name.trim()}
-                                onClick={() => createMut.mutate({ name: form.name.trim(), location: form.location.trim() })}
-                            >
-                                Register
-                            </CustomButton>
+                                disabled={createMut.isPending}
+                                onClick={() => formikRef?.current?.submitForm()}
+                            />
                         </>
                     )
                 }
             >
                 {newToken ? (
-                    <div className="space-y-4">
-                        <p className="text-sm text-slate-600">
+                    <div className="space-y-4 text-center pb-5">
+                        
+                        <div className='flex justify-center'><ScanFace size={70} color='indigo'/></div>
+                        <p className="text-sm text-slate-600 pb-4">
                             Open <span className="font-medium">{KIOSK_URL}</span> on <b>{newToken.name}</b> and paste
                             this token. It is shown <b>once</b> — copy it now.
                         </p>
@@ -294,7 +292,7 @@ export default function KioskAdmin() {
                             <button
                                 type="button"
                                 onClick={() => copy(newToken.token)}
-                                className="rounded-md p-1.5 text-slate-400 hover:bg-white hover:text-slate-700"
+                                className="rounded-md p-1.5 text-slate-400 hover:bg-white hover:text-slate-700 cursor-pointer"
                             >
                                 <Copy size={15} />
                             </button>
@@ -302,33 +300,40 @@ export default function KioskAdmin() {
                         <button
                             type="button"
                             onClick={() => copy(`${KIOSK_URL}\n${newToken.token}`)}
-                            className="text-xs font-medium text-indigo-600 hover:text-indigo-700"
+                            className="text-xs font-medium text-indigo-600 hover:text-indigo-700 hover:underline cursor-pointer"
                         >
                             Copy URL + token
                         </button>
                     </div>
                 ) : (
-                    <div className="space-y-4">
-                        <div>
-                            <label className="text-xs font-medium text-slate-500">Device name</label>
-                            <input
-                                autoFocus
-                                value={form.name}
-                                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                                placeholder="e.g. Lobby tablet"
-                                className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-indigo-400 focus:outline-none"
-                            />
-                        </div>
-                        <div>
-                            <label className="text-xs font-medium text-slate-500">Location (optional)</label>
-                            <input
-                                value={form.location}
-                                onChange={(e) => setForm((f) => ({ ...f, location: e.target.value }))}
-                                placeholder="e.g. Ground floor entrance"
-                                className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-indigo-400 focus:outline-none"
-                            />
-                        </div>
-                    </div>
+                    <CustomForm
+                        formRef={formikRef}
+                        initialValues={form}
+                        validationSchema={kioskDeviceValidationSchema}
+                        onSubmit={submitDevice}
+                        id="kiosk-device-form"
+                        content={(errors, touched) => (
+                            <div className="space-y-4 pb-3">
+                                <CustomInput
+                                    label="Device name"
+                                    isRequired
+                                    value={form.name}
+                                    onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                                    placeholder="e.g. Lobby tablet"
+                                    error={errors.name && touched.name}
+                                    errorLabel={errors.name}
+                                />
+                                <CustomInput
+                                    label="Location (optional)"
+                                    value={form.location}
+                                    onChange={(e) => setForm((f) => ({ ...f, location: e.target.value }))}
+                                    placeholder="e.g. Ground floor entrance"
+                                    error={errors.location && touched.location}
+                                    errorLabel={errors.location}
+                                />
+                            </div>
+                        )}
+                    />
                 )}
             </CustomModal>
         </div>

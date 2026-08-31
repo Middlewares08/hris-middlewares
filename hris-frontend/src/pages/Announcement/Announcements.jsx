@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import moment from 'moment';
-import { PlusIcon, Save, ShieldAlert, Trash, Megaphone, Pin, Send, Archive, Undo2 } from 'lucide-react';
+import { PlusIcon, Save, ShieldAlert, Trash, Megaphone, Pin} from 'lucide-react';
 import { CustomDataTable } from '../../components/CustomDataTable';
 import CustomModal from '../../components/CustomModal';
 import CustomInput from '../../components/CustomInput';
@@ -8,9 +8,12 @@ import CustomButton from '../../components/CustomButton';
 import CustomDropdown from '../../components/CustomDropdown';
 import CustomDatePicker from '../../components/CustomDatePicker';
 import CustomLabel from '../../components/CustomLabel';
+import CustomForm from '../../components/CustomForm';
 import NotFound from '../../components/NotFound';
 import { can } from '../../utils/permissionCheck';
 import { useAnnouncements } from '../../hooks/useAnnouncement';
+import { announcementValidationSchema } from '../../validation/announcement-validation';
+import CustomSelection from '../../components/CustomSelection';
 
 const VIEW = 'announcements:view';
 
@@ -59,17 +62,11 @@ const toForm = (row) => ({
     expires_at: row.expires_at ? new Date(row.expires_at) : null,
 });
 
-const Check = ({ label, checked, onChange }) => (
-    <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
-        <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} className="h-4 w-4 rounded border-slate-300" />
-        {label}
-    </label>
-);
-
 function Announcements() {
     const { items, isLoading, error, create, update, setStatus, remove, isMutating } = useAnnouncements();
     const [form, setForm] = useState(null);       // null = closed; object = create/edit
     const [toDelete, setToDelete] = useState(null);
+    const formikRef = useRef(null);
 
     const set = (k, v) => setForm((p) => ({ ...p, [k]: v }));
 
@@ -124,7 +121,7 @@ function Announcements() {
         <div className="mt-4 space-y-4">
             <div className="rounded-xl border border-slate-100 bg-slate-50 p-4">
                 <p className="text-lg font-bold text-slate-900">{row.title}</p>
-                <div className="mt-2 flex flex-wrap gap-2">
+                <div className="mt-2 flex flex-wrap gap-2 justify-center pb-3">
                     <Pill value={row.priority} />
                     <Pill value={row.status} />
                     {row.is_pinned && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-700">pinned</span>}
@@ -144,28 +141,43 @@ function Announcements() {
             {can('announcements:edit') && (
                 <div className="flex flex-wrap gap-2">
                     {row.status !== 'published' && (
-                        <CustomButton onClick={() => { close(); changeStatus(row, 'published'); }} icon={Send} iconPosition="left"
-                            variant="primary" className="flex-1 bg-emerald-50! text-emerald-700! border border-emerald-200 hover:bg-emerald-100!">Publish</CustomButton>
+                        <CustomButton 
+                            children='Publish'
+                            onClick={() => { close(); changeStatus(row, 'published'); }} 
+                            variant="primary" className="flex-1 py-2 text-xs not-odd:bg-emerald-50! text-emerald-700! border border-emerald-200 hover:bg-emerald-100!"
+                        />
                     )}
                     {row.status !== 'draft' && (
-                        <CustomButton onClick={() => { close(); changeStatus(row, 'draft'); }} icon={Undo2} iconPosition="left"
-                            variant="primary" className="flex-1 bg-white! text-slate-700! border border-slate-200 hover:bg-slate-100!">Revert to draft</CustomButton>
+                        <CustomButton 
+                            children='Revert to draft'
+                            onClick={() => { close(); changeStatus(row, 'draft'); }} 
+                            variant="primary" className="flex-1 py-2 text-xs bg-white! text-slate-700! border border-slate-200 hover:bg-slate-100!"
+                        />
                     )}
                     {row.status !== 'archived' && (
-                        <CustomButton onClick={() => { close(); changeStatus(row, 'archived'); }} icon={Archive} iconPosition="left"
-                            variant="primary" className="flex-1 bg-amber-50! text-amber-700! border border-amber-200 hover:bg-amber-100!">Archive</CustomButton>
+                        <CustomButton 
+                            children='Archive'
+                            onClick={() => { close(); changeStatus(row, 'archived'); }} 
+                            className="flex-1 py-2 text-xs bg-amber-50! text-amber-700! border border-amber-200 hover:bg-amber-100!"
+                        />
                     )}
                 </div>
             )}
 
             <div className="flex gap-2">
                 {can('announcements:edit') && (
-                    <CustomButton onClick={() => { close(); setForm(toForm(row)); }}
-                        variant="primary" className="flex-1 bg-white! text-blue-700! border border-slate-200 hover:bg-blue-50!">Edit</CustomButton>
+                    <CustomButton 
+                        children='Edit'
+                        onClick={() => { close(); setForm(toForm(row)); }}
+                        className="flex-1 py-2 border border-slate-200 rounded text-xs bg-white! text-blue-700! hover:bg-blue-50!"
+                    />
                 )}
                 {can('announcements:delete') && (
-                    <CustomButton onClick={() => { close(); setToDelete(row); }}
-                        variant="primary" className="flex-1 bg-rose-50! text-rose-600! border border-rose-200 hover:bg-rose-100!">Delete</CustomButton>
+                    <CustomButton 
+                        children='Delete'
+                        onClick={() => { close(); setToDelete(row); }}
+                        className="flex-1 py-2 border border-rose-200 rounded text-xs bg-rose-50! text-rose-600! hover:bg-rose-100!"
+                    />
                 )}
             </div>
         </div>
@@ -173,14 +185,16 @@ function Announcements() {
 
     if (!can(VIEW)) return <NotFound />;
 
-    const canSubmit = form && form.title?.trim() && form.body?.trim();
-
     return (
         <div className="mx-auto max-w-7xl space-y-6">
             <div className="border-b border-slate-100 pb-4">
-                <CustomLabel variant="h2" addedClass="font-bold text-slate-700!" description="Company-wide announcements broadcast to the employee dashboard feed.">
-                    Announcements
-                </CustomLabel>
+                <CustomLabel 
+                    children='Announcements'
+                    descriptionClass='text-xs'
+                    variant="h2" 
+                    addedClass="font-bold text-slate-700!" 
+                    description="Company-wide announcements broadcast to the employee dashboard feed."
+                />
             </div>
 
             {error && (
@@ -196,8 +210,13 @@ function Announcements() {
                 searchPlaceholder="Search announcements..."
                 renderDrawerContent={drawer}
                 actionButton={can('announcements:create') && (
-                    <CustomButton onClick={() => setForm({ ...BLANK })} icon={PlusIcon} iconPosition="left"
-                        className="flex items-center gap-2 bg-slate-800 px-4 py-2 text-sm hover:bg-slate-700">New Announcement</CustomButton>
+                    <CustomButton 
+                        children='New Announcement'
+                        onClick={() => setForm({ ...BLANK })} 
+                        icon={PlusIcon} 
+                        iconPosition="left"
+                        className='flex py-2 items-center gap-2 hover:cursor-pointer px-4 bg-slate-700 text-white rounded-lg text-sm font-medium hover:bg-slate-600 transition-colors shadow-xs'
+                    />
                 )}
             />
 
@@ -210,57 +229,89 @@ function Announcements() {
                 hasRequiredFields
                 footer={(
                     <div className="flex justify-center border-t border-slate-100 pt-4">
-                        <CustomButton onClick={submit} icon={Save} iconPosition="left" isLoading={isMutating}
-                            disabled={isMutating || !canSubmit}
-                            className="bg-slate-800 px-5 py-2.5 text-sm hover:bg-slate-700">
-                            {form?.uuid ? 'Save Changes' : 'Create Announcement'}
-                        </CustomButton>
+                        <CustomButton 
+                            children={form?.uuid ? 'Save Changes' : 'Create Announcement'}
+                            onClick={() => formikRef?.current?.submitForm()} 
+                            icon={Save} 
+                            iconPosition="left" 
+                            isLoading={isMutating}
+                            disabled={isMutating}
+                            className='flex py-2 items-center gap-2 hover:cursor-pointer px-4 bg-slate-700 text-white rounded-lg text-sm font-medium hover:bg-slate-600 transition-colors shadow-xs'
+                        />
                     </div>
                 )}
             >
                 {form && (
-                    <div className="max-h-[60vh] space-y-4 overflow-y-auto px-1">
-                        <CustomInput label="Title" isRequired value={s(form.title)} placeholder="Office closed on Friday"
-                            onChange={(e) => set('title', e.target.value)} />
+                    <CustomForm
+                        formRef={formikRef}
+                        initialValues={form}
+                        validationSchema={announcementValidationSchema}
+                        onSubmit={submit}
+                        id="announcement-form"
+                        content={(errors, touched) => (
+                            <div className="max-h-[60vh] space-y-4 overflow-y-auto scrollbar-y-visible px-1 pb-4">
+                                <CustomInput label="Title" isRequired value={s(form.title)} placeholder="Office closed on Friday"
+                                    onChange={(e) => set('title', e.target.value)}
+                                    error={errors.title && touched.title} errorLabel={errors.title} />
 
-                        <div className="flex w-full flex-col space-y-1">
-                            <label className="text-xs font-medium text-gray-700">
-                                Body <span className="ml-1 text-red-500">*</span>
-                            </label>
-                            <textarea
-                                rows="5"
-                                value={s(form.body)}
-                                onChange={(e) => set('body', e.target.value)}
-                                placeholder="Write the announcement details here..."
-                                className="w-full resize-none rounded-lg border border-gray-300 p-2 text-sm focus:outline-gray-600"
-                            />
-                        </div>
+                                <div className="flex w-full flex-col space-y-1 text-left">
+                                    <label className="text-xs font-medium text-gray-700">
+                                        Body <span className="ml-1 text-red-500">*</span>
+                                    </label>
+                                    <textarea
+                                        rows="5"
+                                        value={s(form.body)}
+                                        onChange={(e) => set('body', e.target.value)}
+                                        placeholder="Write the announcement details here..."
+                                        className={`w-full resize-none rounded-lg border p-2 text-sm focus:outline-gray-600 ${
+                                            errors.body && touched.body ? 'border-red-400' : 'border-gray-300'
+                                        }`}
+                                    />
+                                    {errors.body && touched.body && (
+                                        <p className="text-xs font-semibold text-red-500">{errors.body}</p>
+                                    )}
+                                </div>
 
-                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                            <CustomDropdown label="Priority" isRequired options={PRIORITY_OPTIONS} value={form.priority}
-                                renderProps="label" returnProps="value" onChange={(v) => set('priority', v)} className="w-full items-start!" />
-                            <CustomDropdown label="Status" isRequired options={STATUS_OPTIONS} value={form.status}
-                                renderProps="label" returnProps="value" onChange={(v) => set('status', v)} className="w-full items-start!" />
-                        </div>
+                                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                    <CustomDropdown label="Priority" isRequired options={PRIORITY_OPTIONS} value={form.priority}
+                                        renderProps="label" returnProps="value" onChange={(v) => set('priority', v)} className="w-full items-start!"
+                                        error={errors.priority && touched.priority} errorLabel={errors.priority} />
+                                    <CustomDropdown label="Status" isRequired options={STATUS_OPTIONS} value={form.status}
+                                        renderProps="label" returnProps="value" onChange={(v) => set('status', v)} className="w-full items-start!"
+                                        error={errors.status && touched.status} errorLabel={errors.status} />
+                                </div>
 
-                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                            <CustomDatePicker label="Publish at" className="text-left!" value={form.published_at}
-                                onChange={(date) => set('published_at', date)} placeholder="Immediately" />
-                            <CustomDatePicker label="Expires at" className="text-left!" value={form.expires_at}
-                                minDate={form.published_at || null}
-                                onChange={(date) => set('expires_at', date)} placeholder="Never" />
-                        </div>
+                                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                    <CustomDatePicker label="Publish at" className="text-left!" value={form.published_at}
+                                        onChange={(date) => set('published_at', date)} placeholder="Immediately" />
+                                    <CustomDatePicker label="Expires at" className="text-left!" value={form.expires_at}
+                                        minDate={form.published_at || null}
+                                        onChange={(date) => set('expires_at', date)} placeholder="Never" />
+                                </div>
+                                {errors.expires_at && touched.expires_at && (
+                                    <p className="text-xs font-semibold text-red-500">{errors.expires_at}</p>
+                                )}
 
-                        <CustomInput label="Link URL" value={s(form.link_url)} placeholder="https://..."
-                            onChange={(e) => set('link_url', e.target.value)} />
+                                <CustomInput label="Link URL" value={s(form.link_url)} placeholder="https://..."
+                                    onChange={(e) => set('link_url', e.target.value)}
+                                    error={errors.link_url && touched.link_url} errorLabel={errors.link_url} />
 
-                        <div className="flex flex-wrap gap-x-6 gap-y-2 rounded-xl border border-slate-100 bg-slate-50 p-3">
-                            <Check label="Pin to top of feed" checked={form.is_pinned} onChange={(v) => set('is_pinned', v)} />
-                        </div>
-                        <p className="text-xs text-slate-400">
-                            Only <span className="font-semibold">published</span> announcements inside their publish/expiry window appear on the employee dashboard.
-                        </p>
-                    </div>
+                                
+                                <div className="flex flex-wrap gap-x-6 gap-y-2 rounded-xl border border-slate-100 bg-slate-50 p-2">
+                                    <CustomSelection
+                                        className='text-left w-40' 
+                                        label="Pin to top of feed" 
+                                        checked={form.is_pinned} 
+                                        onChange={(v) => set('is_pinned', v)} 
+                                        indicatorPosition='left'
+                                    />
+                                </div>
+                                <p className="text-xs text-slate-400">
+                                    Only <span className="font-semibold">published</span> announcements inside their publish/expiry window appear on the employee dashboard.
+                                </p>
+                            </div>
+                        )}
+                    />
                 )}
             </CustomModal>
 

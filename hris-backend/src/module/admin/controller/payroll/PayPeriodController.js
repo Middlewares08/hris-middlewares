@@ -54,6 +54,42 @@ const getAll = async (req, res) => {
     }
 };
 
+/**
+ * SELF-SERVICE — the nearest upcoming pay date (pay_date >= today).
+ * Falls back to the most recent past pay period when nothing is scheduled ahead,
+ * so the dashboard tile always has something to show. Auth-only, no admin permission.
+ */
+const getNext = async (req, res) => {
+    try {
+        const today = new Date().toISOString().slice(0, 10);
+
+        const upcoming = await PayPeriod.query()
+            .where('is_deleted', false)
+            .where('pay_date', '>=', today)
+            .orderBy('pay_date', 'asc')
+            .first();
+
+        const period = upcoming || await PayPeriod.query()
+            .where('is_deleted', false)
+            .orderBy('pay_date', 'desc')
+            .first();
+
+        if (!period) return ok(res, null);
+
+        return ok(res, {
+            uuid: period.uuid,
+            name: period.name,
+            period_start: period.period_start,
+            period_end: period.period_end,
+            pay_date: period.pay_date,
+            frequency: period.frequency,
+            is_upcoming: Boolean(upcoming),
+        });
+    } catch (error) {
+        return serverError(res, 'period.getNext', error);
+    }
+};
+
 const getByUuid = async (req, res) => {
     try {
         const row = await PayPeriod.query()
@@ -190,4 +226,4 @@ const remove = async (req, res) => {
     }
 };
 
-module.exports = { getAll, getByUuid, create, update, remove };
+module.exports = { getAll, getNext, getByUuid, create, update, remove };

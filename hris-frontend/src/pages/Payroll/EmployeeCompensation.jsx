@@ -1,16 +1,19 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { PlusIcon, Save, ShieldAlert, Trash, Banknote } from 'lucide-react';
 import { CustomDataTable } from '../../components/CustomDataTable';
 import CustomModal from '../../components/CustomModal';
 import CustomInput from '../../components/CustomInput';
 import CustomButton from '../../components/CustomButton';
 import CustomDropdown from '../../components/CustomDropdown';
+import CustomSelection from '../../components/CustomSelection';
 import CustomLabel from '../../components/CustomLabel';
+import CustomForm from '../../components/CustomForm';
 import NotFound from '../../components/NotFound';
 import { can } from '../../utils/permissionCheck';
 import { useEmployees } from '../../hooks/useEmployee';
 import { useCompensations } from '../../hooks/usePayroll';
 import { RATE_TYPES, PAY_FREQUENCIES, PAYMENT_METHODS, peso, fmtDate } from './payrollOptions';
+import { employeeCompensationValidationSchema } from '../../validation/employee-compensation-validation';
 import Pill from './Pill';
 
 const BLANK = {
@@ -45,6 +48,7 @@ function EmployeeCompensation() {
     const { employees } = useEmployees({ page: 1, limit: 200, search: '' });
     const [form, setForm] = useState(null);
     const [toDelete, setToDelete] = useState(null);
+    const formikRef = useRef(null);
     const set = (k, v) => setForm((p) => ({ ...p, [k]: v }));
 
     const empOptions = (employees || []).map((e) => ({ id: e.id, value: e.id, label: `${e.first_name} ${e.last_name}` }));
@@ -98,7 +102,7 @@ function EmployeeCompensation() {
                     {row.employee ? `${row.employee.first_name} ${row.employee.last_name}` : `Employee #${row.employee_id}`}
                 </p>
                 <p className="text-xs text-slate-500">{peso(row.pay_rate)} / {String(row.rate_type).replace(/_/g, ' ')} · monthly {peso(row.monthly_equivalent)}</p>
-                <div className="mt-2 flex flex-wrap gap-2">
+                <div className="mt-2 flex flex-wrap gap-2 justify-center">
                     {row.is_active ? <Pill value="applied" /> : <Pill value="cancelled" />}
                     {row.is_minimum_wage_earner && <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[11px] font-semibold text-slate-600">MWE</span>}
                     {row.bank_account_last4 && <span className="text-[11px] text-slate-400">acct •••• {row.bank_account_last4.replace(/•/g, '')}</span>}
@@ -106,12 +110,18 @@ function EmployeeCompensation() {
             </div>
             <div className="flex gap-2">
                 {can('payroll-and-compensation:edit') && (
-                    <CustomButton onClick={() => { close(); setForm(toForm(row)); }}
-                        className="flex-1 border border-slate-200 bg-white! text-blue-700! hover:bg-blue-50!">Edit</CustomButton>
+                    <CustomButton
+                        children='Edit'
+                        onClick={() => { close(); setForm(toForm(row)); }}
+                        className="flex-1 py-2 border border-slate-200 rounded text-xs bg-white! text-blue-700! hover:bg-blue-50!"
+                    />
                 )}
                 {can('payroll-and-compensation:delete') && (
-                    <CustomButton onClick={() => { close(); setToDelete(row); }}
-                        className="flex-1 border border-rose-200 bg-rose-50! text-rose-600! hover:bg-rose-100!">Archive</CustomButton>
+                    <CustomButton 
+                        children='Archive'
+                        onClick={() => { close(); setToDelete(row); }}
+                        className="flex-1 py-2 border border-rose-200 rounded text-xs bg-rose-50! text-rose-600! hover:bg-rose-100!"
+                    />
                 )}
             </div>
         </div>
@@ -122,9 +132,13 @@ function EmployeeCompensation() {
     return (
         <div className="mx-auto max-w-7xl space-y-6">
             <div className="border-b border-slate-100 pb-4">
-                <CustomLabel variant="h2" addedClass="font-bold text-slate-700!" description="Effective-dated base pay per employee. Creating a new record supersedes the current one.">
-                    Employee Compensation
-                </CustomLabel>
+                <CustomLabel 
+                    children='Employee Compensation' 
+                    variant="h2" 
+                    addedClass="font-bold text-slate-700!" 
+                    description="Effective-dated base pay per employee. Creating a new record supersedes the current one."
+                    descriptionClass='text-xs'
+                />
             </div>
 
             {error && (
@@ -140,8 +154,11 @@ function EmployeeCompensation() {
                 searchPlaceholder="Search employee..."
                 renderDrawerContent={drawer}
                 actionButton={can('payroll-and-compensation:create') && (
-                    <CustomButton onClick={() => setForm({ ...BLANK })} icon={PlusIcon} iconPosition="left"
-                        className="flex items-center gap-2 bg-slate-800 px-4 py-2 text-sm hover:bg-slate-700">Add Compensation</CustomButton>
+                    <CustomButton 
+                        children='Add Compensation'
+                        onClick={() => setForm({ ...BLANK })} icon={PlusIcon} iconPosition="left"
+                        className='flex items-center gap-2 hover:cursor-pointer px-4 py-2 bg-slate-700 text-white rounded-lg text-sm font-medium hover:bg-slate-700 transition-colors shadow-xs'
+                    />
                 )}
             />
 
@@ -154,69 +171,163 @@ function EmployeeCompensation() {
                 hasRequiredFields
                 footer={(
                     <div className="flex justify-center border-t border-slate-100 pt-4">
-                        <CustomButton onClick={submit} icon={Save} iconPosition="left" isLoading={isMutating}
-                            disabled={isMutating || !form?.employee_id || !form?.pay_rate || !form?.effective_date}
-                            className="bg-slate-800 px-5 py-2.5 text-sm hover:bg-slate-700">
-                            {form?.uuid ? 'Save Changes' : 'Create'}
-                        </CustomButton>
+                        <CustomButton
+                            children={form?.uuid ? 'Save Changes' : 'Create'}
+                            onClick={() => formikRef?.current?.submitForm()} icon={Save} iconPosition="left" isLoading={isMutating}
+                            disabled={isMutating}
+                            className='flex items-center gap-2 hover:cursor-pointer px-4 py-2 bg-slate-700 text-white rounded-lg text-sm font-medium hover:bg-slate-700 transition-colors shadow-xs'
+                        />
                     </div>
                 )}
             >
                 {form && (
-                    <div className="max-h-[62vh] space-y-4 overflow-y-auto px-1">
-                        <CustomDropdown label="Employee" isRequired options={empOptions} value={form.employee_id}
-                            renderProps="label" returnProps="value" placeholder="Choose employee..." disabled={!!form.uuid}
-                            onChange={(v) => set('employee_id', v)} className="w-full items-start!" />
-                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                            <CustomInput label="Pay rate" isRequired type="number" value={s(form.pay_rate)}
-                                onChange={(e) => set('pay_rate', e.target.value)} />
-                            <CustomDropdown label="Rate type" options={RATE_TYPES} value={form.rate_type}
-                                renderProps="label" returnProps="value" onChange={(v) => set('rate_type', v)} className="w-full items-start!" />
+                    <CustomForm
+                        formRef={formikRef}
+                        initialValues={form}
+                        validationSchema={employeeCompensationValidationSchema}
+                        onSubmit={submit}
+                        id="employee-compensation-form"
+                        content={(errors, touched) => (
+                    <div className="max-h-[65vh] space-y-4 scrollbar-y-visible overflow-y-auto px-1 pb-4">
+                        <CustomDropdown
+                            label="Employee"
+                            isRequired
+                            options={empOptions}
+                            value={form.employee_id}
+                            renderProps="label"
+                            returnProps="value"
+                            placeholder="Choose employee..."
+                            searchable
+                            searchPlaceholder="Search employee..."
+                            disabled={!!form.uuid}
+                            onChange={(v) => set('employee_id', v)} className="w-full items-start!"
+                            error={errors.employee_id && touched.employee_id} errorLabel={errors.employee_id}
+                        />
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 border-b border-slate-200 pb-4">
+                            <CustomInput
+                                placeholder='e.g. 10,000'
+                                label="Pay rate"
+                                isRequired
+                                type="number"
+                                value={s(form.pay_rate)}
+                                onChange={(e) => set('pay_rate', e.target.value)}
+                                error={errors.pay_rate && touched.pay_rate} errorLabel={errors.pay_rate}
+                            />
+                            <CustomDropdown
+                                label="Rate type"
+                                options={RATE_TYPES}
+                                value={form.rate_type}
+                                renderProps="label"
+                                returnProps="value"
+                                onChange={(v) => set('rate_type', v)}
+                                className="w-full items-start!"
+                                error={errors.rate_type && touched.rate_type} errorLabel={errors.rate_type}
+                            />
                         </div>
                         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                            <CustomInput label="Work days / mo" type="number" value={s(form.working_days_per_month)}
-                                onChange={(e) => set('working_days_per_month', e.target.value)} />
-                            <CustomInput label="Work hrs / day" type="number" value={s(form.working_hours_per_day)}
-                                onChange={(e) => set('working_hours_per_day', e.target.value)} />
-                            <CustomDropdown label="Frequency" options={PAY_FREQUENCIES} value={form.pay_frequency}
-                                renderProps="label" returnProps="value" onChange={(v) => set('pay_frequency', v)} className="w-full items-start!" />
+                            <CustomInput
+                                label="Work days/mo" type="number"
+                                value={s(form.working_days_per_month)}
+                                onChange={(e) => set('working_days_per_month', e.target.value)}
+                                error={errors.working_days_per_month && touched.working_days_per_month} errorLabel={errors.working_days_per_month}
+                            />
+                            <CustomInput
+                                label="Work hrs/day"
+                                type="number"
+                                value={s(form.working_hours_per_day)}
+                                onChange={(e) => set('working_hours_per_day', e.target.value)}
+                                error={errors.working_hours_per_day && touched.working_hours_per_day} errorLabel={errors.working_hours_per_day}
+                            />
+                            <CustomDropdown
+                                label="Frequency"
+                                options={PAY_FREQUENCIES}
+                                value={form.pay_frequency}
+                                renderProps="label"
+                                returnProps="value"
+                                onChange={(v) => set('pay_frequency', v)} className="w-full items-start!"
+                                error={errors.pay_frequency && touched.pay_frequency} errorLabel={errors.pay_frequency}
+                            />
                         </div>
-                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                            <CustomInput label="Effective date" isRequired type="date" value={s(form.effective_date)}
-                                onChange={(e) => set('effective_date', e.target.value)} />
-                            <CustomInput label="End date" type="date" value={s(form.end_date)}
-                                onChange={(e) => set('end_date', e.target.value)} />
-                            <CustomInput label="Tax status" value={s(form.tax_status)} placeholder="S / ME / S1"
-                                onChange={(e) => set('tax_status', e.target.value)} />
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 border-b border-slate-200 pb-4">
+                            <CustomInput
+                                label="Effective date"
+                                isRequired
+                                type="date"
+                                value={s(form.effective_date)}
+                                onChange={(e) => set('effective_date', e.target.value)}
+                                error={errors.effective_date && touched.effective_date} errorLabel={errors.effective_date}
+                            />
+                            <CustomInput
+                                label="End date"
+                                type="date"
+                                value={s(form.end_date)}
+                                onChange={(e) => set('end_date', e.target.value)}
+                                error={errors.end_date && touched.end_date} errorLabel={errors.end_date}
+                            />
+                            <CustomInput
+                                label="Tax status"
+                                value={s(form.tax_status)}
+                                placeholder="S/ME/S1"
+                                onChange={(e) => set('tax_status', e.target.value)}
+                                error={errors.tax_status && touched.tax_status} errorLabel={errors.tax_status}
+                            />
                         </div>
-                        <div className="flex flex-wrap gap-x-6 gap-y-2 rounded-xl border border-slate-100 bg-slate-50 p-3">
-                            <label className="flex items-center gap-2 text-sm text-slate-700">
-                                <input type="checkbox" checked={form.is_minimum_wage_earner} className="h-4 w-4 rounded border-slate-300"
-                                    onChange={(e) => set('is_minimum_wage_earner', e.target.checked)} />
-                                Minimum wage earner
-                            </label>
-                            <label className="flex items-center gap-2 text-sm text-slate-700">
-                                <input type="checkbox" checked={form.is_tax_exempt} className="h-4 w-4 rounded border-slate-300"
-                                    onChange={(e) => set('is_tax_exempt', e.target.checked)} />
-                                Tax exempt
-                            </label>
-                            <label className="flex items-center gap-2 text-sm text-slate-700">
-                                <input type="checkbox" checked={form.is_active} className="h-4 w-4 rounded border-slate-300"
-                                    onChange={(e) => set('is_active', e.target.checked)} />
-                                Active
-                            </label>
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 border-b border-slate-200 pb-4">
+                            <CustomSelection
+                                className='text-left'
+                                label="Minimum wage earner"
+                                checked={!!form.is_minimum_wage_earner}
+                                onChange={(v) => set('is_minimum_wage_earner', v)}
+                                indicatorPosition='left'
+                            />
+                            <CustomSelection
+                                label="Tax exempt"
+                                checked={!!form.is_tax_exempt}
+                                onChange={(v) => set('is_tax_exempt', v)}
+                                indicatorPosition='left'
+                            />
+                            <CustomSelection
+                                label="Active"
+                                checked={!!form.is_active}
+                                onChange={(v) => set('is_active', v)}
+                                indicatorPosition='left'
+                            />
                         </div>
                         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                            <CustomDropdown label="Payment method" options={PAYMENT_METHODS} value={form.payment_method}
-                                renderProps="label" returnProps="value" onChange={(v) => set('payment_method', v)} className="w-full items-start!" />
-                            <CustomInput label="Bank name" value={s(form.bank_name)} onChange={(e) => set('bank_name', e.target.value)} />
-                            <CustomInput label="Account name" value={s(form.bank_account_name)} onChange={(e) => set('bank_account_name', e.target.value)} />
-                            <CustomInput label="Account number" value={s(form.bank_account_number)}
+                            <CustomDropdown
+                                label="Payment method"
+                                options={PAYMENT_METHODS}
+                                value={form.payment_method}
+                                renderProps="label"
+                                returnProps="value" onChange={(v) => set('payment_method', v)}
+                                className="w-full items-start!"
+                                error={errors.payment_method && touched.payment_method} errorLabel={errors.payment_method}
+                            />
+                            <CustomInput
+                                label="Bank name"
+                                value={s(form.bank_name)}
+                                onChange={(e) => set('bank_name', e.target.value)}
+                                error={errors.bank_name && touched.bank_name} errorLabel={errors.bank_name}
+                            />
+                            <CustomInput
+                                label="Account name"
+                                value={s(form.bank_account_name)}
+                                onChange={(e) => set('bank_account_name', e.target.value)}
+                                error={errors.bank_account_name && touched.bank_account_name} errorLabel={errors.bank_account_name}
+                            />
+                            <CustomInput
+                                label="Account number"
+                                value={s(form.bank_account_number)}
                                 placeholder={form.uuid ? 'Leave blank to keep current' : ''}
-                                onChange={(e) => set('bank_account_number', e.target.value)} />
+                                onChange={(e) => set('bank_account_number', e.target.value)}
+                                error={errors.bank_account_number && touched.bank_account_number} errorLabel={errors.bank_account_number}
+                            />
                         </div>
-                        <CustomInput label="Remarks" value={s(form.remarks)} onChange={(e) => set('remarks', e.target.value)} />
+                        <CustomInput label="Remarks" value={s(form.remarks)} onChange={(e) => set('remarks', e.target.value)}
+                            error={errors.remarks && touched.remarks} errorLabel={errors.remarks} />
                     </div>
+                        )}
+                    />
                 )}
             </CustomModal>
 

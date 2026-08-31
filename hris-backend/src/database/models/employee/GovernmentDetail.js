@@ -11,6 +11,14 @@ function processEncryption(instance) {
     if (instance.pagibig_number) instance.pagibig_number = encrypt(instance.pagibig_number);
 }
 
+// Decrypt tolerantly: a value written under a rotated/old key (or a legacy
+// plaintext value) must never blow up a read — hand back null instead so the
+// caller can prompt the employee to re-enter it.
+function safeDecrypt(value) {
+    if (!value) return value;
+    try { return decrypt(value); } catch (_) { return null; }
+}
+
 class GovernmentDetails extends BaseModel {
     static get tableName() { 
         return 'employee.government_details'; 
@@ -40,10 +48,10 @@ class GovernmentDetails extends BaseModel {
     $parseDatabaseJson(json) {
         json = super.$parseDatabaseJson(json);
 
-        if (json.tin_number) json.tin_number = decrypt(json.tin_number);
-        if (json.sss_number) json.sss_number = decrypt(json.sss_number);
-        if (json.philhealth_number) json.philhealth_number = decrypt(json.philhealth_number);
-        if (json.pagibig_number) json.pagibig_number = decrypt(json.pagibig_number);
+        if (json.tin_number) json.tin_number = safeDecrypt(json.tin_number);
+        if (json.sss_number) json.sss_number = safeDecrypt(json.sss_number);
+        if (json.philhealth_number) json.philhealth_number = safeDecrypt(json.philhealth_number);
+        if (json.pagibig_number) json.pagibig_number = safeDecrypt(json.pagibig_number);
 
         return json;
     }

@@ -2,8 +2,11 @@ import { useMemo, useState } from 'react';
 import moment from 'moment';
 import { toast } from 'sonner';
 import {
-    FileText, Image as ImageIcon, PlusIcon, Save, ShieldAlert, Trash, Download,
+    FileText, PlusIcon, Save, ShieldAlert, Trash,
     ClipboardList, X,
+    SearchIcon,
+    SearchAlert,
+    File,
 } from 'lucide-react';
 import CustomModal from '../../components/CustomModal';
 import CustomInput from '../../components/CustomInput';
@@ -11,11 +14,13 @@ import CustomButton from '../../components/CustomButton';
 import CustomDropdown from '../../components/CustomDropdown';
 import CustomLabel from '../../components/CustomLabel';
 import { CustomFileUploader } from '../../components/CustomFileUploader';
+import DocumentList from '../../components/document/DocumentList';
 import NotFound from '../../components/NotFound';
 import { can } from '../../utils/permissionCheck';
 import { useEmployees } from '../../hooks/useEmployee';
 import { useDocuments } from '../../hooks/useDocuments';
 import { buildDocumentForm, MAX_DOC_BYTES } from '../../services/documentServices';
+import { BLANK } from '../../utils/constants';
 
 const VIEW = 'employee-documents:view';
 
@@ -26,11 +31,10 @@ const REQ_TONE = {
 };
 
 const fmtDate = (v) => (v ? moment(v).format('MMM D, YYYY') : '—');
-const fmtSize = (b) => (b ? `${(Number(b) / 1024 / 1024).toFixed(2)} MB` : '');
 
 function Documents() {
-    const { employees } = useEmployees({ page: 1, limit: 200, search: '' });
-    const [employeeId, setEmployeeId] = useState('');
+    const { employees } = useEmployees({ page: 1, limit: 200, search: BLANK });
+    const [employeeId, setEmployeeId] = useState(BLANK);
 
     const {
         documents, requests, isLoading, error,
@@ -97,13 +101,19 @@ function Documents() {
     return (
         <div className="mx-auto max-w-7xl space-y-6">
             <div className="border-b border-slate-100 pb-4">
-                <CustomLabel variant="h2" addedClass="font-bold text-slate-700!" description="View an employee's documents and request new ones.">
-                    Employee Documents
-                </CustomLabel>
+                <CustomLabel 
+                    children='Employee Documents' 
+                    variant="h2" 
+                    addedClass="font-bold text-slate-700!" 
+                    description="View an employee's documents and request new ones."
+                    descriptionClass='text-xs'
+                  />
+                    
             </div>
 
             <div className="max-w-md">
                 <CustomDropdown
+                    searchable
                     label="Employee"
                     options={employeeOptions}
                     value={employeeId}
@@ -137,16 +147,26 @@ function Documents() {
                                 <p className="text-sm font-semibold text-slate-900">Document Requests</p>
                             </div>
                             {can('employee-documents:create') && (
-                                <CustomButton onClick={() => setReqForm({ label: '', note: '', due_date: '' })}
+                                <CustomButton 
+                                    children='Request'
+                                    onClick={() => setReqForm({ label: BLANK, note: BLANK, due_date: BLANK })}
                                     icon={PlusIcon} iconPosition="left"
-                                    className="bg-slate-800 px-3 py-1.5 text-xs hover:bg-slate-700">Request</CustomButton>
+                                    className='flex py-2 items-center gap-2 hover:cursor-pointer px-4 bg-slate-700 text-white rounded-lg text-sm font-medium hover:bg-slate-600 transition-colors shadow-xs'
+                                />
+
                             )}
                         </div>
 
                         {requests.length === 0 ? (
-                            <p className="text-sm text-slate-400">No requests yet.</p>
+                            <>
+                                <div className='flex justify-center pb-3'>
+                                    <SearchAlert size={40} color='gray'/>
+                                </div>
+                                <p className="text-xs text-slate-400">No requests found..</p>
+                            </>
+                           
                         ) : (
-                            <ul className="space-y-2">
+                            <ul className="space-y-2 text-left">
                                 {requests.map((r) => (
                                     <li key={r.id} className="rounded-xl border border-slate-100 bg-slate-50/70 p-3">
                                         <div className="flex items-start justify-between gap-2">
@@ -154,7 +174,7 @@ function Documents() {
                                                 <p className="truncate text-sm font-medium text-slate-800">{r.label}</p>
                                                 {r.note && <p className="mt-0.5 text-xs text-slate-500">{r.note}</p>}
                                                 <p className="mt-1 text-[11px] text-slate-400">
-                                                    {r.due_date ? `Due ${fmtDate(r.due_date)} · ` : ''}Requested {fmtDate(r.created_at)}
+                                                    {r.due_date ? `Due ${fmtDate(r.due_date)} · ` : BLANK}Requested {fmtDate(r.created_at)}
                                                 </p>
                                             </div>
                                             <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold capitalize ${REQ_TONE[r.status]}`}>
@@ -164,11 +184,11 @@ function Documents() {
                                         <div className="mt-2 flex gap-3 text-xs">
                                             {r.status === 'pending' && can('employee-documents:edit') && (
                                                 <button onClick={() => setConfirm({ kind: 'req-cancel', id: r.id, label: r.label })}
-                                                    className="font-semibold text-amber-600 hover:underline">Cancel</button>
+                                                    className="font-semibold text-amber-600 hover:underline cursor-pointer">Cancel</button>
                                             )}
                                             {can('employee-documents:delete') && (
                                                 <button onClick={() => setConfirm({ kind: 'req-delete', id: r.id, label: r.label })}
-                                                    className="font-semibold text-rose-500 hover:underline">Remove</button>
+                                                    className="font-semibold text-rose-500 hover:underline cursor-pointer">Remove</button>
                                             )}
                                         </div>
                                     </li>
@@ -185,42 +205,28 @@ function Documents() {
                                 <p className="text-sm font-semibold text-slate-900">Documents ({documents.length})</p>
                             </div>
                             {can('employee-documents:create') && (
-                                <CustomButton onClick={() => setDocForm({ label: '', file: null })}
+                                <CustomButton 
+                                    children='Add'
+                                    onClick={() => setDocForm({ label: BLANK, file: null })}
                                     icon={PlusIcon} iconPosition="left"
-                                    className="bg-slate-800 px-3 py-1.5 text-xs hover:bg-slate-700">Add</CustomButton>
+                                    className='flex py-2 items-center gap-2 hover:cursor-pointer px-4 bg-slate-700 text-white rounded-lg text-sm font-medium hover:bg-slate-600 transition-colors shadow-xs'
+                                />
                             )}
                         </div>
 
-                        {documents.length === 0 ? (
-                            <p className="text-sm text-slate-400">No documents on file.</p>
-                        ) : (
-                            <ul className="space-y-2">
-                                {documents.map((d) => (
-                                    <li key={d.id} className="flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50/70 p-3">
-                                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500">
-                                            {d.type === 'image' ? <ImageIcon size={16} /> : <FileText size={16} />}
-                                        </div>
-                                        <div className="min-w-0 flex-1">
-                                            <p className="truncate text-sm font-medium text-slate-800">{d.label}</p>
-                                            <p className="text-[11px] text-slate-400">
-                                                {d.source === 'employee' ? 'Uploaded by employee' : 'Added by HR'} · {fmtDate(d.created_at)}
-                                                {fmtSize(d.size_bytes) && ` · ${fmtSize(d.size_bytes)}`}
-                                            </p>
-                                        </div>
-                                        <a href={d.file_url || d.file_link} target="_blank" rel="noreferrer" download={d.file_name || d.label}
-                                            className="rounded-lg p-1.5 text-slate-400 hover:bg-white hover:text-slate-700" title="Open / download">
-                                            <Download size={15} />
-                                        </a>
-                                        {can('employee-documents:delete') && (
-                                            <button onClick={() => setConfirm({ kind: 'doc', id: d.id, label: d.label })}
-                                                className="rounded-lg p-1.5 text-slate-400 hover:bg-white hover:text-rose-600" title="Archive">
-                                                <Trash size={15} />
-                                            </button>
-                                        )}
-                                    </li>
-                                ))}
-                            </ul>
-                        )}
+                        <DocumentList
+                            emptyLabel={
+                                <>
+                                    <div className='flex justify-center pb-3'>
+                                        <File size={40} color='gray'/>
+                                    </div>
+                                    <p className="text-xs text-slate-400">No file found..</p>
+                                </>
+                            }
+                            documents={documents}
+                            canDelete={can('employee-documents:delete')}
+                            onDelete={(d) => setConfirm({ kind: 'doc', id: d.id, label: d.label })}
+                        />
                     </section>
                 </div>
             )}
@@ -235,17 +241,22 @@ function Documents() {
                 hasRequiredFields
                 footer={(
                     <div className="flex justify-center border-t border-slate-100 pt-4">
-                        <CustomButton onClick={submitRequest} icon={Save} iconPosition="left"
+                        <CustomButton 
+                            children='Send Request'
+                            onClick={submitRequest} 
+                            icon={Save} 
+                            iconPosition="left"
                             isLoading={isMutating} disabled={isMutating || !reqForm?.label?.trim()}
-                            className="bg-slate-800 px-5 py-2.5 text-sm hover:bg-slate-700">Send Request</CustomButton>
+                            className='flex py-2 items-center gap-2 hover:cursor-pointer px-4 bg-slate-700 text-white rounded-lg text-sm font-medium hover:bg-slate-600 transition-colors shadow-xs'
+                        />
                     </div>
                 )}
             >
                 {reqForm && (
-                    <div className="space-y-4 px-1">
+                    <div className="space-y-4 px-1 pb-3">
                         <CustomInput label="Document" isRequired value={reqForm.label} placeholder="e.g. NBI Clearance"
                             onChange={(e) => setReqForm((p) => ({ ...p, label: e.target.value }))} />
-                        <div>
+                        <div className='text-left'>
                             <label className="mb-1 block text-xs font-medium text-slate-700">Note</label>
                             <textarea rows={3} value={reqForm.note} maxLength={500}
                                 onChange={(e) => setReqForm((p) => ({ ...p, note: e.target.value }))}
@@ -268,14 +279,19 @@ function Documents() {
                 hasRequiredFields
                 footer={(
                     <div className="flex justify-center border-t border-slate-100 pt-4">
-                        <CustomButton onClick={submitDocument} icon={Save} iconPosition="left"
-                            isLoading={busy || isMutating} disabled={busy || isMutating || !docForm?.file}
-                            className="bg-slate-800 px-5 py-2.5 text-sm hover:bg-slate-700">Save Document</CustomButton>
+                        <CustomButton 
+                            children='Save Document'
+                            onClick={submitDocument} 
+                            icon={Save} iconPosition="left"
+                            isLoading={busy || isMutating} 
+                            disabled={busy || isMutating || !docForm?.file}
+                            className='flex py-2 items-center gap-2 hover:cursor-pointer px-4 bg-slate-700 text-white rounded-lg text-sm font-medium hover:bg-slate-600 transition-colors shadow-xs'
+                        />
                     </div>
                 )}
             >
                 {docForm && (
-                    <div className="space-y-4 px-1">
+                    <div className="space-y-4 px-1 pb-3">
                         <CustomInput label="Label" value={docForm.label} placeholder="Defaults to the file name"
                             onChange={(e) => setDocForm((p) => ({ ...p, label: e.target.value }))} />
                         <CustomFileUploader

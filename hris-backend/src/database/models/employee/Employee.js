@@ -28,14 +28,18 @@ class Employee extends BaseModel {
 
         // 2. Extract transaction (trx) or knex connection context from the parent query
         const trx = queryContext.transaction;
+        const childCtx = { user: queryContext.user };
 
-        // 3. Chain graph operations directly to the newly created employee record instance (`this`)
-        await this.$relatedQuery('contact', trx).insert(graphData.contact || {});
-        await this.$relatedQuery('addresses', trx).insert(graphData.addresses || {});
-        await this.$relatedQuery('demographics', trx).insert(graphData.demographics || {});
-        await this.$relatedQuery('credentials', trx).insert(graphData.credentials || {});
-        await this.$relatedQuery('governmentDetails', trx).insert(graphData.governmentDetails || {});
+        // 3. Insert only the related records the caller actually supplied. Each
+        //    sub-model stamps its own audit columns from childCtx.user.
+        const insertRelated = (relation, data) =>
+            this.$relatedQuery(relation, trx).context(childCtx).insert(data);
 
+        if (graphData.contact) await insertRelated('contact', graphData.contact);
+        if (graphData.addresses) await insertRelated('addresses', graphData.addresses);
+        if (graphData.demographics) await insertRelated('demographics', graphData.demographics);
+        if (graphData.credentials) await insertRelated('credentials', graphData.credentials);
+        if (graphData.governmentDetails) await insertRelated('governmentDetails', graphData.governmentDetails);
 
         // Relate existing roles and positions (pivot joins)
         if (graphData.roles?.length) {
@@ -88,6 +92,7 @@ class Employee extends BaseModel {
         const Role = require('../roles-and-permission/Role');
         const Position = require('../lookups/Position');
         const GovernmentDetail = require('./GovernmentDetail');
+        const EmployeeCompensation = require('../payroll/EmployeeCompensation');
 
         return {
             contact: {
@@ -143,6 +148,19 @@ class Employee extends BaseModel {
                     from: 'employee.employees.id', // Owner table column
                     to: 'employee.government_details.employee_id' // Related table column
                 }
+            },
+            // Currently-active pay profile (payroll.employee_compensations)
+            compensation: {
+                relation: BaseModel.HasOneRelation,
+                modelClass: EmployeeCompensation,
+                join: {
+                    from: 'employee.employees.id',
+                    to: 'payroll.employee_compensations.employee_id'
+                },
+                modify: (builder) => builder
+                    .where('payroll.employee_compensations.is_active', true)
+                    .andWhere('payroll.employee_compensations.is_deleted', false)
+                    .select('uuid', 'pay_rate', 'rate_type', 'monthly_equivalent', 'effective_date')
             }
         };
     }

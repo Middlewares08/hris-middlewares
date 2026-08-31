@@ -5,7 +5,7 @@ const crypto = require('crypto');
 // ➕ CREATE
 const createPosition = async (req, res) => {
     try {
-        const { name, description, department, rate_type, rate } = req.body;
+        const { name, description, department } = req.body;
 
         // Resolve internal department ID
         const dept = await Department.query().findOne({ uuid: department, is_deleted: false });
@@ -13,18 +13,11 @@ const createPosition = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Target department mapping missing.' });
         }
 
-        // Simple validation guard
-        if (rate_type && !['hr', 'day'].includes(rate_type)) {
-            return res.status(400).json({ success: false, message: 'Invalid rate type specified.' });
-        }
-
         const newPosition = await Position.query().insert({
             uuid: crypto.randomUUID(),
             name,
             description,
             department_id: dept?.id,
-            rate_type: rate_type || null,
-            rate: rate ? parseFloat(rate) : null,
             created_by: req.user?.id ? parseInt(req.user.id, 10) : null
         });
 
@@ -108,24 +101,13 @@ const getPositionByUuid = async (req, res) => {
 const updatePosition = async (req, res) => {
     try {
         const { uuid } = req.params;
-        const { name, description, department, rate_type, rate } = req.body;
+        const { name, description, department } = req.body;
 
         const updateData = {
             name,
             description,
             updated_by: req.user?.id ? parseInt(req.user.id, 10) : null
         };
-
-        if (rate_type !== undefined) {
-            if (rate_type && !['hr', 'day'].includes(rate_type)) {
-                return res.status(400).json({ success: false, message: 'Invalid rate type specified.' });
-            }
-            updateData.rate_type = rate_type;
-        }
-
-        if (rate !== undefined) {
-            updateData.rate = rate ? parseFloat(rate) : null;
-        }
 
         if (name) {
             const dummyInstance = new Position();

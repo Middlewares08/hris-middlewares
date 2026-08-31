@@ -9,7 +9,8 @@ import { address } from 'addresspinas';
 import * as addresspinas from 'addresspinas';
 import { usePositions } from "../../hooks/usePosition";
 import { useMemo } from "react";
-import { formatGovernmentId } from "../../utils/utils";
+import { formatGovernmentId, handleNumberInput } from "../../utils/utils";
+import { RATE_TYPES } from "../Payroll/payrollOptions";
 import clsx from "clsx";
 
 export const BasicInformation = ({ payload, onChange, errors, touched }) => {
@@ -118,6 +119,7 @@ export const BasicInformation = ({ payload, onChange, errors, touched }) => {
 
                 <div className="flex space-x-4 px-3">
                     <CustomDatePicker
+                        isRequired={true}
                         className="text-left!"
                         label="Birthdate"
                         maxDate={new Date()}
@@ -247,6 +249,7 @@ export const Employement = ({ payload, onChange, errors, touched }) => {
         return positionList.find(prev => prev?.id === payload?.position) || null;
     }, [payload?.position, positionList]);
 
+    console.log('errors, touched: ',errors, touched)
     return (
         <>
         
@@ -296,7 +299,7 @@ export const Employement = ({ payload, onChange, errors, touched }) => {
                             errorLabel={errors?.position}
                         />
 
-                        { selectedPosition && 
+                        { selectedPosition &&
                             <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 space-y-2">
                                 <h5 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Job Profile</h5>
                                 <div className="flex justify-between items-center pt-1">
@@ -305,14 +308,36 @@ export const Employement = ({ payload, onChange, errors, touched }) => {
                                         {selectedPosition?.department?.name}
                                     </span>
                                 </div>
-                                <div className="flex justify-between items-center pt-1">
-                                    <span className="text-sm text-slate-600">Base Salary Rate:</span>
-                                    <span className="font-mono font-bold text-slate-900 text-base">
-                                    ₱{selectedPosition?.rate ? Number(selectedPosition?.rate).toFixed(2) : '0.00'} / {selectedPosition?.position?.rate_type === 'hr' ? 'hr' : 'day'}
-                                    </span>
-                                </div>
                             </div>
                         }
+
+                        <div className="flex space-x-4">
+                            <CustomInput
+                                className="w-full"
+                                label="Base Pay Rate"
+                                labelPosition="left"
+                                type="text"
+                                isRequired
+                                placeholder="Ex. 25000.00"
+                                value={payload?.pay_rate}
+                                onChange={(e) => onChange({ pay_rate: handleNumberInput(e.target.value) })}
+                                error={errors?.pay_rate && touched?.pay_rate}
+                                errorLabel={errors?.pay_rate}
+                            />
+                            <CustomDropdown
+                                className="items-start! w-full"
+                                label="Rate Type"
+                                isRequired
+                                options={RATE_TYPES}
+                                value={payload?.rate_type}
+                                onChange={(val) => onChange({ rate_type: val })}
+                                renderProps="label"
+                                returnProps="value"
+                                placeholder="Select rate type"
+                                error={errors?.rate_type && touched?.rate_type}
+                                errorLabel={errors?.rate_type}
+                            />
+                        </div>
                     </div>
                 </div>
             </div>
@@ -457,7 +482,7 @@ export const Benefits = ({ payload, onChange, errors, touched, addedClass = BLAN
     )
 }
 
-export const ContactInformation = ({ payload, onChange, errors, touched }) => {
+export const ContactInformation = ({ payload, onChange, errors }) => {
     return (
         <div className="scrollbar-y-visible overflow-y-auto max-h-[50vh] border-t border-t-slate-200 py-4 px-2">
             <CustomLabel
@@ -471,11 +496,12 @@ export const ContactInformation = ({ payload, onChange, errors, touched }) => {
                     label="Employee Mobile Phone Number"
                     labelPosition="left"
                     type="text"
+                    isRequired={true}
                     maxLength={13}
                     placeholder="0917-123-4567"
                     value={payload?.phone_number}
                     onChange={(e) => onChange({ phone_number: formatGovernmentId(e.target.value, 'phone') })}
-                    error={errors?.phone_number && touched?.phone_number}
+                    error={!!errors?.phone_number}
                     errorLabel={errors?.phone_number}
                     showCharacterCount
                     showCharacterMaxLength={false}
@@ -485,12 +511,13 @@ export const ContactInformation = ({ payload, onChange, errors, touched }) => {
                 <CustomInput
                     label="Employee Personal Email address"
                     labelPosition="left"
+                    isRequired={true}
                     type="text"
                     maxLength={50}
                     placeholder="john_doe@email.com"
                     value={payload?.personal_email}
                     onChange={(e) => onChange({ personal_email: e.target.value })}
-                    error={errors?.personal_email && touched?.personal_email}
+                    error={!!errors?.personal_email}
                     errorLabel={errors?.personal_email}
                 />
             </div>
@@ -510,7 +537,7 @@ export const ContactInformation = ({ payload, onChange, errors, touched }) => {
                     placeholder="Ex. John Doe"
                     value={payload?.emergency_contact_name}
                     onChange={(e) => onChange({ emergency_contact_name: e.target.value })}
-                    error={errors?.emergency_contact_name && touched?.emergency_contact_name}
+                    error={!!errors?.emergency_contact_name}
                     errorLabel={errors?.emergency_contact_name}
                 />
                 <CustomInput
@@ -522,7 +549,7 @@ export const ContactInformation = ({ payload, onChange, errors, touched }) => {
                     placeholder="0917-123-4567"
                     value={payload?.emergency_contact_phone}
                     onChange={(e) => onChange({ emergency_contact_phone: formatGovernmentId(e.target.value, 'phone') })}
-                    error={errors?.emergency_contact_phone && touched?.emergency_contact_phone}
+                    error={!!errors?.emergency_contact_phone}
                     errorLabel={errors?.emergency_contact_phone}
                     showCharacterCount
                     showCharacterMaxLength={false}
@@ -539,7 +566,7 @@ export const ContactInformation = ({ payload, onChange, errors, touched }) => {
                     renderProps="label"
                     returnProps="value"
                     disabled={false}
-                    error={errors?.emergency_contact_relationship && touched?.emergency_contact_relationship}
+                    error={!!errors?.emergency_contact_relationship}
                     errorLabel={errors?.emergency_contact_relationship}
                     placeholder="Choose relationship.."
                 />

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import moment from 'moment';
-import { ShieldAlert, Trash, Clock, Check, X, Power } from 'lucide-react';
+import { ShieldAlert, Clock, X, Power } from 'lucide-react';
 import { CustomDataTable } from '../../components/CustomDataTable';
 import CustomModal from '../../components/CustomModal';
 import CustomButton from '../../components/CustomButton';
@@ -34,7 +34,7 @@ function FeatureToggle() {
     const canEdit = can('maintenance:edit');
 
     return (
-        <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-white p-4">
+        <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-white p-4 text-left">
             <div className="flex items-center gap-3">
                 <div className={`flex h-9 w-9 items-center justify-center rounded-lg ${enabled ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}>
                     <Power size={16} />
@@ -106,7 +106,7 @@ function OvertimeRequests() {
         <div className="mt-4 space-y-4">
             <div className="rounded-xl border border-slate-100 bg-slate-50 p-4">
                 <p className="text-lg font-bold text-slate-900">{employeeName(row.employee)}</p>
-                <div className="mt-2 flex flex-wrap gap-2">
+                <div className="mt-2 flex flex-wrap gap-2 justify-center pb-3">
                     <Pill value={row.status} />
                     <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[11px] font-semibold text-slate-600">
                         {Number(row.hours)}h on {fmtDate(row.work_date)}
@@ -124,16 +124,26 @@ function OvertimeRequests() {
 
             {row.status === 'pending' && can('overtime-tracker:edit') && (
                 <div className="flex gap-2">
-                    <CustomButton onClick={() => approve(row, close)} icon={Check} iconPosition="left" isLoading={isMutating}
-                        variant="primary" className="flex-1 bg-emerald-50! text-emerald-700! border border-emerald-200 hover:bg-emerald-100!">Approve</CustomButton>
-                    <CustomButton onClick={() => { close(); setToReject(row); }} icon={X} iconPosition="left"
-                        variant="primary" className="flex-1 bg-rose-50! text-rose-600! border border-rose-200 hover:bg-rose-100!">Reject</CustomButton>
+                    <CustomButton 
+                        children='Approve'
+                        onClick={() => approve(row, close)} 
+                        isLoading={isMutating}
+                        variant="primary" className="flex-1 py-2 text-xs bg-emerald-50! text-emerald-700! border border-emerald-200 hover:bg-emerald-100!"/>
+                    <CustomButton 
+                        children='Reject'
+                        onClick={() => { close(); setToReject(row); }} 
+                        variant="primary" className="flex-1 py-2 text-xs bg-rose-50! text-rose-600! border border-rose-200 hover:bg-rose-100!"
+                    />
                 </div>
             )}
 
             {can('overtime-tracker:delete') && (
-                <CustomButton onClick={() => { close(); setToDelete(row); }}
-                    variant="primary" className="w-full bg-white! text-slate-700! border border-slate-200 hover:bg-slate-100!">Archive</CustomButton>
+                <CustomButton 
+                    children='Archive'
+                    onClick={() => { close(); setToDelete(row); }}
+                    variant="primary" 
+                    className="w-full py-2 text-xs bg-white! text-slate-700! border border-slate-200 hover:bg-slate-100!"
+                />
             )}
         </div>
     );
@@ -143,9 +153,13 @@ function OvertimeRequests() {
     return (
         <div className="mx-auto max-w-7xl space-y-6">
             <div className="border-b border-slate-100 pb-4">
-                <CustomLabel variant="h2" addedClass="font-bold text-slate-700!" description="Review employee overtime filings. Approved hours flow into payroll runs for the covered period.">
-                    Overtime Tracker
-                </CustomLabel>
+                <CustomLabel 
+                    variant="h2" 
+                    children='Overtime Tracker'
+                    descriptionClass='text-xs'
+                    addedClass="font-bold text-slate-700!" 
+                    description="Review employee overtime filings. Approved hours flow into payroll runs for the covered period."
+                />
             </div>
 
             <FeatureToggle />
@@ -198,14 +212,21 @@ function OvertimeRequests() {
                     <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full border border-rose-100 bg-rose-50 text-rose-500">
                         <ShieldAlert size={26} />
                     </div>
-                    <p className="mb-6 text-sm text-slate-500">
+                    <p className="mb-6 text-sm text-slate-500 pb-4">
                         {toDelete && <>Archive <span className="font-semibold text-slate-800">{employeeName(toDelete.employee)}</span>'s {Number(toDelete.hours)}h filing for {fmtDate(toDelete.work_date)}? It will stop counting toward payroll.</>}
                     </p>
                     <div className="flex gap-3 border-t border-slate-100 pt-4">
-                        <CustomButton onClick={() => setToDelete(null)} className="flex-1 border border-slate-200 bg-white! text-slate-700! hover:bg-slate-100!">Cancel</CustomButton>
-                        <CustomButton variant="danger" icon={Trash} iconPosition="left" isLoading={isMutating}
+                        <CustomButton 
+                            children='Cancel'
+                            onClick={() => setToDelete(null)} 
+                            className="flex-1 py-2 text-center border border-slate-200 bg-white! text-slate-700! hover:bg-slate-100! rounded-lg"
+                        />
+                        <CustomButton 
+                            children='Archive'
+                            isLoading={isMutating}
+                            className='flex-1 py-2 items-center gap-2 hover:cursor-pointer px-4 bg-red-700 text-white rounded-lg text-sm font-medium hover:bg-red-600 transition-colors shadow-xs'
                             onClick={async () => { try { await remove(toDelete.uuid); setToDelete(null); } catch { /* handled */ } }}
-                            className="flex-1">Archive</CustomButton>
+                        />
                     </div>
                 </div>
             </CustomModal>

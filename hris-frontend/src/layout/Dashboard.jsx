@@ -8,11 +8,11 @@ import {
     LogOut,
     ChevronDown,
     GroupIcon,
-    CogIcon,
     Wallet,
     Megaphone,
     Clock,
-    ScanFace
+    ScanFace,
+    ListChecks
 } from 'lucide-react';
 import { useLogout } from '../hooks/useLogout';
 import Header from './Header';
@@ -40,9 +40,19 @@ const Dashboard = () => {
             permission: 'employee-management:view',
             children: [
                 {
-                    label: 'Employee', 
-                    path: '/dashboard/employee/lists', 
-                    permission: 'employee-management:view' 
+                    label: 'Employee',
+                    path: '/dashboard/employee/lists',
+                    permission: 'employee-management:view'
+                },
+                {
+                    label: 'Departments',
+                    path: '/dashboard/employee/departments',
+                    permission: 'departments:view'
+                },
+                {
+                    label: 'Position',
+                    path: '/dashboard/employee/positions',
+                    permission: 'positions:view'
                 },
                 // {
                 //     label: 'Statutory & Compliance',
@@ -53,35 +63,26 @@ const Dashboard = () => {
                     label: 'Documents',
                     path: '/dashboard/employee/documents',
                     permission: 'employee-documents:view'
-                }
-            ]
-        },
-        { 
-            icon: <CogIcon className='hover:cursor-pointer' size={20}/>, 
-            label: 'Lookups Setting', 
-            path: '/dashboard/lookups', 
-            permission: 'lookups-setting:view',
-            children: [
-                {
-                    label: 'Departments', 
-                    path: '/dashboard/lookups/departments', 
-                    permission: 'departments:view' 
                 },
                 {
-                    label: 'Position', 
-                    path: '/dashboard/lookups/positions', 
-                    permission: 'positions:view' 
+                    label: 'Employee Compensation',
+                    path: '/dashboard/employee/compensation',
+                    permission: 'payroll-and-compensation:view'
+                },
+                {
+                    label: 'Bank Details',
+                    path: '/dashboard/employee/bank-details',
+                    permission: 'payroll-and-compensation:view'
                 }
             ]
         },
         {
             icon: <Wallet className='hover:cursor-pointer' size={20} />,
-            label: 'Payroll & Compensation',
+            label: 'Payroll',
             path: '/dashboard/payroll',
             children: [
                 { label: 'Payroll Runs', path: '/dashboard/payroll/runs', permission: 'run-payroll:view' },
                 { label: 'Pay Periods', path: '/dashboard/payroll/periods', permission: 'run-payroll:view' },
-                { label: 'Employee Compensation', path: '/dashboard/payroll/compensation', permission: 'payroll-and-compensation:view' },
                 { label: 'Pay Components', path: '/dashboard/payroll/components', permission: 'payroll-and-compensation:view' },
                 { label: 'Statutory Tables', path: '/dashboard/payroll/statutory-tables', permission: 'statutory-and-compliance:view' },
             ]
@@ -91,6 +92,12 @@ const Dashboard = () => {
             label: 'Announcements',
             path: '/dashboard/announcements',
             permission: 'announcements:view',
+        },
+        {
+            icon: <ListChecks className='hover:cursor-pointer' size={20} />,
+            label: 'Attendance Logs',
+            path: '/dashboard/attendance-logs',
+            permission: 'attendance-logs:view',
         },
         {
             icon: <Clock className='hover:cursor-pointer' size={20} />,

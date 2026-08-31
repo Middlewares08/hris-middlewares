@@ -2,6 +2,7 @@
 require('dotenv').config(); // Load environment variables from .env immediately
 const express = require('express');
 const cors = require('cors');
+const cookieParser = require('cookie-parser');
 const helmet = require('helmet');
 
 const app = express();
@@ -30,6 +31,7 @@ app.use(cors({
 }));
 
 app.use(express.json()); // Parses incoming json request payloads automatically
+app.use(cookieParser()); // Populates req.cookies (needed by /auth/refresh)
 
 // ==========================================
 // Base Health Check Route
@@ -128,6 +130,11 @@ app.use('/announcements', announcementRoutes);
 // PAYROLL
 const payrollRoutes = require("../src/route/admin/payrollRoutes");
 app.use('/payroll', payrollRoutes);
+
+
+// DASHBOARD ANALYTICS
+const dashboardRoutes = require("../src/route/admin/dashboardRoutes");
+app.use('/dashboard', dashboardRoutes);
 
 
 // ==========================================

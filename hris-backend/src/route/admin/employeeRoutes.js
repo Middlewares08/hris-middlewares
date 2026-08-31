@@ -15,6 +15,11 @@ const {
 } = require('../../module/admin/controller/employee/GovernmentDetailController');
 
 const {
+    getEmployeesWithBankDetails,
+    upsertBankDetails
+} = require('../../module/admin/controller/employee/BankDetailController');
+
+const {
     getAllDocuments,
     getDocumentsByEmployee,
     getDocumentById,
@@ -40,6 +45,10 @@ router.delete('/:uuid', requirePermission('employee-management:delete'), deleteE
 router.get('/list/benefits', requirePermission('benefits:view'), getEmployeesWithBenefits);
 router.post('/list/benefits', requirePermission('benefits:edit'), upsertGovernmentDetails);
 router.delete('/list/benefits/:employeeId', requirePermission('benefits:delete'), deleteGovernmentDetails);
+
+// PAYROLL BANK / PAYMENT DETAILS (patches the active compensation row)
+router.get('/list/bank-details', requirePermission('payroll-and-compensation:view'), getEmployeesWithBankDetails);
+router.post('/list/bank-details', requirePermission('payroll-and-compensation:edit'), upsertBankDetails);
 
 // DOCUMENTS
 router.get('/list/documents', requirePermission('resume:view'), getAllDocuments);

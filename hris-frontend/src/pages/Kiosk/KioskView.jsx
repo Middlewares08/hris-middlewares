@@ -9,7 +9,9 @@ import {
     CalendarCheck,
 } from 'lucide-react';
 import Loading from '../../components/Loading';
+import CustomForm from '../../components/CustomForm';
 import { kioskDeviceService } from '../../services/kioskServices';
+import { kioskTokenValidationSchema } from '../../validation/kiosk-token-validation';
 
 const FaceLivenessCheck = lazy(() => import('../../components/kiosk/FaceLivenessCheck'));
 
@@ -41,7 +43,6 @@ export default function KioskView() {
     );
     const [kioskName, setKioskName] = useState('');
     const [fatal, setFatal] = useState(null); // message on needsToken / disabled
-    const [tokenInput, setTokenInput] = useState('');
     const [result, setResult] = useState(null); // { kind:'in'|'out'|'none'|'error', employee?, time?, message }
 
     const now = useClock();
@@ -89,12 +90,10 @@ export default function KioskView() {
         if (localStorage.getItem('kioskToken')) loadConfig();
     }, [loadConfig]);
 
-    const submitToken = async (e) => {
-        e.preventDefault();
-        const t = tokenInput.trim();
+    const submitToken = async ({ token }) => {
+        const t = token.trim();
         if (!t) return;
         localStorage.setItem('kioskToken', t);
-        setTokenInput('');
         await loadConfig();
     };
 
@@ -256,26 +255,39 @@ export default function KioskView() {
 
     if (phase === 'needsToken') {
         return shell(
-            <form onSubmit={submitToken} className="w-full max-w-sm px-6 text-center">
+            <div className="w-full max-w-sm px-6 text-center">
                 <ScanFace size={40} className="mx-auto mb-4 text-indigo-400" />
                 <h1 className="text-xl font-semibold">Attendance Kiosk</h1>
                 <p className="mt-2 text-sm text-white/60">
                     {fatal || 'Paste the kiosk token from HR to activate this device.'}
                 </p>
-                <input
-                    autoFocus
-                    value={tokenInput}
-                    onChange={(e) => setTokenInput(e.target.value)}
-                    placeholder="Kiosk token"
-                    className="mt-5 w-full rounded-lg border border-white/15 bg-white/5 px-3 py-2.5 text-center text-sm tracking-wide text-white placeholder-white/30 focus:border-indigo-400 focus:outline-none"
+                <CustomForm
+                    initialValues={{ token: '' }}
+                    validationSchema={kioskTokenValidationSchema}
+                    onSubmit={submitToken}
+                    id="kiosk-token-form"
+                    content={(errors, touched, handleSubmit, values, setFieldValue) => (
+                        <>
+                            <input
+                                autoFocus
+                                value={values.token}
+                                onChange={(e) => setFieldValue('token', e.target.value)}
+                                placeholder="Kiosk token"
+                                className="mt-5 w-full rounded-lg border border-white/15 bg-white/5 px-3 py-2.5 text-center text-sm tracking-wide text-white placeholder-white/30 focus:border-indigo-400 focus:outline-none"
+                            />
+                            {errors.token && touched.token && (
+                                <p className="mt-1.5 text-xs font-medium text-amber-400">{errors.token}</p>
+                            )}
+                            <button
+                                type="submit"
+                                className="mt-3 w-full rounded-lg bg-indigo-600 py-2.5 text-sm font-semibold hover:bg-indigo-500"
+                            >
+                                Activate
+                            </button>
+                        </>
+                    )}
                 />
-                <button
-                    type="submit"
-                    className="mt-3 w-full rounded-lg bg-indigo-600 py-2.5 text-sm font-semibold hover:bg-indigo-500"
-                >
-                    Activate
-                </button>
-            </form>,
+            </div>,
         );
     }
 

@@ -10,18 +10,34 @@ import CustomModal from '../../components/CustomModal';
 import { CustomStepper } from '../../components/CustomStepper';
 import { BasicInformation, Benefits, ContactInformation, Employement } from './AddEmployee';
 import { BLANK } from '../../utils/constants';
-import { basicInfoValidationSchema, employmentValidationSchema } from '../../validation/employee-validation';
+import { formatDate } from '../../utils/utils';
+import { basicInfoValidationSchema, employmentValidationSchema, contactInfoValidationSchema } from '../../validation/employee-validation';
 import CustomForm from '../../components/CustomForm';
 import { useRef } from 'react';
 import FaceRecognitionSection from './FaceRecognitionSection';
 import FaceClockInToggle from './FaceClockInToggle';
+
+const INITIAL_PAYLOAD = {
+    lastname: BLANK,
+    middlename: BLANK,
+    firstname: BLANK,
+    uploaded_profile: BLANK,
+    email: BLANK,
+    birth_date: BLANK,
+    date_hired: BLANK,
+    position: BLANK,
+    employment_type: BLANK,
+    pay_rate: BLANK,
+    rate_type: 'monthly',
+    phone_number: BLANK,
+    personal_email: BLANK
+};
 
 const Employees = () => {
     const basicInfoRef = useRef(null);
     const contactInfoRef = useRef(null);
     const employmentRef = useRef(null);
     const benefitRef = useRef(null);
-    const regEmpMainRef = useRef(null);
     const stepRefs = [basicInfoRef, employmentRef, benefitRef, contactInfoRef];
 
     // Search & Pagination local state variables
@@ -29,16 +45,7 @@ const Employees = () => {
     const [page, setPage] = useState(1);
     const limit = 10;
     const [onOpenAddModal, setOnOpenAddModal] = useState(false);
-    const [payload, setPayload] = useState({
-        lastname: BLANK,
-        middlename: BLANK,
-        firstname: BLANK,
-        uploaded_profile: BLANK,
-        email: BLANK,
-        date_hired: BLANK,
-        position: BLANK,
-        employment_type: BLANK
-    });
+    const [payload, setPayload] = useState(INITIAL_PAYLOAD);
     const [currentStep, setCurrentStep] = useState(0);
 
     // Query hooks mapping to Server-side variables
@@ -87,6 +94,7 @@ const Employees = () => {
                     <div className="flex flex-col">
                         <span className="font-semibold text-gray-900">{`${row.first_name} ${row.last_name}`}</span>
                         <span className="text-xs text-gray-400">{row?.credentials?.email}</span>
+                        <span className="text-xs font-mono text-gray-400 select-all">{row?.employee_id || '—'}</span>
                     </div>
                 </div>
             )
@@ -109,7 +117,9 @@ const Employees = () => {
                     </span>
                 </div> 
                 <span className='subtitle text-xs'>
-                    ₱{row?.position?.rate ? Number(row?.position?.rate).toFixed(2) : '0.00'} / {row.position?.position?.rate_type === 'hr' ? 'hr' : 'day'}
+                    {row?.compensation?.pay_rate
+                        ? `₱${Number(row.compensation.pay_rate).toFixed(2)} / ${String(row.compensation.rate_type).replace(/_/g, ' ')}`
+                        : '—'}
                 </span>
                 
                 </>
@@ -136,16 +146,7 @@ const Employees = () => {
     const onCloseModal = () => {
         setOnOpenAddModal(false);
         setCurrentStep(0);
-        setPayload({
-            lastname: BLANK,
-            middlename: BLANK,
-            firstname: BLANK,
-            uploaded_profile: BLANK,
-            email: BLANK,
-            date_hired: BLANK,
-            position: BLANK,
-            employment_type: BLANK
-        });
+        setPayload(INITIAL_PAYLOAD);
     }
 
     const onOpenAddEmployeeModal = () => {
@@ -233,9 +234,10 @@ const Employees = () => {
                     id="contact-form"
                     formRef={contactInfoRef}
                     initialValues={payload}
-                    onSubmit={() => handleNext()}
-                    content={(errors, touched) =>  
-                        <ContactInformation 
+                    validationSchema={contactInfoValidationSchema}
+                    onSubmit={() => handleSubmit()}
+                    content={(errors, touched) =>
+                        <ContactInformation
                             payload={payload} 
                             onChange={(data) => updatePayload(data)}
                             onNext={handleNext}
@@ -260,6 +262,7 @@ const Employees = () => {
                     <div>
                         <h4 className="font-bold text-xl text-gray-900">{`${employee?.first_name} ${employee?.last_name}`}</h4>
                         <p className="text-sm text-gray-500">{employee?.position?.name || 'No Position Assigned'}</p>
+                        <p className="text-xs font-mono text-gray-400 select-all">{employee?.employee_id || '—'}</p>
                     </div>
                 </div>
 
@@ -276,12 +279,12 @@ const Employees = () => {
                     
                     <div className="flex items-center gap-3 text-sm text-gray-700">
                         <Phone className="w-4 h-4 text-gray-400" />
-                        <span>{employee?.phone || 'No phone number'}</span>
+                        <span>{employee?.contact?.personal_phone || 'No phone number'}</span>
                     </div>
 
                     <div className="flex items-center gap-3 text-sm text-gray-700">
                         <MapPin className="w-4 h-4 text-gray-400" />
-                        <span>{employee?.department?.name || 'Unassigned Department'}</span>
+                        <span>{employee?.position?.department?.name || 'Unassigned Department'}</span>
                     </div>
                 </div>
 
@@ -293,8 +296,18 @@ const Employees = () => {
                     <div className="flex justify-between items-center pt-1">
                         <span className="text-sm text-slate-600">Base Salary Rate:</span>
                         <span className="font-mono font-bold text-slate-900 text-base">
-                          ₱{employee?.position?.rate ? Number(employee?.position?.rate).toFixed(2) : '0.00'} / {employee?.position?.position?.rate_type === 'hr' ? 'hr' : 'day'}
+                          {employee?.compensation?.pay_rate
+                            ? `₱${Number(employee.compensation.pay_rate).toFixed(2)} / ${String(employee.compensation.rate_type).replace(/_/g, ' ')}`
+                            : '—'}
                         </span>
+                    </div>
+                    <div className="flex justify-between items-center pt-1">
+                        <span className="text-sm text-slate-600">Employment Type:</span>
+                        <span className="text-sm font-medium text-slate-900 capitalize">{employee?.employment_type || '—'}</span>
+                    </div>
+                    <div className="flex justify-between items-center pt-1">
+                        <span className="text-sm text-slate-600">Date Hired:</span>
+                        <span className="text-sm font-medium text-slate-900">{employee?.date_hired ? formatDate(employee.date_hired, 'MMMM D, YYYY') : '—'}</span>
                     </div>
                 </div>
 
@@ -311,22 +324,15 @@ const Employees = () => {
        
         return (
             <div className="p-4">
-                 <CustomForm
-                    id="contact-form"
-                    formRef={regEmpMainRef}
-                    initialValues={payload}
-                    onSubmit={() => handleSubmit()}
-                    content={() =>  
-                        <CustomStepper 
-                            steps={steps} 
-                            currentStep={currentStep} 
-                            onStepClick={setCurrentStep} // Allows clicking back to completed steps
-                        />
-                    }
+                <CustomStepper
+                    steps={steps}
+                    currentStep={currentStep}
+                    onStepClick={setCurrentStep} // Allows clicking back to completed steps
                 />
             </div>
         );
     }
+
     return (
         <div className="max-w-7xl mx-auto space-y-6">
              <div className="flex justify-between border-b border-slate-100 pb-4">
@@ -334,7 +340,7 @@ const Employees = () => {
                     variant='h2' 
                     children='Employee Directory' 
                     addedClass='font-bold text-slate-700!' 
-                    descriptionClass='text-sm text-slate-500'
+                    descriptionClass='text-xs text-slate-500'
                     description="Manage, evaluate, and categorize corporate staff records."
                 />
             </div>
@@ -413,7 +419,7 @@ const Employees = () => {
                         (currentStep > 2 ) &&
                             <CustomButton
                                 children={'Register'}
-                                onClick={() => regEmpMainRef?.current?.submitForm()}
+                                onClick={() => stepRefs[currentStep]?.current?.submitForm()}
                                 icon={Save}
                                 iconPosition='right'
                                 type='button'

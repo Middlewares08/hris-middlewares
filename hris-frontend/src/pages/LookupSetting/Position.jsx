@@ -2,7 +2,7 @@ import { useState, useRef } from "react";
 
 import CustomLabel from "../../components/CustomLabel";
 import { CustomDataTable } from '../../components/CustomDataTable';
-import { Building2, ShieldAlert, PlusIcon, MemoryStick, Building, Trash, UserCog, PiggyBank } from 'lucide-react';
+import { Building2, ShieldAlert, PlusIcon, MemoryStick, Building, Trash, UserCog } from 'lucide-react';
 import { can } from "../../utils/permissionCheck";
 import CustomModal from "../../components/CustomModal";
 import CustomInput from "../../components/CustomInput";
@@ -12,9 +12,8 @@ import NotFound from "../../components/NotFound";
 import { usePositions } from "../../hooks/usePosition";
 import CustomDropdown from "../../components/CustomDropdown";
 import { positionValidationSchema } from "../../validation/position-validation";
-import { formatDate, handleNumberInput } from "../../utils/utils";
-import CustomRadioGroup from "../../components/CustomRadioGroup";
-import { BLANK, RATE_TYPE } from "../../utils/constants";
+import { formatDate } from "../../utils/utils";
+import { BLANK } from "../../utils/constants";
 
 function Position() {
     const {
@@ -36,9 +35,7 @@ function Position() {
     const [payload, setPayload] = useState({
             name: BLANK,
             description: BLANK,
-            department: BLANK,
-            rate: 0,
-            rate_type: BLANK
+            department: BLANK
         })
     
     // 🎯 Reference to manually tap into Formik from outside the form if needed
@@ -99,14 +96,6 @@ function Position() {
             )
         },
         {
-            header: 'Rate',
-            render: (row) => (
-                <div className="max-w-xs truncate text-gray-500 text-sm">
-                    ₱{row?.rate ? Number(row.rate).toFixed(2) : '0.00'} / {row?.rate_type === 'hr' ? 'hr' : 'day'}
-                </div>
-            )
-        },
-        {
             header: 'Date Created',
             render: (row) => (
                 <div className="max-w-xs truncate text-gray-500 text-sm">
@@ -124,8 +113,6 @@ function Position() {
             description: pos?.description,
             uuid: pos?.uuid,
             department: pos?.department?.uuid,
-            rate: pos?.rate,
-            rate_type: pos?.rate_type,
         });
 
         action === 'upd' ? setOnOpenModal(true) : setOnTrashModal(true)
@@ -152,9 +139,7 @@ function Position() {
         setPayload({
             name: BLANK,
             description: BLANK,
-            department: BLANK,
-            rate: 0,
-            rate_type: BLANK
+            department: BLANK
         })
     }
 
@@ -201,33 +186,6 @@ function Position() {
                                 error={errors.department && touched.department}
                                 errorLabel={errors.department}
                                 placeholder="Choose department.."
-                            />
-                        </div>
-                        {/* RATE */}
-                        <div className="mb-4">
-                            <CustomRadioGroup
-                                label="Rate Type"
-                                name="rate_type"
-                                options={RATE_TYPE}
-                                value={payload.rate_type}
-                                onChange={(val) => setPayload(prev => ({ ...prev, rate_type: val }))}
-                                isRequired={true}
-                                className="mb-4"
-                            />
-                            <CustomInput
-                                label="Rate"
-                                labelPosition='left'
-                                icon={PiggyBank}
-                                iconPosition="left"
-                                type="text"
-                                maxLength={50}
-                                isRequired={true}
-                                placeholder="1000.00"
-                                inputClassName="tracking-widest placeholder:tracking-normal font-mono"
-                                value={payload?.rate}
-                                onChange={(e) =>  setPayload( prevState => ({...prevState, rate: parseFloat(handleNumberInput(e.target.value)).toFixed(2) }))}
-                                error={errors.rate && touched.rate}
-                                errorLabel={errors.rate}
                             />
                         </div>
                         <div className="space-y-1">
@@ -308,7 +266,7 @@ function Position() {
             <div className="bg-slate-50 border border-gray-100 rounded-xl p-5 text-center">
                 <div className="w-12 h-12 bg-slate-700 text-white rounded-xl flex items-center justify-center mx-auto mb-3 shadow-sm"><Building2 size={24} /></div>
                 <h4 className="text-lg font-bold text-gray-900">{dept?.name}</h4>
-                <span className="inline-block text-xs font-mono font-bold tracking-widest text-indigo-600 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded mt-1"> ₱{dept?.rate ? Number(dept?.rate).toFixed(2) : '0.00'} / {dept?.rate_type === 'hr' ? 'hr' : 'day'}</span>
+                <span className="inline-block text-xs font-mono font-bold tracking-widest text-indigo-600 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded mt-1">{dept?.department?.name}</span>
             </div>
             <div className="space-y-4 text-sm">
                 <div>

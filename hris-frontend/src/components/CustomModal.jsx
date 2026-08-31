@@ -68,7 +68,7 @@ const CustomModal = ({
                         )}
                     >
                         {/* Header */}
-                        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-gray-50/20 flex-shrink-0">
+                        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between flex-shrink-0">
                             <CustomLabel
                                 variant='h3' 
                                 children={title}
@@ -99,7 +99,7 @@ const CustomModal = ({
 
                         {/* Optional Footer Container */}
                         {footer && (
-                            <div className="px-6 py-4 bg-slate-50/50 border-t border-slate-100 flex items-center justify-end gap-3 flex-shrink-0 z-10">
+                            <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-end gap-3 flex-shrink-0 z-10">
                                 {footer}
                             </div>
                         )}

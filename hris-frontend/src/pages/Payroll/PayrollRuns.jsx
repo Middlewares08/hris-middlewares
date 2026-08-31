@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PlusIcon, Save, ShieldAlert, Play } from 'lucide-react';
 import { CustomDataTable } from '../../components/CustomDataTable';
@@ -7,10 +7,12 @@ import CustomInput from '../../components/CustomInput';
 import CustomButton from '../../components/CustomButton';
 import CustomDropdown from '../../components/CustomDropdown';
 import CustomLabel from '../../components/CustomLabel';
+import CustomForm from '../../components/CustomForm';
 import NotFound from '../../components/NotFound';
 import { can } from '../../utils/permissionCheck';
 import { usePayrollRuns, usePayPeriods } from '../../hooks/usePayroll';
 import { RUN_TYPES, peso, fmtDate } from './payrollOptions';
+import { payrollRunValidationSchema } from '../../validation/payroll-run-validation';
 import Pill from './Pill';
 
 const VIEW = 'run-payroll:view';
@@ -20,6 +22,7 @@ function PayrollRuns() {
     const { items, isLoading, error, create, isMutating } = usePayrollRuns();
     const { items: periods } = usePayPeriods();
     const [form, setForm] = useState(null);
+    const formikRef = useRef(null);
     const set = (k, v) => setForm((p) => ({ ...p, [k]: v }));
 
     const periodOptions = (periods || [])
@@ -60,9 +63,13 @@ function PayrollRuns() {
     return (
         <div className="mx-auto max-w-7xl space-y-6">
             <div className="border-b border-slate-100 pb-4">
-                <CustomLabel variant="h2" addedClass="font-bold text-slate-700!" description="Create, calculate, approve and release payroll runs.">
-                    Payroll Runs
-                </CustomLabel>
+                <CustomLabel 
+                    children='Payroll Runs'
+                    variant="h2" 
+                    addedClass="font-bold text-slate-700!" 
+                    description="Create, calculate, approve and release payroll runs."  
+                    descriptionClass='text-xs'
+                />
             </div>
 
             {error && (
@@ -95,8 +102,13 @@ function PayrollRuns() {
                     </div>
                 )}
                 actionButton={can('run-payroll:create') && (
-                    <CustomButton onClick={() => setForm({ pay_period_id: '', run_type: 'regular', notes: '' })} icon={PlusIcon} iconPosition="left"
-                        className="flex items-center gap-2 bg-slate-800 px-4 py-2 text-sm hover:bg-slate-700">New Run</CustomButton>
+                    <CustomButton 
+                        children='New Run'
+                        onClick={() => setForm({ pay_period_id: '', run_type: 'regular', notes: '' })} 
+                        icon={PlusIcon} 
+                        iconPosition="left"
+                        className='flex py-2 items-center gap-2 hover:cursor-pointer px-4 bg-slate-700 text-white rounded-lg text-sm font-medium hover:bg-slate-600 transition-colors shadow-xs'
+                    />
                 )}
             />
 
@@ -109,22 +121,34 @@ function PayrollRuns() {
                 hasRequiredFields
                 footer={(
                     <div className="flex justify-center border-t border-slate-100 pt-4">
-                        <CustomButton onClick={submit} icon={Save} iconPosition="left" isLoading={isMutating}
-                            disabled={isMutating || !form?.pay_period_id}
+                        <CustomButton onClick={() => formikRef?.current?.submitForm()} icon={Save} iconPosition="left" isLoading={isMutating}
+                            disabled={isMutating}
                             className="bg-slate-800 px-5 py-2.5 text-sm hover:bg-slate-700">Create Run</CustomButton>
                     </div>
                 )}
             >
                 {form && (
-                    <div className="space-y-4 px-1">
-                        <CustomDropdown label="Pay period" isRequired options={periodOptions} value={form.pay_period_id}
-                            renderProps="label" returnProps="value" placeholder="Choose a period..."
-                            onChange={(v) => set('pay_period_id', v)} className="w-full items-start!" />
-                        <CustomDropdown label="Run type" options={RUN_TYPES} value={form.run_type}
-                            renderProps="label" returnProps="value" onChange={(v) => set('run_type', v)} className="w-full items-start!" />
-                        <CustomInput label="Notes" value={form.notes} onChange={(e) => set('notes', e.target.value)} />
-                        <p className="text-xs text-slate-400">A run starts as a draft. You calculate payslips on the next screen.</p>
-                    </div>
+                    <CustomForm
+                        formRef={formikRef}
+                        initialValues={form}
+                        validationSchema={payrollRunValidationSchema}
+                        onSubmit={submit}
+                        id="payroll-run-form"
+                        content={(errors, touched) => (
+                            <div className="space-y-4 px-1">
+                                <CustomDropdown label="Pay period" isRequired options={periodOptions} value={form.pay_period_id}
+                                    renderProps="label" returnProps="value" placeholder="Choose a period..."
+                                    onChange={(v) => set('pay_period_id', v)} className="w-full items-start!"
+                                    error={errors.pay_period_id && touched.pay_period_id} errorLabel={errors.pay_period_id} />
+                                <CustomDropdown label="Run type" options={RUN_TYPES} value={form.run_type}
+                                    renderProps="label" returnProps="value" onChange={(v) => set('run_type', v)} className="w-full items-start!"
+                                    error={errors.run_type && touched.run_type} errorLabel={errors.run_type} />
+                                <CustomInput label="Notes" value={form.notes} onChange={(e) => set('notes', e.target.value)}
+                                    error={errors.notes && touched.notes} errorLabel={errors.notes} />
+                                <p className="text-xs text-slate-400">A run starts as a draft. You calculate payslips on the next screen.</p>
+                            </div>
+                        )}
+                    />
                 )}
             </CustomModal>
         </div>

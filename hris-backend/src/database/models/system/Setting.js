@@ -7,6 +7,9 @@ const BaseModel = require('../BaseModel');
  */
 const REGISTRY = {
     'overtime.enabled': { type: 'boolean', default: true, public: true },
+    // Annual paid-leave credits an employee accrues (vacation/sick/emergency draw from this).
+    // Drives the employee dashboard "Leave Balance" tile: remaining = credits - days approved this year.
+    'leave.annual_credits': { type: 'number', default: 15, public: true },
     // When on, an enrolled employee must pass face verification to clock in/out.
     // Employees without an active face enrollment are unaffected (gradual rollout).
     'face.clockin_enabled': { type: 'boolean', default: false, public: true },

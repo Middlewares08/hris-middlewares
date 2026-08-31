@@ -2,8 +2,8 @@
 import axios from "axios";
 
 const apiClient = axios.create({
-    baseURL: import.meta.env.VITE_API_BASE_URL, 
-    withCredentials: false, 
+    baseURL: import.meta.env.VITE_API_BASE_URL,
+    withCredentials: true, // needed so the httpOnly refreshToken cookie is stored on login and sent to /auth/refresh
     headers: {
         'X-Requested-With': 'XMLHttpRequest',
         'Authorization': `Bearer ${localStorage.getItem('accessToken')}`

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
     ArrowLeft, Calculator, CheckCircle2, BadgeDollarSign, XCircle, PlusIcon, Trash2, Receipt,
@@ -8,6 +8,7 @@ import CustomModal from '../../components/CustomModal';
 import CustomInput from '../../components/CustomInput';
 import CustomButton from '../../components/CustomButton';
 import CustomDropdown from '../../components/CustomDropdown';
+import CustomForm from '../../components/CustomForm';
 import Loading from '../../components/Loading';
 import NotFound from '../../components/NotFound';
 import { can } from '../../utils/permissionCheck';
@@ -16,6 +17,7 @@ import {
     usePayrollRun, usePayslips, usePayslip, useRunAdjustments,
 } from '../../hooks/usePayroll';
 import { ADJUSTMENT_TYPES, peso, fmtDate } from './payrollOptions';
+import { payrollAdjustmentValidationSchema } from '../../validation/payroll-adjustment-validation';
 import Pill from './Pill';
 
 const VIEW = 'run-payroll:view';
@@ -88,6 +90,7 @@ function PayrollRunDetail() {
     const [payModal, setPayModal] = useState(false);
     const [payRef, setPayRef] = useState('');
     const [adjForm, setAdjForm] = useState(null);
+    const adjFormikRef = useRef(null);
 
     if (!can(VIEW)) return <NotFound />;
     if (isLoading) return <Loading size="lg" text="Loading run" fullPage />;
@@ -140,9 +143,8 @@ function PayrollRunDetail() {
     ];
 
     return (
-        <div className="mx-auto max-w-7xl space-y-6">
-            <button onClick={() => navigate('/dashboard/payroll/runs')}
-                className="inline-flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-slate-800">
+        <div className="mx-auto max-w-7xl space-y-6 text-left">
+            <button onClick={() => navigate('/dashboard/payroll/runs')} className="inline-flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-slate-800 cursor-pointer">
                 <ArrowLeft size={16} /> All runs
             </button>
 
@@ -167,7 +169,7 @@ function PayrollRunDetail() {
                 </div>
 
                 {canEdit && (
-                    <div className="mt-5 flex flex-wrap gap-2 border-t border-slate-100 pt-4">
+                    <div className="mt-5 flex flex-wrap gap-2 pt-4">
                         {['draft', 'calculating', 'calculated'].includes(run.status) && (
                             <CustomButton onClick={doCalculate} icon={Calculator} iconPosition="left" isLoading={isBusy}
                                 className="w-auto! bg-sky-600 px-4 hover:bg-sky-700">
@@ -266,34 +268,48 @@ function PayrollRunDetail() {
             <CustomModal isOpen={!!adjForm} onClose={() => setAdjForm(null)} title="Queue Adjustment" size="md" showCloseButton hasRequiredFields
                 footer={(
                     <div className="flex justify-center border-t border-slate-100 pt-4">
-                        <CustomButton onClick={submitAdj} isLoading={adjBusy}
-                            disabled={adjBusy || !adjForm?.employee_id || !adjForm?.label || !adjForm?.amount || !adjForm?.reason}
+                        <CustomButton onClick={() => adjFormikRef?.current?.submitForm()} isLoading={adjBusy}
+                            disabled={adjBusy}
                             className="w-auto! bg-slate-800 px-5 hover:bg-slate-700">Queue</CustomButton>
                     </div>
                 )}
             >
                 {adjForm && (
-                    <div className="space-y-4 px-1">
-                        <CustomDropdown label="Employee" isRequired options={empOptions} value={adjForm.employee_id}
-                            renderProps="label" returnProps="value" placeholder="Choose employee..."
-                            onChange={(v) => setAdjForm((p) => ({ ...p, employee_id: v }))} className="w-full items-start!" />
-                        <div className="grid grid-cols-2 gap-4">
-                            <CustomDropdown label="Type" options={ADJUSTMENT_TYPES} value={adjForm.adjustment_type}
-                                renderProps="label" returnProps="value"
-                                onChange={(v) => setAdjForm((p) => ({ ...p, adjustment_type: v }))} className="w-full items-start!" />
-                            <CustomInput label="Amount" isRequired type="number" value={adjForm.amount}
-                                onChange={(e) => setAdjForm((p) => ({ ...p, amount: e.target.value }))} />
-                        </div>
-                        <CustomInput label="Label" isRequired value={adjForm.label} placeholder="Perfect attendance bonus"
-                            onChange={(e) => setAdjForm((p) => ({ ...p, label: e.target.value }))} />
-                        <CustomInput label="Reason" isRequired value={adjForm.reason}
-                            onChange={(e) => setAdjForm((p) => ({ ...p, reason: e.target.value }))} />
-                        <label className="flex items-center gap-2 text-sm text-slate-700">
-                            <input type="checkbox" checked={adjForm.is_taxable} className="h-4 w-4 rounded border-slate-300"
-                                onChange={(e) => setAdjForm((p) => ({ ...p, is_taxable: e.target.checked }))} />
-                            Taxable
-                        </label>
-                    </div>
+                    <CustomForm
+                        formRef={adjFormikRef}
+                        initialValues={adjForm}
+                        validationSchema={payrollAdjustmentValidationSchema}
+                        onSubmit={submitAdj}
+                        id="payroll-adjustment-form"
+                        content={(errors, touched) => (
+                            <div className="space-y-4 px-1">
+                                <CustomDropdown label="Employee" isRequired options={empOptions} value={adjForm.employee_id}
+                                    renderProps="label" returnProps="value" placeholder="Choose employee..." searchable searchPlaceholder="Search employee..."
+                                    onChange={(v) => setAdjForm((p) => ({ ...p, employee_id: v }))} className="w-full items-start!"
+                                    error={errors.employee_id && touched.employee_id} errorLabel={errors.employee_id} />
+                                <div className="grid grid-cols-2 gap-4">
+                                    <CustomDropdown label="Type" options={ADJUSTMENT_TYPES} value={adjForm.adjustment_type}
+                                        renderProps="label" returnProps="value"
+                                        onChange={(v) => setAdjForm((p) => ({ ...p, adjustment_type: v }))} className="w-full items-start!"
+                                        error={errors.adjustment_type && touched.adjustment_type} errorLabel={errors.adjustment_type} />
+                                    <CustomInput label="Amount" isRequired type="number" value={adjForm.amount}
+                                        onChange={(e) => setAdjForm((p) => ({ ...p, amount: e.target.value }))}
+                                        error={errors.amount && touched.amount} errorLabel={errors.amount} />
+                                </div>
+                                <CustomInput label="Label" isRequired value={adjForm.label} placeholder="Perfect attendance bonus"
+                                    onChange={(e) => setAdjForm((p) => ({ ...p, label: e.target.value }))}
+                                    error={errors.label && touched.label} errorLabel={errors.label} />
+                                <CustomInput label="Reason" isRequired value={adjForm.reason}
+                                    onChange={(e) => setAdjForm((p) => ({ ...p, reason: e.target.value }))}
+                                    error={errors.reason && touched.reason} errorLabel={errors.reason} />
+                                <label className="flex items-center gap-2 text-sm text-slate-700">
+                                    <input type="checkbox" checked={adjForm.is_taxable} className="h-4 w-4 rounded border-slate-300"
+                                        onChange={(e) => setAdjForm((p) => ({ ...p, is_taxable: e.target.checked }))} />
+                                    Taxable
+                                </label>
+                            </div>
+                        )}
+                    />
                 )}
             </CustomModal>
         </div>

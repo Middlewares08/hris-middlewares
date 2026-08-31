@@ -42,7 +42,7 @@ export default function FaceClockInToggle() {
     if (!can(['face-recognition:view', 'face-recognition:edit'])) return null;
 
     return (
-        <div className="space-y-3">
+        <div className="space-y-3 text-left">
             <Row
                 icon={ScanFace}
                 title="Face check on clock-in"

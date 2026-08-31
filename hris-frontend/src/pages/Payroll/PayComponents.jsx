@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { PlusIcon, Save, ShieldAlert, Trash, Coins } from 'lucide-react';
 import { CustomDataTable } from '../../components/CustomDataTable';
 import CustomModal from '../../components/CustomModal';
@@ -6,11 +6,14 @@ import CustomInput from '../../components/CustomInput';
 import CustomButton from '../../components/CustomButton';
 import CustomDropdown from '../../components/CustomDropdown';
 import CustomLabel from '../../components/CustomLabel';
+import CustomForm from '../../components/CustomForm';
 import NotFound from '../../components/NotFound';
 import { can } from '../../utils/permissionCheck';
 import { usePayComponents } from '../../hooks/usePayroll';
 import { COMPONENT_TYPES, CALCULATION_TYPES } from './payrollOptions';
+import { payComponentValidationSchema } from '../../validation/pay-component-validation';
 import Pill from './Pill';
+import CustomSelection from '../../components/CustomSelection';
 
 const BLANK = {
     code: '', name: '', description: '', component_type: 'earning', calculation_type: 'manual',
@@ -32,17 +35,11 @@ const toForm = (row) => ({
 
 const VIEW = 'payroll-and-compensation:view';
 
-const Check = ({ label, checked, onChange }) => (
-    <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
-        <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} className="h-4 w-4 rounded border-slate-300" />
-        {label}
-    </label>
-);
-
 function PayComponents() {
     const { items, isLoading, error, create, update, remove, isMutating } = usePayComponents();
     const [form, setForm] = useState(null);        // null = closed; object = create/edit
     const [toDelete, setToDelete] = useState(null);
+    const formikRef = useRef(null);
 
     const set = (k, v) => setForm((p) => ({ ...p, [k]: v }));
 
@@ -96,12 +93,18 @@ function PayComponents() {
             </div>
             <div className="flex gap-2">
                 {can('payroll-and-compensation:edit') && (
-                    <CustomButton onClick={() => { close(); setForm(toForm(row)); }}
-                        variant="primary" className="flex-1 bg-white! text-blue-700! border border-slate-200 hover:bg-blue-50!">Edit</CustomButton>
+                    <CustomButton 
+                        children='Edit'
+                        onClick={() => { close(); setForm(toForm(row)); }}
+                        className="flex-1 py-2 border border-slate-200 rounded text-xs bg-white! text-blue-700! hover:bg-blue-50!"
+                    />
                 )}
                 {can('payroll-and-compensation:delete') && !row.is_system && (
-                    <CustomButton onClick={() => { close(); setToDelete(row); }}
-                        variant="primary" className="flex-1 bg-rose-50! text-rose-600! border border-rose-200 hover:bg-rose-100!">Archive</CustomButton>
+                    <CustomButton 
+                        children='Archive'
+                        onClick={() => { close(); setToDelete(row); }}
+                        className="flex-1 py-2 border border-rose-200 rounded text-xs bg-rose-50! text-rose-600! hover:bg-rose-100!"
+                    />
                 )}
             </div>
         </div>
@@ -112,9 +115,13 @@ function PayComponents() {
     return (
         <div className="mx-auto max-w-7xl space-y-6">
             <div className="border-b border-slate-100 pb-4">
-                <CustomLabel variant="h2" addedClass="font-bold text-slate-700!" description="Earning, deduction and employer-contribution types used across payroll runs.">
-                    Pay Components
-                </CustomLabel>
+                <CustomLabel 
+                    variant="h2" 
+                    addedClass="font-bold text-slate-700!" 
+                    description="Earning, deduction and employer-contribution types used across payroll runs."
+                    children='Pay Components'
+                    descriptionClass='text-xs'
+                />
             </div>
 
             {error && (
@@ -130,8 +137,13 @@ function PayComponents() {
                 searchPlaceholder="Search components..."
                 renderDrawerContent={drawer}
                 actionButton={can('payroll-and-compensation:create') && (
-                    <CustomButton onClick={() => setForm({ ...BLANK })} icon={PlusIcon} iconPosition="left"
-                        className="flex items-center gap-2 bg-slate-800 px-4 py-2 text-sm hover:bg-slate-700">Add Component</CustomButton>
+                    <CustomButton 
+                        children='Add Component'
+                        onClick={() => setForm({ ...BLANK })} 
+                        icon={PlusIcon} 
+                        iconPosition="left"
+                        className='flex py-2 items-center gap-2 hover:cursor-pointer px-4 bg-slate-700 text-white rounded-lg text-sm font-medium hover:bg-slate-600 transition-colors shadow-xs'
+                    />
                 )}
             />
 
@@ -144,45 +156,143 @@ function PayComponents() {
                 hasRequiredFields
                 footer={(
                     <div className="flex justify-center border-t border-slate-100 pt-4">
-                        <CustomButton onClick={submit} icon={Save} iconPosition="left" isLoading={isMutating} disabled={isMutating}
-                            className="bg-slate-800 px-5 py-2.5 text-sm hover:bg-slate-700">
-                            {form?.uuid ? 'Save Changes' : 'Create Component'}
-                        </CustomButton>
+                        <CustomButton
+                            children={form?.uuid ? 'Save Changes' : 'Create Component'}
+                            onClick={() => formikRef?.current?.submitForm()}
+                            icon={Save}
+                            iconPosition="left" 
+                            isLoading={isMutating} 
+                            disabled={isMutating}
+                            className='flex py-2 items-center gap-2 hover:cursor-pointer px-4 bg-slate-700 text-white rounded-lg text-sm font-medium hover:bg-slate-600 transition-colors shadow-xs'
+                        />
                     </div>
                 )}
             >
                 {form && (
-                    <div className="max-h-[60vh] space-y-4 overflow-y-auto px-1">
-                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                            <CustomInput label="Code" isRequired value={s(form.code)} disabled={form.is_system}
-                                placeholder="ALLOW_TRANSPORT" inputClassName="font-mono"
-                                onChange={(e) => set('code', e.target.value.toUpperCase())} />
-                            <CustomInput label="Name" isRequired value={s(form.name)} placeholder="Transport Allowance"
-                                onChange={(e) => set('name', e.target.value)} />
-                        </div>
-                        <CustomInput label="Description" value={s(form.description)} onChange={(e) => set('description', e.target.value)} />
-                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                            <CustomDropdown label="Type" isRequired options={COMPONENT_TYPES} value={form.component_type}
-                                renderProps="label" returnProps="value" disabled={form.is_system}
-                                onChange={(v) => set('component_type', v)} className="w-full items-start!" />
-                            <CustomDropdown label="Calculation" options={CALCULATION_TYPES} value={form.calculation_type}
-                                renderProps="label" returnProps="value" onChange={(v) => set('calculation_type', v)} className="w-full items-start!" />
-                        </div>
-                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                            <CustomInput label="Default amount" type="number" value={s(form.default_amount)}
-                                onChange={(e) => set('default_amount', e.target.value)} />
-                            <CustomInput label="Default rate" type="number" value={s(form.default_rate)}
-                                onChange={(e) => set('default_rate', e.target.value)} />
-                            <CustomInput label="Display order" type="number" value={s(form.display_order)}
-                                onChange={(e) => set('display_order', e.target.value)} />
-                        </div>
-                        <div className="flex flex-wrap gap-x-6 gap-y-2 rounded-xl border border-slate-100 bg-slate-50 p-3">
-                            <Check label="Taxable" checked={form.is_taxable} onChange={(v) => set('is_taxable', v)} />
-                            <Check label="Statutory" checked={form.is_statutory} onChange={(v) => set('is_statutory', v)} />
-                            <Check label="Counts toward 13th month" checked={form.affects_thirteenth_month} onChange={(v) => set('affects_thirteenth_month', v)} />
-                            <Check label="Active" checked={form.is_active} onChange={(v) => set('is_active', v)} />
-                        </div>
-                    </div>
+                    <CustomForm
+                        formRef={formikRef}
+                        initialValues={form}
+                        validationSchema={payComponentValidationSchema}
+                        onSubmit={submit}
+                        id="pay-component-form"
+                        content={(errors, touched) => (
+                            <div className="max-h-[60vh] space-y-4 scrollbar-y-visible overflow-y-auto px-1 pb-4">
+                                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                    <CustomInput
+                                        label="Code"
+                                        isRequired
+                                        value={s(form.code)}
+                                        disabled={form.is_system}
+                                        placeholder="e.g. ALLOW_TRANSPORT"
+                                        inputClassName="font-mono"
+                                        onChange={(e) => set('code', e.target.value.toUpperCase())}
+                                        error={errors.code && touched.code}
+                                        errorLabel={errors.code}
+                                    />
+                                    <CustomInput
+                                        label="Name"
+                                        isRequired
+                                        value={s(form.name)}
+                                        placeholder="e.g. Transport Allowance"
+                                        onChange={(e) => set('name', e.target.value)}
+                                        error={errors.name && touched.name}
+                                        errorLabel={errors.name}
+                                    />
+                                </div>
+                                <CustomInput
+                                    label="Description"
+                                    value={s(form.description)}
+                                    onChange={(e) => set('description', e.target.value)}
+                                    error={errors.description && touched.description}
+                                    errorLabel={errors.description}
+                                />
+                                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                    <CustomDropdown
+                                        label="Type"
+                                        isRequired
+                                        options={COMPONENT_TYPES}
+                                        value={form.component_type}
+                                        renderProps="label"
+                                        returnProps="value"
+                                        disabled={form.is_system}
+                                        onChange={(v) => set('component_type', v)}
+                                        className="w-full items-start!"
+                                        error={errors.component_type && touched.component_type}
+                                        errorLabel={errors.component_type}
+                                    />
+                                    <CustomDropdown
+                                        label="Calculation"
+                                        options={CALCULATION_TYPES}
+                                        value={form.calculation_type}
+                                        renderProps="label"
+                                        returnProps="value"
+                                        onChange={(v) => set('calculation_type', v)}
+                                        className="w-full items-start!"
+                                        error={errors.calculation_type && touched.calculation_type}
+                                        errorLabel={errors.calculation_type}
+                                    />
+                                </div>
+                                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 border-b border-slate-200 pb-4">
+                                    <CustomInput
+                                        label="Default amount"
+                                        type="number"
+                                        value={s(form.default_amount)}
+                                        onChange={(e) => set('default_amount', e.target.value)}
+                                        placeholder='₱0.00'
+                                        error={errors.default_amount && touched.default_amount}
+                                        errorLabel={errors.default_amount}
+                                    />
+                                    <CustomInput
+                                        label="Default rate"
+                                        type="number"
+                                        value={s(form.default_rate)}
+                                        onChange={(e) => set('default_rate', e.target.value)}
+                                        placeholder='₱0.00'
+                                        error={errors.default_rate && touched.default_rate}
+                                        errorLabel={errors.default_rate}
+                                    />
+                                    <CustomInput
+                                        label="Display order"
+                                        type="number"
+                                        value={s(form.display_order)}
+                                        onChange={(e) => set('display_order', e.target.value)}
+                                        error={errors.display_order && touched.display_order}
+                                        errorLabel={errors.display_order}
+                                    />
+                                </div>
+                               <div className="flex flex-wrap gap-x-6 gap-y-2 rounded-xl border border-slate-100 bg-slate-50 p-3">
+                                    <CustomSelection
+                                        className='text-left'
+                                        label="Taxable"
+                                        checked={form.is_taxable}
+                                        onChange={(v) => set('is_taxable', v)}
+                                        indicatorPosition='left'
+                                    />
+                                    <CustomSelection
+                                        className='text-left'
+                                        label="Statutory"
+                                        checked={form.is_statutory}
+                                        onChange={(v) => set('is_statutory', v)}
+                                        indicatorPosition='left'
+                                    />
+                                    <CustomSelection
+                                        className='text-left'
+                                        label="Counts toward 13th month"
+                                        checked={form.affects_thirteenth_month}
+                                        onChange={(v) => set('affects_thirteenth_month', v)}
+                                        indicatorPosition='left'
+                                    />
+                                    <CustomSelection
+                                        className='text-left'
+                                        label="Active"
+                                        checked={form.is_active}
+                                        onChange={(v) => set('is_active', v)}
+                                        indicatorPosition='left'
+                                    />
+                                </div>
+                            </div>
+                        )}
+                    />
                 )}
             </CustomModal>
 
