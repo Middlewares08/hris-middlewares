@@ -30,6 +30,7 @@ const ACCESS_TYPES = {
 const ADMIN_PERMISSION_MATRIX = {
     'admin-console': ['access'], // gate: may sign in to the admin dashboard (hris-frontend)
     'dashboard': ['view'],
+    'reports': ['view'],
     'employee-management': ['view', 'create', 'edit', 'delete'],
     'attendance-logs': ['view', 'create', 'edit', 'delete'],
     'attendance-kiosk': ['view', 'create', 'edit', 'delete'],

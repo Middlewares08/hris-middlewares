@@ -17,6 +17,7 @@ import { useRef } from 'react';
 import FaceRecognitionSection from './FaceRecognitionSection';
 import FaceClockInToggle from './FaceClockInToggle';
 import EditEmployeeModal from './EditEmployeeModal';
+import SeparationFormModal from '../Reports/SeparationFormModal';
 
 const INITIAL_PAYLOAD = {
     lastname: BLANK,
@@ -51,6 +52,8 @@ const Employees = () => {
 
     // Edit drawer/modal local state
     const [editingEmployee, setEditingEmployee] = useState(null);
+    // "Record a separation" modal, pre-locked to one employee
+    const [separatingEmployee, setSeparatingEmployee] = useState(null);
 
     // Query hooks mapping to Server-side variables
     const {
@@ -61,6 +64,7 @@ const Employees = () => {
         createEmployee,
         updateEmployee,
         isUpdating,
+        refetch,
         error
     } = useEmployees({ page, limit, search });
 
@@ -297,14 +301,22 @@ const Employees = () => {
                 </div>
 
                 {/* Action bar */}
-                {(can('employee-management:edit') || can('employee-management:delete')) && (
-                    <div className="flex gap-2">
+                {(can('employee-management:edit') || can('employee-management:delete') || can('employee-management:create')) && (
+                    <div className="flex flex-wrap gap-2">
                         {can('employee-management:edit') && (
                             <button
                                 onClick={() => handleEdit(employee, closeDrawer)}
                                 className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 text-white rounded-lg text-xs font-medium hover:bg-slate-700 transition-colors"
                             >
                                 <Pencil size={14} /> Edit Record
+                            </button>
+                        )}
+                        {can('employee-management:create') && employee?.is_active !== false && (
+                            <button
+                                onClick={() => { closeDrawer?.(); setSeparatingEmployee({ id: employee.id, name: fullName || '—' }); }}
+                                className="flex items-center gap-1.5 px-3 py-1.5 border border-amber-200 text-amber-700 rounded-lg text-xs font-medium hover:bg-amber-50 transition-colors"
+                            >
+                                <CalendarDays size={14} /> Record Separation
                             </button>
                         )}
                         {can('employee-management:delete') && (
@@ -535,6 +547,14 @@ const Employees = () => {
                 onClose={() => setEditingEmployee(null)}
                 onSubmit={handleUpdate}
                 isSaving={isUpdating}
+            />
+
+            <SeparationFormModal
+                key={separatingEmployee?.id || 'record-separation'}
+                isOpen={!!separatingEmployee}
+                lockedEmployee={separatingEmployee}
+                onClose={() => setSeparatingEmployee(null)}
+                onSaved={refetch}
             />
         </div>
     );

@@ -5,6 +5,7 @@ import { useAuth } from "../hooks/useAuth";
 import { useSystemInit } from '../hooks/useSystem';
 import CustomButton from "../components/CustomButton";
 import CustomInput from "../components/CustomInput";
+import ContactAdminModal from "../components/ContactAdminModal";
 
 function Login() {
     // Pull our centralized architectural states
@@ -14,6 +15,7 @@ function Login() {
     // Controlled form inputs (initialized with safe empty strings)
     const [payload, setPayload] = useState({ email: "", password: "" });
     const [otpCode, setOtpCode] = useState("");
+    const [contactOpen, setContactOpen] = useState(false);
 
     console.log('result: ', result);
 
@@ -49,6 +51,11 @@ function Login() {
 
   return (
     <div className="min-h-screen bg-slate-100 flex items-center justify-center h-[80vh]">
+        <ContactAdminModal
+            isOpen={contactOpen}
+            onClose={() => setContactOpen(false)}
+            source="admin-console · login"
+        />
         <div className="bg-white rounded-2xl shadow-lg shadow-black/5 ring-1 ring-black/5 p-10 w-full max-w-sm space-y-6">
             <div className="space-y-1 text-center">
                 <p className="text-2xl font-semibold leading-snug text-slate-900">Welcome to HRIS Middleware</p>
@@ -109,9 +116,13 @@ function Login() {
 
                 <div className="flex justify-between text-xs pt-2">
                     <a href="#" className="text-slate-500 hover:text-slate-900 transition-colors">Forgot password?</a>
-                    <a href="#" className="text-slate-500 hover:text-slate-900 transition-colors">
-                        Need an account? <span className="text-slate-900 font-medium">Sign up</span>
-                    </a>
+                    <button
+                        type="button"
+                        onClick={() => setContactOpen(true)}
+                        className="text-slate-500 hover:text-slate-900 transition-colors"
+                    >
+                        Need help? <span className="text-slate-900 font-medium">Contact an admin</span>
+                    </button>
                 </div>
             </>
             ) : (

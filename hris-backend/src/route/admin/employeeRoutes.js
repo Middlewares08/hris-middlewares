@@ -29,10 +29,23 @@ const {
     deleteDocument
 } = require('../../module/admin/controller/employee/DocumentController');
 
+const {
+    listSeparations,
+    createSeparation,
+    updateSeparation,
+    deleteSeparation
+} = require('../../module/admin/controller/employee/SeparationController');
+
 const { verifyToken } = require('../../middleware/authMiddleware');
 const { requirePermission } = require('../../middleware/permissionMiddleware');
 
 router.use(verifyToken);
+
+// SEPARATIONS / OFFBOARDING — declared before '/:uuid' so 'separations' isn't read as a uuid.
+router.get('/separations', requirePermission('employee-management:view'), listSeparations);
+router.post('/separations', requirePermission('employee-management:create'), createSeparation);
+router.patch('/separations/:uuid', requirePermission('employee-management:edit'), updateSeparation);
+router.delete('/separations/:uuid', requirePermission('employee-management:delete'), deleteSeparation);
 
 // All routes are prefixed under /api/employees in your app mounting setup
 router.get('/', requirePermission('employee-management:view'), getEmployees);

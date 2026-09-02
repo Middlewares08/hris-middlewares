@@ -12,7 +12,8 @@ import {
     Megaphone,
     Clock,
     ScanFace,
-    ListChecks
+    ListChecks,
+    FileBarChart
 } from 'lucide-react';
 import { useLogout } from '../hooks/useLogout';
 import Header from './Header';
@@ -56,9 +57,15 @@ const Dashboard = () => {
             path: '/dashboard', 
             permission: 'dashboard:view' 
         },
-        { 
-            icon: <GroupIcon className='hover:cursor-pointer' size={20}/>, 
-            label: 'Employee Directory', 
+        {
+            icon: <FileBarChart className='hover:cursor-pointer' size={20} />,
+            label: 'Reports',
+            path: '/dashboard/reports',
+            permission: 'reports:view'
+        },
+        {
+            icon: <GroupIcon className='hover:cursor-pointer' size={20}/>,
+            label: 'Employee Directory',
             path: '/dashboard/employee', 
             permission: 'employee-management:view',
             children: [

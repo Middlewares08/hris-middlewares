@@ -70,6 +70,10 @@ const getAnalytics = async (req, res) => {
             attendanceTrendRows,
             leaveByTypeRows,
             payrollRuns,
+            inactiveHeadcountRow,
+            separations30dRow,
+            overtimeHours30dRow,
+            headcountByType,
         ] = await Promise.all([
             // Active headcount
             knex('employee.employees')
@@ -156,6 +160,34 @@ const getAnalytics = async (req, res) => {
                     'r.total_employer_cost',
                     'r.employee_count',
                 ),
+
+            // Inactive headcount
+            knex('employee.employees')
+                .where({ is_active: false, is_deleted: false })
+                .count({ count: '*' })
+                .first(),
+
+            // Separations — last 30 days
+            knex('employee.separations')
+                .where({ is_deleted: false })
+                .andWhereRaw("separation_date >= current_date - interval '30 days'")
+                .count({ count: '*' })
+                .first(),
+
+            // Approved overtime hours — last 30 days
+            knex('attendance.overtime_requests')
+                .where({ is_deleted: false, status: 'approved' })
+                .andWhereRaw("work_date >= current_date - interval '30 days'")
+                .sum({ hours: 'hours' })
+                .first(),
+
+            // Active headcount by employment type
+            knex('employee.employees')
+                .where({ is_deleted: false, is_active: true })
+                .groupBy('employment_type')
+                .select(knex.raw("coalesce(nullif(employment_type, ''), 'Unspecified') as type"))
+                .count({ count: '*' })
+                .orderBy('count', 'desc'),
         ]);
 
         const activeHeadcount = toNum(headcountRow?.count);
@@ -178,7 +210,14 @@ const getAnalytics = async (req, res) => {
                 onLeaveToday: toNum(onLeaveRow?.count),
                 pendingLeave: toNum(pendingLeaveRow?.count),
                 pendingOvertime: toNum(pendingOvertimeRow?.count),
+                inactiveHeadcount: toNum(inactiveHeadcountRow?.count),
+                separations30d: toNum(separations30dRow?.count),
+                overtimeHours30d: Math.round(toNum(overtimeHours30dRow?.hours) * 100) / 100,
             },
+            headcountByType: headcountByType.map((r) => ({
+                type: r.type,
+                count: toNum(r.count),
+            })),
             headcountByDepartment: headcountByDepartment.map((r) => ({
                 department: r.department,
                 count: toNum(r.count),

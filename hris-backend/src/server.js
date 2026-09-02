@@ -61,6 +61,10 @@ app.use('/system', systemRoutes);
 const authRoutes = require("../src/route/authRoutes");
 app.use('/auth', authRoutes);
 
+// PUBLIC (unauthenticated) — e.g. the "Contact an admin" form on the landing/login screens
+const publicRoutes = require("../src/route/publicRoutes");
+app.use('/public', publicRoutes);
+
 // MODULE
 const moduleRoutes = require("../src/route/admin/moduleRoutes");
 app.use('/modules', moduleRoutes);
@@ -135,6 +139,11 @@ app.use('/payroll', payrollRoutes);
 // DASHBOARD ANALYTICS
 const dashboardRoutes = require("../src/route/admin/dashboardRoutes");
 app.use('/dashboard', dashboardRoutes);
+
+
+// HR REPORTS
+const reportsRoutes = require("../src/route/admin/reportsRoutes");
+app.use('/reports', reportsRoutes);
 
 
 // ==========================================

@@ -8,6 +8,8 @@ import {
     Timer,
     ShieldAlert,
     RefreshCw,
+    UserMinus,
+    LogOut,
 } from 'lucide-react';
 import {
     BarChart,
@@ -114,6 +116,7 @@ function DashboardHome() {
 
     const kpis = data?.kpis || {};
     const headcountByDepartment = data?.headcountByDepartment || [];
+    const headcountByType = data?.headcountByType || [];
     const attendanceTrend = data?.attendanceTrend || [];
     const leaveByType = data?.leaveByType || [];
     const payrollCostTrend = data?.payrollCostTrend || [];
@@ -153,6 +156,9 @@ function DashboardHome() {
                 <StatCard label="On Leave Today" value={kpis.onLeaveToday ?? 0} icon={Plane} tone="amber" />
                 <StatCard label="Pending Leave" value={kpis.pendingLeave ?? 0} hint="Awaiting review" icon={FileClock} tone="amber" />
                 <StatCard label="Pending Overtime" value={kpis.pendingOvertime ?? 0} hint="Awaiting review" icon={Timer} tone="rose" />
+                <StatCard label="Inactive Headcount" value={kpis.inactiveHeadcount ?? 0} icon={UserMinus} tone="slate" />
+                <StatCard label="Separations" value={kpis.separations30d ?? 0} hint="Last 30 days" icon={LogOut} tone="rose" />
+                <StatCard label="Overtime Hours" value={kpis.overtimeHours30d ?? 0} hint="Approved, last 30 days" icon={Timer} tone="violet" />
             </div>
 
             {/* Charts */}
@@ -171,6 +177,34 @@ function DashboardHome() {
                             <LabelList dataKey="count" position="top" style={{ fontSize: 11, fill: '#64748b' }} />
                         </Bar>
                     </BarChart>
+                </ChartCard>
+
+                <ChartCard
+                    title="Headcount by Employment Type"
+                    subtitle="Active employees, by employment type"
+                    isEmpty={headcountByType.length === 0}
+                >
+                    <PieChart>
+                        <Tooltip contentStyle={TOOLTIP_STYLE} />
+                        <Legend wrapperStyle={{ fontSize: 12 }} />
+                        <Pie
+                            data={headcountByType}
+                            dataKey="count"
+                            nameKey="type"
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={55}
+                            outerRadius={90}
+                            paddingAngle={2}
+                            label={(entry) => `${titleCase(entry.type)} (${entry.count})`}
+                            labelLine={false}
+                            style={{ fontSize: 11 }}
+                        >
+                            {headcountByType.map((entry, i) => (
+                                <Cell key={entry.type} fill={CATEGORICAL[i % CATEGORICAL.length]} stroke="#fff" strokeWidth={2} />
+                            ))}
+                        </Pie>
+                    </PieChart>
                 </ChartCard>
 
                 <ChartCard

@@ -30,6 +30,18 @@ import EmployeeDocuments from './pages/Employee/Documents'
 import BankDetails from './pages/Employee/BankDetails'
 import KioskView from './pages/Kiosk/KioskView'
 import KioskAdmin from './pages/Kiosk/KioskAdmin'
+import ReportsLayout from './pages/Reports/ReportsLayout'
+import HeadcountReport from './pages/Reports/HeadcountReport'
+import AttendanceReport from './pages/Reports/AttendanceReport'
+import AbsenceReport from './pages/Reports/AbsenceReport'
+import LeaveUtilizationReport from './pages/Reports/LeaveUtilizationReport'
+import OvertimeReport from './pages/Reports/OvertimeReport'
+import PayrollReport from './pages/Reports/PayrollReport'
+import TurnoverReport from './pages/Reports/TurnoverReport'
+import NewHiresReport from './pages/Reports/NewHiresReport'
+import SeparationReport from './pages/Reports/SeparationReport'
+import DepartmentStatsReport from './pages/Reports/DepartmentStatsReport'
+import { PerformanceReport, TrainingReport } from './pages/Reports/ComingSoonReport'
 import NotFound from './components/NotFound'
 
 const ProtectedElement = ({ element, permission }) => {
@@ -114,6 +126,22 @@ function App() {
           <Route path="overtime" element={<ProtectedElement element={<OvertimeRequests />} permission="overtime-tracker:view" />} />
 
           <Route path="attendance-logs" element={<ProtectedElement element={<AttendanceLogs />} permission="attendance-logs:view" />} />
+
+          <Route path="reports" element={<ProtectedElement element={<ReportsLayout />} permission="reports:view" />}>
+            <Route index element={<Navigate to="/dashboard/reports/headcount" replace />} />
+            <Route path="headcount" element={<HeadcountReport />} />
+            <Route path="attendance" element={<AttendanceReport />} />
+            <Route path="absence" element={<AbsenceReport />} />
+            <Route path="leave" element={<LeaveUtilizationReport />} />
+            <Route path="overtime" element={<OvertimeReport />} />
+            <Route path="payroll" element={<PayrollReport />} />
+            <Route path="turnover" element={<TurnoverReport />} />
+            <Route path="new-hires" element={<NewHiresReport />} />
+            <Route path="separations" element={<SeparationReport />} />
+            <Route path="departments" element={<DepartmentStatsReport />} />
+            <Route path="performance" element={<PerformanceReport />} />
+            <Route path="training" element={<TrainingReport />} />
+          </Route>
 
           <Route path="maintenance">
             <Route path="roles-and-permission" element={<RolesAndPermission />} />

@@ -27,6 +27,14 @@ exports.seed = async function(knex) {
             updated_by: null
         },
         {
+            name: 'Reports',
+            slug: 'reports',
+            description: 'HR analytics & reports — headcount, attendance, absence, leave, overtime, payroll, turnover, new hires, separations, department stats.',
+            access_type: 'ADMIN',
+            created_by: 1,
+            updated_by: null
+        },
+        {
             name: 'Employees',
             slug: 'employee-management',
             description: 'Master Employee Directory, onboarding tracks, and department profiles.',
