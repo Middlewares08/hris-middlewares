@@ -1,51 +1,66 @@
+const { ACTIVE_PERMISSION_MATRIX, ACTIVE_PERMISSION_SLUGS, ACTION_LABELS } = require('../constants/permissionMatrix');
+
 /**
+ * Seeds ONLY the permissions the application actually enforces
+ * (src/database/constants/permissionMatrix.js) and soft-deletes anything else
+ * so the matrix stays lean.
+ *
+ * Rows are upserted one at a time on purpose: a single stale/duplicate row can
+ * no longer halt the whole seed run (see [[hris-backend-permission-seeder-fragile]]).
+ *
  * @param { import("knex").Knex } knex
- * @returns { Promise<void> } 
+ * @returns { Promise<void> }
  */
-exports.seed = async function(knex) {
-    // 1. Fetch modules
+exports.seed = async function (knex) {
+    // 1. Map module slug -> id
     const modules = await knex('role_permission.modules').select('id', 'name', 'slug');
 
     if (!modules || modules.length === 0) {
-        console.warn('⚠️ No modules found in role_permission.modules.');
+        console.warn('⚠️ No modules found in role_permission.modules. Run 01_ModuleSeeeder first.');
         return;
     }
 
-    const actionsTemplate = [
-        { action: 'view',   prefix: 'View',   slugSuffix: 'view' },
-        { action: 'create', prefix: 'Create', slugSuffix: 'create' },
-        { action: 'edit',   prefix: 'Edit',   slugSuffix: 'edit' },
-        { action: 'delete', prefix: 'Delete', slugSuffix: 'delete' }
-    ];
+    const moduleBySlug = Object.fromEntries(modules.map((mod) => [mod.slug, mod]));
 
-    const permissionsToInsert = [];
+    // 2. Upsert every active permission
+    let synced = 0;
 
-    modules.forEach((mod) => {
-        actionsTemplate.forEach((tmpl) => {
-            permissionsToInsert.push({
+    for (const [moduleSlug, actions] of Object.entries(ACTIVE_PERMISSION_MATRIX)) {
+        const mod = moduleBySlug[moduleSlug];
+
+        if (!mod) {
+            console.warn(`⚠️ Skipping "${moduleSlug}" permissions — no matching module row.`);
+            continue;
+        }
+
+        for (const action of actions) {
+            const row = {
                 module_id: mod.id,
-                action: tmpl.action,
-                name: `${tmpl.prefix} ${mod.name}`, 
-                slug: `${mod.slug}:${tmpl.slugSuffix}`,
-                description: `Allows you to ${tmpl.action} the ${mod.name.toLowerCase()} module dashboard options.`,
+                action,
+                name: `${ACTION_LABELS[action]} ${mod.name}`,
+                slug: `${mod.slug}:${action}`,
+                description: `Allows you to ${action} the ${mod.name.toLowerCase()} module dashboard options.`,
                 is_deleted: false,
                 created_by: 1,
-                updated_by: null
-            });
-        });
-    });
+                updated_by: null,
+            };
 
-    // 2. 💡 Fixed Batch Upsert
-    try {
-        await knex('role_permission.permissions')
-            .insert(permissionsToInsert)
-            .onConflict('slug') 
-            // 🔑 CRITICAL FIX: Explicitly name the columns you want to overwrite on conflict.
-            // This tells Knex exactly how to align the compiled SQL parameters.
-            .merge(['action', 'name', 'description', 'module_id', 'is_deleted', 'updated_by']);           
-
-        console.log(`🚀 Successfully bulk synchronized ${permissionsToInsert.length} permissions smoothly!`);
-    } catch (error) {
-        console.error('Error executing permission upsert:', error);
+            try {
+                await knex('role_permission.permissions')
+                    .insert(row)
+                    .onConflict('slug')
+                    .merge(['action', 'name', 'description', 'module_id', 'is_deleted', 'updated_by']);
+                synced += 1;
+            } catch (error) {
+                console.error(`Error upserting permission "${row.slug}":`, error.message);
+            }
+        }
     }
+
+    // 3. Soft-delete everything that isn't on the active list
+    const removed = await knex('role_permission.permissions')
+        .whereNotIn('slug', ACTIVE_PERMISSION_SLUGS)
+        .update({ is_deleted: true });
+
+    console.log(`🚀 Synced ${synced} active permissions, soft-deleted ${removed} unused ones.`);
 };

@@ -15,17 +15,19 @@ export const documentService = {
     createRequest: async (payload) => (await apiClient.post(`${BASE}/requests`, payload)).data,
     updateRequest: async (id, payload) => (await apiClient.put(`${BASE}/requests/${id}`, payload)).data,
     cancelRequest: async (id) => (await apiClient.patch(`${BASE}/requests/${id}/cancel`)).data,
+    declineRequest: async (id, payload) => (await apiClient.patch(`${BASE}/requests/${id}/decline`, payload)).data,
     deleteRequest: async (id) => (await apiClient.delete(`${BASE}/requests/${id}`)).data,
 };
 
 /**
  * Build the multipart payload the documents API expects.
- * @param {{ employeeId: string|number, label?: string, file?: File }} opts
+ * @param {{ employeeId: string|number, label?: string, file?: File, documentRequestId?: string|number }} opts
  */
-export const buildDocumentForm = ({ employeeId, label, file } = {}) => {
+export const buildDocumentForm = ({ employeeId, label, file, documentRequestId } = {}) => {
     const fd = new FormData();
     if (employeeId != null) fd.append('employee_id', employeeId);
     if (label != null) fd.append('label', label);
+    if (documentRequestId) fd.append('document_request_id', documentRequestId);
     if (file) fd.append('file', file);
     return fd;
 };

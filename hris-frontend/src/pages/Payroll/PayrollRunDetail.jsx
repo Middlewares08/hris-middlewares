@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-    ArrowLeft, Calculator, CheckCircle2, BadgeDollarSign, XCircle, PlusIcon, Trash2, Receipt,
+    ArrowLeft, Calculator, CheckCircle2, BadgeDollarSign, XCircle, PlusIcon, Trash2, Receipt, Download,
 } from 'lucide-react';
 import { CustomDataTable } from '../../components/CustomDataTable';
 import CustomModal from '../../components/CustomModal';
@@ -14,7 +14,7 @@ import NotFound from '../../components/NotFound';
 import { can } from '../../utils/permissionCheck';
 import { useEmployees } from '../../hooks/useEmployee';
 import {
-    usePayrollRun, usePayslips, usePayslip, useRunAdjustments,
+    usePayrollRun, usePayslips, usePayslip, useRunAdjustments, downloadPayslipPdf,
 } from '../../hooks/usePayroll';
 import { ADJUSTMENT_TYPES, peso, fmtDate } from './payrollOptions';
 import { payrollAdjustmentValidationSchema } from '../../validation/payroll-adjustment-validation';
@@ -34,12 +34,25 @@ function StatCard({ label, value, strong }) {
 
 function PayslipModal({ uuid, onClose }) {
     const { payslip, isLoading } = usePayslip(uuid);
+    const [downloading, setDownloading] = useState(false);
+
+    const doDownload = async () => {
+        setDownloading(true);
+        try { await downloadPayslipPdf(payslip.uuid); } finally { setDownloading(false); }
+    };
+
     return (
-        <CustomModal isOpen={!!uuid} onClose={onClose} title="Payslip" size="lg" showCloseButton>
+        <CustomModal 
+            isOpen={!!uuid} 
+            onClose={onClose} 
+            title="Payslip" 
+            size="lg" 
+            showCloseButton
+        >
             {isLoading || !payslip ? (
                 <Loading size="sm" text="Loading payslip" />
             ) : (
-                <div className="max-h-[65vh] space-y-4 overflow-y-auto px-1">
+                <div className="max-h-[65vh] space-y-4 overflow-y-auto scrollbar-y-visible px-1 pb-7">
                     <div className="flex items-center justify-between">
                         <div>
                             <p className="font-semibold text-slate-900">
@@ -49,11 +62,27 @@ function PayslipModal({ uuid, onClose }) {
                         </div>
                         <Pill value={payslip.status} />
                     </div>
-                    <div className="rounded-xl bg-slate-50 p-4">
-                        <p className="text-xs text-slate-500">Net pay</p>
-                        <p className="text-2xl font-semibold text-slate-900">{peso(payslip.net_pay)}</p>
-                        <p className="text-[11px] text-slate-400">{peso(payslip.gross_pay)} gross − {peso(payslip.total_deductions)} deductions</p>
+
+                    <div className='flex justify-between'>
+                        <div className="rounded-xl bg-slate-50 p-4">
+                            <p className="text-xs text-slate-500">Net pay</p>
+                            <p className="text-2xl font-semibold text-slate-900">{peso(payslip.net_pay)}</p>
+                            <p className="text-[11px] text-slate-400">{peso(payslip.gross_pay)} gross − {peso(payslip.total_deductions)} deductions</p>
+                        </div>
+                        <div className='my-auto'>
+                            <CustomButton
+                                children='Generate PDF'
+                                onClick={doDownload}
+                                isLoading={downloading}
+                                icon={Download}
+                                iconPosition="left"
+                                className='flex py-2 items-center gap-2 hover:cursor-pointer px-4 bg-slate-700 text-white rounded-lg text-sm font-medium hover:bg-slate-600 transition-colors shadow-xs'
+                            />
+
+                        </div>
+                        
                     </div>
+                    
                     {['earning', 'deduction', 'employer_contribution'].map((lt) => {
                         const lines = (payslip.lines || []).filter((l) => l.line_type === lt);
                         if (!lines.length) return null;

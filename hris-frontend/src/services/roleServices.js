@@ -40,5 +40,16 @@ export const roleServices = {
     deleteRole: async (id) => {
         const { data } = await apiClient.delete(`/roles/${id}`);
         return data.data;
+    },
+
+    /**
+     * Replaces the full permission set granted to a role
+     * @param {number|string} id - The unique ID of the target role
+     * @param {Array<number>} permissionIds - The complete list of permission IDs to grant
+     * @returns {Promise<Object>}
+     */
+    syncPermissions: async (id, permissionIds) => {
+        const { data } = await apiClient.put(`/roles/${id}/permissions`, { permission_ids: permissionIds });
+        return data.data;
     }
 };

@@ -17,6 +17,19 @@ import {
 import { useLogout } from '../hooks/useLogout';
 import Header from './Header';
 import { can } from '../utils/permissionCheck';
+import { usePendingEmployeeDocumentRequests } from '../hooks/useDocuments';
+import { usePendingPayslipRequests } from '../hooks/usePayroll';
+
+const DOCUMENTS_PATH = '/dashboard/employee/documents';
+const PAYSLIP_REQUESTS_PATH = '/dashboard/payroll/payslip-requests';
+
+const NavBadge = ({ count, className = '' }) => (
+    count > 0 ? (
+        <span className={`inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-rose-700 px-1.5 text-[10px] font-bold leading-none text-white ${className}`}>
+            {count > 9 ? '9+' : count}
+        </span>
+    ) : null
+);
 
 const Dashboard = () => {
     const [isCollapsed, setIsCollapsed] = useState(false);
@@ -25,6 +38,16 @@ const Dashboard = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const logout = useLogout();
+
+    // Sidebar alert counts for pending requests employees have raised.
+    const { data: pendingDocRequests = [] } = usePendingEmployeeDocumentRequests({ enabled: can('employee-documents:view') });
+    const { data: pendingPayslipRequests = [] } = usePendingPayslipRequests({ enabled: can('run-payroll:view') });
+
+    const badgeForPath = (path) => {
+        if (path === DOCUMENTS_PATH) return pendingDocRequests.length;
+        if (path === PAYSLIP_REQUESTS_PATH) return pendingPayslipRequests.length;
+        return 0;
+    };
 
     const menuBlueprint = [
         { 
@@ -82,6 +105,7 @@ const Dashboard = () => {
             path: '/dashboard/payroll',
             children: [
                 { label: 'Payroll Runs', path: '/dashboard/payroll/runs', permission: 'run-payroll:view' },
+                { label: 'Payslip Requests', path: '/dashboard/payroll/payslip-requests', permission: 'run-payroll:view' },
                 { label: 'Pay Periods', path: '/dashboard/payroll/periods', permission: 'run-payroll:view' },
                 { label: 'Pay Components', path: '/dashboard/payroll/components', permission: 'payroll-and-compensation:view' },
                 { label: 'Statutory Tables', path: '/dashboard/payroll/statutory-tables', permission: 'statutory-and-compliance:view' },
@@ -198,21 +222,21 @@ const Dashboard = () => {
                             <div key={item.label} className="flex flex-col">
                                 <button
                                     onClick={() => handleNavClick(item)}
-                                    className={`w-full flex items-center p-3 justify-center rounded-lg transition-all group hover:cursor-pointer
+                                    className={`relative w-full flex items-center p-3 justify-center rounded-lg transition-all group hover:cursor-pointer
                                         ${isParentActive && !item.children ? 'bg-gray-500 text-white' : 'hover:bg-slate-800 hover:text-white'}
                                         ${isParentActive && item.children ? 'text-gray' : ''}`}
                                 >
                                     <span className={`${isParentActive ? 'text-gray-400' : 'text-slate-400 group-hover:text-gray-400'}`}>
                                         {item.icon}
                                     </span>
-                                    
+
                                     {!isCollapsed && (
                                         <>
                                             <span className="ml-4 font-medium truncate flex-1 text-left hover:cursor-pointer">{item.label}</span>
                                             {item.children && (
-                                                <ChevronDown 
-                                                    size={16} 
-                                                    className={`transition-transform duration-200 hover:cursor-pointer ${isSubmenuOpen ? 'rotate-180' : ''}`} 
+                                                <ChevronDown
+                                                    size={16}
+                                                    className={`transition-transform duration-200 hover:cursor-pointer ${isSubmenuOpen ? 'rotate-180' : ''}`}
                                                 />
                                             )}
                                         </>
@@ -230,12 +254,13 @@ const Dashboard = () => {
                                                 <button
                                                     key={child.label}
                                                     onClick={() => navigate(child.path)}
-                                                    className={`w-full text-left py-2 px-3 rounded-md text-sm transition-all hover:cursor-pointer
-                                                        ${isChildActive 
-                                                            ? 'bg-gray-500 text-white' 
+                                                    className={`w-full flex items-center gap-2 text-left py-2 px-3 rounded-md text-sm transition-all hover:cursor-pointer
+                                                        ${isChildActive
+                                                            ? 'bg-gray-500 text-white'
                                                             : 'text-slate-500 hover:text-slate-200 hover:bg-slate-800/50'}`}
                                                 >
-                                                    {child.label}
+                                                    <span className="flex-1 truncate">{child.label}</span>
+                                                    <NavBadge count={badgeForPath(child.path)} />
                                                 </button>
                                             );
                                         })}

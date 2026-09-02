@@ -1,4 +1,41 @@
-// utils/permissionChecker.js
+// utils/permissionCheck.js
+
+const STORAGE_KEY = 'permissions';
+
+/**
+ * Persist the caller's permission slugs for `can()` to read.
+ * Base64-encoded in sessionStorage (survives a reload, not a browser close).
+ * @param {Array<string>} permissions
+ */
+export function storePermissions(permissions) {
+    try {
+        const clean = Array.isArray(permissions) ? permissions : [];
+        sessionStorage.setItem(STORAGE_KEY, btoa(JSON.stringify(clean)));
+    } catch (error) {
+        console.error('Could not persist permissions:', error);
+    }
+}
+
+/** Wipe the stored permission set (called on logout). */
+export function clearPermissions() {
+    try {
+        sessionStorage.removeItem(STORAGE_KEY);
+    } catch {
+        /* noop */
+    }
+}
+
+/** Read the stored permission slugs as a plain array. */
+export function getPermissions() {
+    try {
+        const encoded = sessionStorage.getItem(STORAGE_KEY);
+        if (!encoded) return [];
+        return JSON.parse(atob(encoded)) || [];
+    } catch (error) {
+        console.error('Permission store was unreadable:', error);
+        return [];
+    }
+}
 
 /**
  * Checks if the current session user has the required permission(s).
@@ -7,24 +44,12 @@
  * @returns {boolean} - True if authorized, false otherwise.
  */
 export function can(requiredPermissions, matchAll = false) {
-    try {
-        const encodedData = sessionStorage.getItem('permissions');
-        if (!encodedData) return false;
+    const permissionsArray = getPermissions();
 
-        // Decode from Base64, then parse back into a real JS Array
-        const permissionsArray = JSON.parse(atob(encodedData)) || []; 
-        
-        // Normalize the required inputs into an array if a single string was passed
-        const targets = Array.isArray(requiredPermissions) ? requiredPermissions : [requiredPermissions];
-        if (targets.length === 0) return true;
+    const targets = Array.isArray(requiredPermissions) ? requiredPermissions : [requiredPermissions];
+    if (targets.length === 0) return true;
 
-        // Run the matching evaluation
-        return matchAll
-            ? targets.every(slug => permissionsArray.includes(slug)) // Must have ALL slugs
-            : targets.some(slug => permissionsArray.includes(slug));  // Must have AT LEAST ONE slug
-
-    } catch (error) {
-        console.error('Permission check failed or session data was corrupted:', error);
-        return false;
-    }
+    return matchAll
+        ? targets.every((slug) => permissionsArray.includes(slug))
+        : targets.some((slug) => permissionsArray.includes(slug));
 }

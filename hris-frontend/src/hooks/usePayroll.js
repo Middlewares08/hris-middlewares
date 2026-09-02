@@ -8,9 +8,21 @@ import {
     payPeriodService,
     payrollRunService,
     payslipService,
+    payslipRequestService,
 } from '../services/payrollServices';
+import { downloadBlob, filenameFromHeaders } from '../utils/downloadBlob';
 
 const errMsg = (err, fallback) => err?.response?.data?.message || err?.message || fallback;
+
+// Fetches a payslip PDF and hands it to the browser as a download.
+export async function downloadPayslipPdf(uuid) {
+    try {
+        const res = await payslipService.downloadPdf(uuid);
+        downloadBlob(res.data, filenameFromHeaders(res.headers, `payslip-${uuid}.pdf`));
+    } catch (err) {
+        toast.error(errMsg(err, 'Failed to download payslip PDF.'));
+    }
+}
 
 /**
  * Generic list + CRUD hook for a payroll resource.
@@ -129,6 +141,63 @@ export function usePayslip(uuid) {
         enabled: Boolean(uuid),
     });
     return { payslip: query.data, isLoading: query.isLoading };
+}
+
+/* ---- Payslip copy requests (admin review) ---- */
+export function usePayslipRequests(params = {}) {
+    const qc = useQueryClient();
+    const invalidate = () => qc.invalidateQueries({ queryKey: ['payslipRequests'] });
+
+    const query = useQuery({
+        queryKey: ['payslipRequests', params],
+        queryFn: () => payslipRequestService.getAll({ limit: 200, ...params }),
+        keepPreviousData: true,
+    });
+
+    const fulfillMutation = useMutation({
+        mutationFn: ({ uuid, payload = {} }) => payslipRequestService.fulfill(uuid, payload),
+        onSuccess: (res) => { toast.success(res?.message || 'Request fulfilled.'); invalidate(); },
+        onError: (err) => toast.error(errMsg(err, 'Failed to fulfill request.')),
+    });
+
+    const rejectMutation = useMutation({
+        mutationFn: ({ uuid, payload = {} }) => payslipRequestService.reject(uuid, payload),
+        onSuccess: (res) => { toast.success(res?.message || 'Request rejected.'); invalidate(); },
+        onError: (err) => toast.error(errMsg(err, 'Failed to reject request.')),
+    });
+
+    const removeMutation = useMutation({
+        mutationFn: (uuid) => payslipRequestService.remove(uuid),
+        onSuccess: (res) => { toast.success(res?.message || 'Request archived.'); invalidate(); },
+        onError: (err) => toast.error(errMsg(err, 'Failed to archive request.')),
+    });
+
+    return {
+        items: query.data?.data || [],
+        pagination: query.data?.pagination || null,
+        isLoading: query.isLoading,
+        error: query.isError ? errMsg(query.error, 'Failed to load payslip requests.') : null,
+        refetch: query.refetch,
+        fulfill: fulfillMutation.mutateAsync,
+        reject: rejectMutation.mutateAsync,
+        remove: removeMutation.mutateAsync,
+        isMutating: fulfillMutation.isPending || rejectMutation.isPending || removeMutation.isPending,
+    };
+}
+
+/**
+ * Lightweight count of still-open payslip copy requests — powers the sidebar badge.
+ * Shares the `['payslipRequests', …]` cache family so review actions refresh it.
+ */
+export function usePendingPayslipRequests({ enabled = true } = {}) {
+    return useQuery({
+        queryKey: ['payslipRequests', { status: 'pending', badge: true }],
+        queryFn: () => payslipRequestService.getAll({ status: 'pending', limit: 100 }),
+        select: (res) => res?.data || [],
+        enabled,
+        refetchInterval: 60_000,
+        refetchOnWindowFocus: true,
+    });
 }
 
 /* ---- Run adjustments ---- */

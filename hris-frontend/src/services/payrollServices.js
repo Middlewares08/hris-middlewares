@@ -36,4 +36,13 @@ export const payslipService = {
     getAll: async (params = {}) => (await apiClient.get(`${BASE}/payslips`, { params })).data,
     getByUuid: async (uuid) => (await apiClient.get(`${BASE}/payslips/${uuid}`)).data,
     setStatus: async (uuid, status) => (await apiClient.patch(`${BASE}/payslips/${uuid}/status`, { status })).data,
+    // Returns the raw axios response so the caller can read the blob + Content-Disposition.
+    downloadPdf: async (uuid) => apiClient.get(`${BASE}/payslips/${uuid}/pdf`, { responseType: 'blob' }),
+};
+
+export const payslipRequestService = {
+    getAll: async (params = {}) => (await apiClient.get(`${BASE}/payslip-requests`, { params })).data,
+    fulfill: async (uuid, payload = {}) => (await apiClient.patch(`${BASE}/payslip-requests/${uuid}/fulfill`, payload)).data,
+    reject: async (uuid, payload = {}) => (await apiClient.patch(`${BASE}/payslip-requests/${uuid}/reject`, payload)).data,
+    remove: async (uuid) => (await apiClient.delete(`${BASE}/payslip-requests/${uuid}`)).data,
 };

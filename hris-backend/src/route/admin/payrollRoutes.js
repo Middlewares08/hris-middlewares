@@ -22,18 +22,27 @@ const Assignment = require('../../module/admin/controller/payroll/ComponentAssig
 const Period = require('../../module/admin/controller/payroll/PayPeriodController');
 const Run = require('../../module/admin/controller/payroll/PayrollRunController');
 const Payslip = require('../../module/admin/controller/payroll/PayslipController');
+const PayslipRequest = require('../../module/admin/controller/payroll/PayslipRequestController');
 
 const SETUP = 'payroll-and-compensation';
 const STAT = 'statutory-and-compliance';
 const PROCESS = 'run-payroll';
 
 /* ---------------------------------------------------------------- *
- * SELF-SERVICE — declared first so '/payslips/me' isn't captured
- * by the '/payslips/:uuid' param route.
+ * SELF-SERVICE (employee PWA, gated by the 'My Payslips' scope) —
+ * declared first so '/payslips/me' isn't captured by the
+ * '/payslips/:uuid' param route.
  * ---------------------------------------------------------------- */
-router.get('/payslips/me', verifyToken, Payslip.getMine);
-router.get('/payslips/me/:uuid', verifyToken, Payslip.getMineByUuid);
+router.get('/payslips/me', verifyToken, requirePermission('my-payslips:view'), Payslip.getMine);
+router.get('/payslips/me/:uuid/pdf', verifyToken, requirePermission('my-payslips:view'), Payslip.getMinePdf);
+router.get('/payslips/me/:uuid', verifyToken, requirePermission('my-payslips:view'), Payslip.getMineByUuid);
+
+// Payslip copy requests (employee files, HR fulfils). '/me' before any ':uuid' route.
+router.get('/payslip-requests/me', verifyToken, requirePermission('my-payslips:view'), Payslip.getMineRequests);
+router.post('/payslip-requests', verifyToken, requirePermission('my-payslips:create'), Payslip.createRequest);
+router.patch('/payslip-requests/me/:uuid/cancel', verifyToken, requirePermission('my-payslips:create'), Payslip.cancelRequest);
 // The nearest upcoming pay date — drives the employee dashboard "Next Payday" tile.
+// Authenticated only (no scope) — it's a single harmless date.
 // Declared before '/periods/:uuid' so 'next' isn't captured as a uuid param.
 router.get('/periods/next', verifyToken, Period.getNext);
 
@@ -104,7 +113,16 @@ router.delete('/adjustments/:uuid', verifyToken, requirePermission(`${PROCESS}:e
  * PAYSLIPS (admin)
  * ---------------------------------------------------------------- */
 router.get('/payslips', verifyToken, requirePermission(`${PROCESS}:view`), Payslip.getAll);
+router.get('/payslips/:uuid/pdf', verifyToken, requirePermission(`${PROCESS}:view`), Payslip.getPdf);
 router.get('/payslips/:uuid', verifyToken, requirePermission(`${PROCESS}:view`), Payslip.getByUuid);
 router.patch('/payslips/:uuid/status', verifyToken, requirePermission(`${PROCESS}:edit`), Payslip.setStatus);
+
+/* ---------------------------------------------------------------- *
+ * PAYSLIP COPY REQUESTS (admin review)
+ * ---------------------------------------------------------------- */
+router.get('/payslip-requests', verifyToken, requirePermission(`${PROCESS}:view`), PayslipRequest.getAll);
+router.patch('/payslip-requests/:uuid/fulfill', verifyToken, requirePermission(`${PROCESS}:edit`), PayslipRequest.fulfill);
+router.patch('/payslip-requests/:uuid/reject', verifyToken, requirePermission(`${PROCESS}:edit`), PayslipRequest.reject);
+router.delete('/payslip-requests/:uuid', verifyToken, requirePermission(`${PROCESS}:delete`), PayslipRequest.remove);
 
 module.exports = router;

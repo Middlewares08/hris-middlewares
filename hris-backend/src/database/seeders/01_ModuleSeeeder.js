@@ -1,6 +1,8 @@
+const { SELF_SERVICE_MODULES, EXTRA_ADMIN_MODULES, ACCESS_TYPES } = require('../constants/permissionMatrix');
+
 /**
  * @param { import("knex").Knex } knex
- * @returns { Promise<void> } 
+ * @returns { Promise<void> }
  */
 exports.seed = async function(knex) {
     // 1. Fetch the immutable admin role reference safely
@@ -10,6 +12,12 @@ exports.seed = async function(knex) {
 
     // 2. Define the Core System Modules Matrix Blueprint
     const modulesToSeed = [
+        ...EXTRA_ADMIN_MODULES.map((mod) => ({
+            ...mod,
+            access_type: 'ADMIN',
+            created_by: 1,
+            updated_by: null,
+        })),
         {
             name: 'Dashboard',
             slug: 'dashboard',
@@ -217,7 +225,14 @@ exports.seed = async function(knex) {
             access_type: 'ADMIN',
             created_by: 1,
             updated_by: null
-        }
+        },
+        // Employee self-service (PWA) modules
+        ...SELF_SERVICE_MODULES.map((mod) => ({
+            ...mod,
+            access_type: ACCESS_TYPES.SELF_SERVICE,
+            created_by: 1,
+            updated_by: null,
+        })),
     ];
 
     // 3. Loop through individual nodes and execute lookups

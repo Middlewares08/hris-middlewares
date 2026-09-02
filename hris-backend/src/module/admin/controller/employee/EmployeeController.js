@@ -27,7 +27,7 @@ const getEmployees = async (req, res) => {
 
         let query = Employee.query()
             .where('employee.employees.is_deleted', false)
-            .withGraphFetched('[position.[department], credentials, compensation, contact, demographics]');
+            .withGraphFetched('[position.[department], credentials, compensation, contact, demographics, roles]');
 
         if (search) {
             query = query.where((builder) => {
@@ -66,7 +66,7 @@ const getEmployeeByUuid = async (req, res) => {
         const { uuid } = req.params;
         const employee = await Employee.query()
             .findOne({ uuid, is_deleted: false })
-            .withGraphFetched('[position.[department], credentials, compensation, contact, demographics]');
+            .withGraphFetched('[position.[department], credentials, compensation, contact, demographics, roles]');
 
         if (!employee) {
             return res.status(404).json({ success: false, message: 'Employee profile not found.' });
@@ -157,6 +157,15 @@ const createEmployee = async (req, res) => {
             })
             .context({ graphData, user: req.user });
 
+        // Every employee gets the default role (self-service PWA access).
+        const defaultRole = await trx('role_permission.roles').where({ is_default: true }).first();
+        if (defaultRole) {
+            await trx('role_permission.employee_roles')
+                .insert({ employee_id: employee.id, role_id: defaultRole.id, created_by: actorId, updated_by: actorId })
+                .onConflict(['employee_id', 'role_id'])
+                .ignore();
+        }
+
         // Seed the employee's active pay profile in payroll.employee_compensations.
         if (b.pay_rate !== undefined && b.pay_rate !== null && b.pay_rate !== '') {
             await EmployeeCompensation.setActive(trx, {
@@ -209,7 +218,8 @@ const updateEmployee = async (req, res) => {
             pay_rate,
             effective_date,
             date_hired,
-            employment_type
+            employment_type,
+            role_ids
         } = req.body;
         const actorId = req.user?.id ? parseInt(req.user.id, 10) : null;
 
@@ -247,6 +257,34 @@ const updateEmployee = async (req, res) => {
                     effective_date: effective_date || new Date().toISOString().substring(0, 10),
                     actorId,
                 });
+            }
+
+            // Roles live in the role_permission.employee_roles pivot. When the caller
+            // supplies an explicit list, sync it: drop rows no longer selected and
+            // insert the newly checked ones. An empty array clears every role.
+            if (Array.isArray(role_ids)) {
+                const desired = [...new Set(role_ids.map(Number).filter((n) => Number.isInteger(n)))];
+
+                const existing = await trx('role_permission.employee_roles')
+                    .where({ employee_id: employee.id })
+                    .pluck('role_id');
+
+                const toRemove = existing.filter((id) => !desired.includes(id));
+                const toAdd = desired.filter((id) => !existing.includes(id));
+
+                if (toRemove.length) {
+                    await trx('role_permission.employee_roles')
+                        .where({ employee_id: employee.id })
+                        .whereIn('role_id', toRemove)
+                        .del();
+                }
+
+                for (const roleId of toAdd) {
+                    await trx('role_permission.employee_roles')
+                        .insert({ employee_id: employee.id, role_id: roleId, created_by: actorId, updated_by: actorId })
+                        .onConflict(['employee_id', 'role_id'])
+                        .ignore();
+                }
             }
         });
 

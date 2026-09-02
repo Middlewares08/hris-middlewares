@@ -4,9 +4,9 @@ import { toast } from 'sonner';
 import {
     FileText, PlusIcon, Save, ShieldAlert, Trash,
     ClipboardList, X,
-    SearchIcon,
     SearchAlert,
     File,
+    Bell,
 } from 'lucide-react';
 import CustomModal from '../../components/CustomModal';
 import CustomInput from '../../components/CustomInput';
@@ -18,7 +18,7 @@ import DocumentList from '../../components/document/DocumentList';
 import NotFound from '../../components/NotFound';
 import { can } from '../../utils/permissionCheck';
 import { useEmployees } from '../../hooks/useEmployee';
-import { useDocuments } from '../../hooks/useDocuments';
+import { useDocuments, usePendingEmployeeDocumentRequests } from '../../hooks/useDocuments';
 import { buildDocumentForm, MAX_DOC_BYTES } from '../../services/documentServices';
 import { BLANK } from '../../utils/constants';
 
@@ -28,6 +28,7 @@ const REQ_TONE = {
     pending: 'bg-amber-100 text-amber-700',
     fulfilled: 'bg-emerald-100 text-emerald-700',
     cancelled: 'bg-slate-200 text-slate-600',
+    declined: 'bg-rose-100 text-rose-700',
 };
 
 const fmtDate = (v) => (v ? moment(v).format('MMM D, YYYY') : '—');
@@ -38,13 +39,25 @@ function Documents() {
 
     const {
         documents, requests, isLoading, error,
-        addDocument, deleteDocument, createRequest, cancelRequest, deleteRequest, isMutating,
+        addDocument, deleteDocument, createRequest, cancelRequest, declineRequest, deleteRequest, isMutating,
     } = useDocuments(employeeId);
 
+    // `source === 'employee'` → the employee asked HR; everything else → HR asked the employee.
+    const hrRequests = useMemo(() => requests.filter((r) => r.source !== 'employee'), [requests]);
+    const incomingRequests = useMemo(() => requests.filter((r) => r.source === 'employee'), [requests]);
+    const pendingIncoming = incomingRequests.filter((r) => r.status === 'pending').length;
+
     const [reqForm, setReqForm] = useState(null);   // {label, note, due_date}
-    const [docForm, setDocForm] = useState(null);   // {label, file}
+    const [docForm, setDocForm] = useState(null);   // {label, file, request?}
+    const [declineFor, setDeclineFor] = useState(null); // request row
+    const [declineReason, setDeclineReason] = useState('');
     const [busy, setBusy] = useState(false);
     const [confirm, setConfirm] = useState(null);   // { kind, id, label }
+    const [notifOpen, setNotifOpen] = useState(false);
+
+    // Company-wide feed of still-open requests raised by employees — drives the header bell.
+    const { data: pendingEmployeeRequests = [] } = usePendingEmployeeDocumentRequests();
+    const notifCount = pendingEmployeeRequests.length;
 
     const employeeOptions = useMemo(
         () => (employees || []).map((e) => ({
@@ -52,6 +65,13 @@ function Documents() {
         })),
         [employees],
     );
+
+    // Open a specific employee's documents (from the notification bell).
+    const jumpToEmployee = (empId) => {
+        const match = employeeOptions.find((o) => String(o.value) === String(empId));
+        setEmployeeId(match ? match.value : empId);
+        setNotifOpen(false);
+    };
 
     const submitRequest = async () => {
         try {
@@ -77,6 +97,7 @@ function Documents() {
                 employeeId,
                 label: docForm.label.trim() || docForm.file.name,
                 file: docForm.file.file,
+                documentRequestId: docForm.request?.id,
             }));
             setDocForm(null);
         } catch {
@@ -84,6 +105,14 @@ function Documents() {
         } finally {
             setBusy(false);
         }
+    };
+
+    const submitDecline = async () => {
+        try {
+            await declineRequest({ id: declineFor.id, payload: { review_remarks: declineReason.trim() } });
+            setDeclineFor(null);
+            setDeclineReason('');
+        } catch { /* toast in hook */ }
     };
 
     const runConfirm = async () => {
@@ -100,15 +129,79 @@ function Documents() {
 
     return (
         <div className="mx-auto max-w-7xl space-y-6">
-            <div className="border-b border-slate-100 pb-4">
-                <CustomLabel 
-                    children='Employee Documents' 
-                    variant="h2" 
-                    addedClass="font-bold text-slate-700!" 
-                    description="View an employee's documents and request new ones."
+            <div className="flex items-start justify-between gap-3 border-b border-slate-100 pb-4">
+                <CustomLabel
+                    children='Employee Documents'
+                    variant="h2"
+                    addedClass="font-bold text-slate-700!"
+                    description="View an employee's documents, answer their requests, and ask for new ones."
                     descriptionClass='text-xs'
                   />
-                    
+
+                {/* Notification bell — pending requests raised by employees */}
+                <div className="relative shrink-0">
+                    <button
+                        type="button"
+                        onClick={() => setNotifOpen((o) => !o)}
+                        className="relative rounded-lg border border-slate-200 bg-white p-2 text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-700 cursor-pointer"
+                        title="Employee document requests"
+                        aria-label={`${notifCount} pending employee document request${notifCount === 1 ? '' : 's'}`}
+                    >
+                        <Bell size={18} />
+                        {notifCount > 0 && (
+                            <span className="absolute -right-1.5 -top-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white ring-2 ring-white">
+                                {notifCount > 9 ? '9+' : notifCount}
+                            </span>
+                        )}
+                    </button>
+
+                    {notifOpen && (
+                        <>
+                            <div className="fixed inset-0 z-20" onClick={() => setNotifOpen(false)} />
+                            <div className="absolute right-0 z-30 mt-2 w-80 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
+                                <div className="flex items-center justify-between border-b border-slate-100 px-4 py-2.5">
+                                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                        Employee Requests
+                                    </p>
+                                    <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
+                                        {notifCount} pending
+                                    </span>
+                                </div>
+                                {notifCount === 0 ? (
+                                    <p className="px-4 py-6 text-center text-xs text-slate-400">Nothing waiting on you.</p>
+                                ) : (
+                                    <ul className="max-h-[60vh] divide-y divide-slate-50 space-y-4 overflow-y-auto scrollbar-y-visible text-left!">
+                                        {pendingEmployeeRequests.map((r) => (
+                                            <li key={r.id}>
+                                               
+                                                <button
+                                                    type="button"
+                                                    onClick={() => jumpToEmployee(r.employee?.id ?? r.employee_id)}
+                                                    className="flex w-full px-4 py-3 transition-colors hover:bg-slate-50 cursor-pointer text-left"
+                                                >
+                                                    <div className='my-auto px-3 border-l-2 border-green-400 py-3'>
+                                                        <FileText size={23} color='gray'/>
+
+                                                    </div>
+                                                    <div>
+                                                        <p className="truncate text-sm font-medium text-slate-800">{r.label}</p>
+                                                        <p className="mt-0.5 truncate text-xs text-slate-500">
+                                                            {r.employee ? `${r.employee.first_name} ${r.employee.last_name}` : `Employee #${r.employee_id}`}
+                                                            {' · '}
+                                                            {fmtDate(r.created_at)}
+                                                        </p>
+
+                                                    </div>
+                                                    
+                                                </button>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                )}
+                            </div>
+                        </>
+                    )}
+                </div>
             </div>
 
             <div className="max-w-md">
@@ -138,8 +231,79 @@ function Documents() {
             ) : isLoading ? (
                 <div className="p-10 text-center text-sm text-slate-400">Loading…</div>
             ) : (
+              <div className="space-y-6">
+                {/* Incoming requests — the employee asked HR for a document */}
+                <section className="rounded-2xl border border-slate-200 bg-white p-5">
+                    <div className="mb-4 flex items-center gap-2">
+                        <ClipboardList size={16} className="text-slate-400" />
+                        <p className="text-sm font-semibold text-slate-900">Incoming Requests</p>
+                        {pendingIncoming > 0 && (
+                            <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-100 px-1.5 text-[10px] font-semibold text-amber-700">
+                                {pendingIncoming} pending
+                            </span>
+                        )}
+                    </div>
+
+                    {incomingRequests.length === 0 ? (
+                        <>
+                            <div className='flex justify-center pb-3'>
+                                <SearchAlert size={40} color='gray'/>
+                            </div>
+                            <p className="text-xs text-slate-400">This employee hasn't requested anything.</p>
+                        </>
+                    ) : (
+                        <ul className="space-y-2 text-left">
+                            {incomingRequests.map((r) => (
+                                <li key={r.id} className="rounded-xl border border-slate-100 bg-slate-50/70 p-3">
+                                    <div className="flex items-start justify-between gap-2">
+                                        <div className="min-w-0">
+                                            <p className="truncate text-sm font-medium text-slate-800">{r.label}</p>
+                                            {r.note && <p className="mt-0.5 text-xs text-slate-500">{r.note}</p>}
+                                            <p className="mt-1 text-[11px] text-slate-400">Requested {fmtDate(r.created_at)}</p>
+                                            {r.status === 'declined' && r.review_remarks && (
+                                                <p className="mt-1 text-[11px] text-rose-500">Declined: {r.review_remarks}</p>
+                                            )}
+                                            {r.status === 'fulfilled' && r.fulfilledDocument?.file_url && (
+                                                <a href={r.fulfilledDocument.file_url} target="_blank" rel="noreferrer"
+                                                    className="mt-1 inline-block text-[11px] font-semibold text-indigo-600 hover:underline">
+                                                    View delivered file
+                                                </a>
+                                            )}
+                                        </div>
+                                        <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold capitalize ${REQ_TONE[r.status]}`}>
+                                            {r.status}
+                                        </span>
+                                    </div>
+                                    {r.status === 'pending' && (
+                                        <div className="mt-2 flex gap-3 text-xs">
+                                            {can('employee-documents:create') && (
+                                                <button onClick={() => setDocForm({ label: r.label, file: null, request: r })}
+                                                    className="font-semibold text-emerald-600 hover:underline cursor-pointer">Fulfill</button>
+                                            )}
+                                            {can('employee-documents:edit') && (
+                                                <button onClick={() => { setDeclineFor(r); setDeclineReason(BLANK); }}
+                                                    className="font-semibold text-rose-500 hover:underline cursor-pointer">Decline</button>
+                                            )}
+                                            {can('employee-documents:delete') && (
+                                                <button onClick={() => setConfirm({ kind: 'req-delete', id: r.id, label: r.label })}
+                                                    className="font-semibold text-slate-500 hover:underline cursor-pointer">Remove</button>
+                                            )}
+                                        </div>
+                                    )}
+                                    {r.status !== 'pending' && can('employee-documents:delete') && (
+                                        <div className="mt-2 flex gap-3 text-xs">
+                                            <button onClick={() => setConfirm({ kind: 'req-delete', id: r.id, label: r.label })}
+                                                className="font-semibold text-rose-500 hover:underline cursor-pointer">Remove</button>
+                                        </div>
+                                    )}
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+                </section>
+
                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                    {/* Document requests */}
+                    {/* Document requests — HR asked the employee for a document */}
                     <section className="rounded-2xl border border-slate-200 bg-white p-5">
                         <div className="mb-4 flex items-center justify-between">
                             <div className="flex items-center gap-2">
@@ -147,7 +311,7 @@ function Documents() {
                                 <p className="text-sm font-semibold text-slate-900">Document Requests</p>
                             </div>
                             {can('employee-documents:create') && (
-                                <CustomButton 
+                                <CustomButton
                                     children='Request'
                                     onClick={() => setReqForm({ label: BLANK, note: BLANK, due_date: BLANK })}
                                     icon={PlusIcon} iconPosition="left"
@@ -157,17 +321,17 @@ function Documents() {
                             )}
                         </div>
 
-                        {requests.length === 0 ? (
+                        {hrRequests.length === 0 ? (
                             <>
                                 <div className='flex justify-center pb-3'>
                                     <SearchAlert size={40} color='gray'/>
                                 </div>
                                 <p className="text-xs text-slate-400">No requests found..</p>
                             </>
-                           
+
                         ) : (
                             <ul className="space-y-2 text-left">
-                                {requests.map((r) => (
+                                {hrRequests.map((r) => (
                                     <li key={r.id} className="rounded-xl border border-slate-100 bg-slate-50/70 p-3">
                                         <div className="flex items-start justify-between gap-2">
                                             <div className="min-w-0">
@@ -229,6 +393,7 @@ function Documents() {
                         />
                     </section>
                 </div>
+              </div>
             )}
 
             {/* Request modal */}
@@ -269,21 +434,21 @@ function Documents() {
                 )}
             </CustomModal>
 
-            {/* Add-document modal */}
+            {/* Add-document modal (also used to fulfill an employee's request) */}
             <CustomModal
                 isOpen={!!docForm}
                 onClose={() => setDocForm(null)}
-                title="Add a document"
+                title={docForm?.request ? `Fulfill: ${docForm.request.label}` : 'Add a document'}
                 size="md"
                 showCloseButton
                 hasRequiredFields
                 footer={(
                     <div className="flex justify-center border-t border-slate-100 pt-4">
-                        <CustomButton 
-                            children='Save Document'
-                            onClick={submitDocument} 
+                        <CustomButton
+                            children={docForm?.request ? 'Deliver Document' : 'Save Document'}
+                            onClick={submitDocument}
                             icon={Save} iconPosition="left"
-                            isLoading={busy || isMutating} 
+                            isLoading={busy || isMutating}
                             disabled={busy || isMutating || !docForm?.file}
                             className='flex py-2 items-center gap-2 hover:cursor-pointer px-4 bg-slate-700 text-white rounded-lg text-sm font-medium hover:bg-slate-600 transition-colors shadow-xs'
                         />
@@ -293,15 +458,54 @@ function Documents() {
                 {docForm && (
                     <div className="space-y-4 px-1 pb-3">
                         <CustomInput label="Label" value={docForm.label} placeholder="Defaults to the file name"
+                            disabled={!!docForm.request}
                             onChange={(e) => setDocForm((p) => ({ ...p, label: e.target.value }))} />
+                        {docForm.request?.note && (
+                            <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700">{docForm.request.note}</p>
+                        )}
                         <CustomFileUploader
                             label="File" isRequired
                             value={docForm.file}
                             onChange={(f) => setDocForm((p) => ({ ...p, file: f }))}
                             description="Image or PDF up to 4MB"
                         />
+                        {docForm.request && (
+                            <p className="text-[11px] text-slate-400">
+                                This file is delivered to the employee and marks their request fulfilled.
+                            </p>
+                        )}
                     </div>
                 )}
+            </CustomModal>
+
+            {/* Decline request modal */}
+            <CustomModal
+                isOpen={!!declineFor}
+                onClose={() => { setDeclineFor(null); setDeclineReason(BLANK); }}
+                title="Decline request?"
+                size="md"
+                showCloseButton
+                footer={(
+                    <div className="flex gap-3 border-t border-slate-100 pt-4">
+                        <CustomButton onClick={() => { setDeclineFor(null); setDeclineReason(BLANK); }}
+                            className="flex-1 border border-slate-200 bg-white! text-slate-700! hover:bg-slate-100!">Cancel</CustomButton>
+                        <CustomButton variant="danger" icon={X} iconPosition="left" isLoading={isMutating}
+                            disabled={isMutating || !declineReason.trim()} onClick={submitDecline} className="flex-1">Decline</CustomButton>
+                    </div>
+                )}
+            >
+                <div className="space-y-3 px-1">
+                    <p className="text-sm text-slate-500">
+                        {declineFor && <>Decline the request for <span className="font-semibold text-slate-800">{declineFor.label}</span>?</>}
+                    </p>
+                    <div className='text-left'>
+                        <label className="mb-1 block text-xs font-medium text-slate-700">Reason <span className="text-rose-500">*</span></label>
+                        <textarea rows={3} value={declineReason} maxLength={500}
+                            onChange={(e) => setDeclineReason(e.target.value)}
+                            placeholder="Let the employee know why this can't be provided"
+                            className="w-full resize-none rounded-lg border border-gray-300 p-2 text-sm focus:outline-gray-600" />
+                    </div>
+                </div>
             </CustomModal>
 
             {/* Confirm modal */}
@@ -312,14 +516,19 @@ function Documents() {
                     <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full border border-rose-100 bg-rose-50 text-rose-500">
                         <ShieldAlert size={26} />
                     </div>
-                    <p className="mb-6 text-sm text-slate-500">
+                    <p className="mb-6 text-sm text-slate-500 pb-5">
                         <span className="font-semibold text-slate-800">{confirm?.label}</span>
                         {confirm?.kind === 'doc' ? ' will be archived.' : confirm?.kind === 'req-cancel' ? ' will be marked cancelled.' : ' will be removed.'}
                     </p>
                     <div className="flex gap-3 border-t border-slate-100 pt-4">
-                        <CustomButton onClick={() => setConfirm(null)} className="flex-1 border border-slate-200 bg-white! text-slate-700! hover:bg-slate-100!">Keep</CustomButton>
-                        <CustomButton variant="danger" icon={confirm?.kind === 'req-cancel' ? X : Trash} iconPosition="left"
-                            isLoading={isMutating} onClick={runConfirm} className="flex-1">Confirm</CustomButton>
+                        <CustomButton onClick={() => setConfirm(null)} className="flex-1 rounded-lg border border-slate-200 bg-white! text-slate-700! hover:bg-slate-100!">Keep</CustomButton>
+                        <CustomButton 
+                            children='Confirm'
+                            variant="danger"
+                            isLoading={isMutating} 
+                            onClick={runConfirm} className="flex-1"
+                            className='flex-1 py-2 items-center gap-2 hover:cursor-pointer px-4 bg-slate-700 text-white rounded-lg text-sm font-medium hover:bg-slate-600 transition-colors shadow-xs'
+                        />
                     </div>
                 </div>
             </CustomModal>

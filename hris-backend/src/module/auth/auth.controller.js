@@ -414,6 +414,8 @@ const getCurrentProfile = async (req, res) => {
             return res.status(404).json({ message: 'User not found.' });
         }
 
+        const permissions = await Permission.getPermissionsById(user.id);
+
         return res.status(200).json({
             fullName: user.first_name + ' ' + user.last_name,
             employeeId: user?.employee_id,
@@ -422,6 +424,7 @@ const getCurrentProfile = async (req, res) => {
             preferredName: user.preferred_name,
             email: user.credentials.email,
             position: user?.position,
+            permissions,
         });
     } catch (error) {
         return res.status(500).json({ message: 'Error retrieving profile context.', err: error });

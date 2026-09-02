@@ -17,16 +17,17 @@ const getModulesWithPermissionsTree = async (req, res) => {
             .where({ is_deleted: false })
             .orderBy('name', 'asc');
 
-        // 3. Construct your custom tree format
-        const formattedTree = modules.map((mod) => {
-            return {
+        // 3. Construct your custom tree format — drop modules that have no
+        //    active permissions left after the prune (nothing to toggle there).
+        const formattedTree = modules
+            .map((mod) => ({
                 // Spreads all the raw database attributes of the module
-                ...mod, 
-                
+                ...mod,
+
                 // Filters down to only matching sub-permissions
                 permission: permissions.filter(perm => perm.module_id === mod.id)
-            };
-        });
+            }))
+            .filter((mod) => mod.permission.length > 0);
 
         // 4. Return encapsulated inside the requested "module" wrapper envelope
         return res.status(200).json({

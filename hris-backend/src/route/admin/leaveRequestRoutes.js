@@ -16,11 +16,11 @@ const {
 const { verifyToken } = require('../../middleware/authMiddleware');
 const { requirePermission } = require('../../middleware/permissionMiddleware');
 
-// SELF-SERVICE — just needs to know who the caller is, no admin permission required
-router.get('/me', verifyToken, getMyLeaveRequests); // 🎯 Must be declared before '/:uuid' or it'll be swallowed as a uuid param
-router.post('/', verifyToken, createLeaveRequest);
-router.put('/:uuid', verifyToken, updateLeaveRequest);
-router.patch('/:uuid/cancel', verifyToken, cancelLeaveRequest);
+// SELF-SERVICE (employee PWA, gated by the 'My Leave' scope)
+router.get('/me', verifyToken, requirePermission('my-leave:view'), getMyLeaveRequests); // 🎯 Must be declared before '/:uuid' or it'll be swallowed as a uuid param
+router.post('/', verifyToken, requirePermission('my-leave:create'), createLeaveRequest);
+router.put('/:uuid', verifyToken, requirePermission('my-leave:edit'), updateLeaveRequest);
+router.patch('/:uuid/cancel', verifyToken, requirePermission('my-leave:edit'), cancelLeaveRequest);
 
 // LEAVE REQUESTS (admin/manager access, gated by the 'Leave Requests' module permissions)
 router.get('/', verifyToken, requirePermission('leave-request:view'), getAllLeaveRequests);

@@ -61,10 +61,10 @@ export const useEmployees = (filters = { page: 1, limit: 10, search: '' }) => {
         isError,
         refetch,
         createEmployee: createMutation.mutateAsync,
-        isCreating: createMutation.isLoading,
+        isCreating: createMutation.isPending,
         updateEmployee: updateMutation.mutateAsync,
-        isUpdating: updateMutation.isLoading,
+        isUpdating: updateMutation.isPending,
         deleteEmployee: deleteMutation.mutateAsync,
-        isDeleting: deleteMutation.isLoading,
+        isDeleting: deleteMutation.isPending,
     };
 };

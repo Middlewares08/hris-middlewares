@@ -134,12 +134,83 @@ const getMyDocumentRequests = async (req, res) => {
         const requests = await DocumentRequest.query()
             .where({ employee_id: employeeId, is_deleted: false })
             .whereNot('status', 'cancelled')
-            .withGraphFetched('[requester, fulfilledDocument]')
+            .withGraphFetched('[requester, reviewer, fulfilledDocument]')
             .orderByRaw("CASE status WHEN 'pending' THEN 0 ELSE 1 END")
             .orderBy('created_at', 'desc');
 
         return res.status(200).json({ success: true, data: await withRequestFileUrls(requests) });
     } catch (error) {
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+/** Employee asks HR for a document (COE, ITR copy, …). */
+const createMyDocumentRequest = async (req, res) => {
+    try {
+        const employeeId = actorId(req);
+        if (!employeeId) return res.status(401).json({ success: false, message: 'Unauthenticated request.' });
+
+        const { label, note } = req.body;
+        if (!label || !String(label).trim()) {
+            return res.status(400).json({ success: false, message: 'label is required.' });
+        }
+        if (String(label).trim().length > 200) {
+            return res.status(400).json({ success: false, message: 'label must be 200 characters or fewer.' });
+        }
+
+        const request = await DocumentRequest.query().context({ user: { id: employeeId } }).insertAndFetch({
+            employee_id: employeeId,
+            label: String(label).trim(),
+            note: note ? String(note).trim().slice(0, 500) : null,
+            status: 'pending',
+            source: 'employee',
+        });
+
+        await logActivity({
+            employeeId,
+            action: 'document.request_raised',
+            category: 'document',
+            description: `Requested "${request.label}" from HR`,
+            metadata: { document_request_uuid: request.uuid },
+            req,
+        });
+
+        return res.status(201).json({ success: true, data: request });
+    } catch (error) {
+        console.error('Create my document request error:', error);
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+/** Employee withdraws their own still-pending request to HR. */
+const cancelMyDocumentRequest = async (req, res) => {
+    try {
+        const employeeId = actorId(req);
+        const { id } = req.params;
+
+        const request = await DocumentRequest.query()
+            .findById(id)
+            .where({ employee_id: employeeId, source: 'employee', is_deleted: false });
+        if (!request) return res.status(404).json({ success: false, message: 'Document request not found.' });
+        if (request.status !== 'pending') {
+            return res.status(409).json({ success: false, message: `A ${request.status} request can no longer be cancelled.` });
+        }
+
+        const updated = await DocumentRequest.query().context({ user: { id: employeeId } })
+            .patchAndFetchById(id, { status: 'cancelled' });
+
+        await logActivity({
+            employeeId,
+            action: 'document.request_withdrawn',
+            category: 'document',
+            description: `Withdrew the request for "${request.label}"`,
+            metadata: { document_request_uuid: request.uuid },
+            req,
+        });
+
+        return res.status(200).json({ success: true, data: updated });
+    } catch (error) {
+        console.error('Cancel my document request error:', error);
         return res.status(500).json({ success: false, message: error.message });
     }
 };
@@ -269,7 +340,7 @@ const deleteMyDocument = async (req, res) => {
 
         // If this document fulfilled a request, reopen it.
         await DocumentRequest.query()
-            .patch({ status: 'pending', fulfilled_document_id: null, fulfilled_at: null })
+            .patch({ status: 'pending', fulfilled_document_id: null, fulfilled_at: null, reviewed_by: null, reviewed_at: null })
             .where({ fulfilled_document_id: id, is_deleted: false });
 
         await logActivity({
@@ -302,7 +373,7 @@ const listEmployeeDocuments = async (req, res) => {
 
         const requests = await DocumentRequest.query()
             .where({ employee_id, is_deleted: false })
-            .withGraphFetched('[requester, fulfilledDocument]')
+            .withGraphFetched('[requester, reviewer, fulfilledDocument]')
             .orderByRaw("CASE status WHEN 'pending' THEN 0 ELSE 1 END")
             .orderBy('created_at', 'desc');
 
@@ -321,10 +392,25 @@ const listEmployeeDocuments = async (req, res) => {
 
 const adminCreateDocument = async (req, res) => {
     try {
-        const { employee_id, label } = req.body;
+        const { employee_id, label, document_request_id } = req.body;
         if (!employee_id) return res.status(400).json({ success: false, message: 'employee_id is required.' });
         if (!label || !String(label).trim()) {
             return res.status(400).json({ success: false, message: 'label is required.' });
+        }
+
+        // When fulfilling an employee's request, the upload is linked back to it.
+        let request = null;
+        if (document_request_id) {
+            request = await DocumentRequest.query()
+                .findById(document_request_id)
+                .where({ is_deleted: false });
+            if (!request) return res.status(404).json({ success: false, message: 'Linked document request not found.' });
+            if (Number(request.employee_id) !== Number(employee_id)) {
+                return res.status(400).json({ success: false, message: 'That request belongs to another employee.' });
+            }
+            if (request.status !== 'pending') {
+                return res.status(409).json({ success: false, message: 'That request is no longer open.' });
+            }
         }
 
         let fileData;
@@ -339,21 +425,75 @@ const adminCreateDocument = async (req, res) => {
             employee_id,
             label: String(label).trim(),
             source: 'admin',
+            document_request_id: request ? request.id : null,
             ...fileData,
         });
 
+        if (request) {
+            await DocumentRequest.query().context({ user: { id: actorId(req) } }).patchAndFetchById(request.id, {
+                status: 'fulfilled',
+                fulfilled_document_id: document.id,
+                fulfilled_at: new Date().toISOString(),
+                reviewed_by: actorId(req),
+                reviewed_at: new Date().toISOString(),
+            });
+        }
+
         await logActivity({
             employeeId: parseInt(employee_id, 10),
-            action: 'document.added_by_admin',
+            action: request ? 'document.request_fulfilled_by_admin' : 'document.added_by_admin',
             category: 'document',
-            description: `HR added document "${document.label}"`,
-            metadata: { document_id: document.id },
+            description: request
+                ? `HR fulfilled the request for "${document.label}"`
+                : `HR added document "${document.label}"`,
+            metadata: { document_id: document.id, document_request_id: request?.id || null },
             req,
         });
 
         return res.status(201).json({ success: true, data: await withFileUrl(document) });
     } catch (error) {
         console.error('Admin create document error:', error);
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+/** HR turns down an employee's document request with a reason. */
+const declineDocumentRequest = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { review_remarks } = req.body;
+
+        const request = await DocumentRequest.query().findById(id).where('is_deleted', false);
+        if (!request) return res.status(404).json({ success: false, message: 'Document request not found.' });
+        if (request.source !== 'employee') {
+            return res.status(400).json({ success: false, message: 'Only employee-raised requests can be declined.' });
+        }
+        if (request.status !== 'pending') {
+            return res.status(409).json({ success: false, message: `A ${request.status} request can no longer be declined.` });
+        }
+        if (!review_remarks || !String(review_remarks).trim()) {
+            return res.status(400).json({ success: false, message: 'A reason is required to decline a request.' });
+        }
+
+        const updated = await DocumentRequest.query().context({ user: { id: actorId(req) } }).patchAndFetchById(id, {
+            status: 'declined',
+            review_remarks: String(review_remarks).trim().slice(0, 500),
+            reviewed_by: actorId(req),
+            reviewed_at: new Date().toISOString(),
+        });
+
+        await logActivity({
+            employeeId: request.employee_id,
+            action: 'document.request_declined',
+            category: 'document',
+            description: `HR declined the request for "${request.label}"`,
+            metadata: { document_request_uuid: request.uuid },
+            req,
+        });
+
+        return res.status(200).json({ success: true, data: updated });
+    } catch (error) {
+        console.error('Decline document request error:', error);
         return res.status(500).json({ success: false, message: error.message });
     }
 };
@@ -367,7 +507,7 @@ const adminDeleteDocument = async (req, res) => {
         // Soft delete only — the S3 object is retained for the archive.
         await Document.query().context({ user: { id: actorId(req) } }).patchAndFetchById(id, { is_deleted: true });
         await DocumentRequest.query()
-            .patch({ status: 'pending', fulfilled_document_id: null, fulfilled_at: null })
+            .patch({ status: 'pending', fulfilled_document_id: null, fulfilled_at: null, reviewed_by: null, reviewed_at: null })
             .where({ fulfilled_document_id: id, is_deleted: false });
 
         await logActivity({
@@ -390,15 +530,16 @@ const listAllDocumentRequests = async (req, res) => {
     try {
         const page = parseInt(req.query.page, 10) || 1;
         const limit = parseInt(req.query.limit, 10) || 20;
-        const { search, employee_id, status } = req.query;
+        const { search, employee_id, status, source } = req.query;
         const offset = (page - 1) * limit;
 
         let query = DocumentRequest.query()
             .where('employee.document_requests.is_deleted', false)
-            .withGraphFetched('[employee, requester, fulfilledDocument]');
+            .withGraphFetched('[employee, requester, reviewer, fulfilledDocument]');
 
         if (employee_id) query = query.where('employee_id', employee_id);
         if (status) query = query.where('status', status);
+        if (source) query = query.where('source', source);
         if (search) {
             query = query.where((b) => {
                 b.where('label', 'ilike', `%${search}%`)
@@ -441,6 +582,7 @@ const createDocumentRequest = async (req, res) => {
             note: note ? String(note).trim().slice(0, 500) : null,
             due_date: due_date || null,
             status: 'pending',
+            source: 'admin',
         });
 
         await logActivity({
@@ -532,6 +674,8 @@ module.exports = {
     // self-service
     getMyDocuments,
     getMyDocumentRequests,
+    createMyDocumentRequest,
+    cancelMyDocumentRequest,
     uploadMyDocument,
     updateMyDocument,
     deleteMyDocument,
@@ -544,5 +688,6 @@ module.exports = {
     createDocumentRequest,
     updateDocumentRequest,
     cancelDocumentRequest,
+    declineDocumentRequest,
     deleteDocumentRequest,
 };

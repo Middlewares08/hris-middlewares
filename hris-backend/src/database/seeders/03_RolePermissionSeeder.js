@@ -1,49 +1,75 @@
+const { SELF_SERVICE_PERMISSION_SLUGS } = require('../constants/permissionMatrix');
+
 /**
+ * Wires role -> permission grants:
+ *   - the immutable Administrator role gets every active permission
+ *   - the default employee role (`is_default = true`) gets the SELF_SERVICE set
+ *   - links pointing at soft-deleted permissions are pruned (any role)
+ *
  * @param { import("knex").Knex } knex
- * @returns { Promise<void> } 
+ * @returns { Promise<void> }
  */
-exports.seed = async function(knex) {
+exports.seed = async function (knex) {
     try {
-        // 1. Find the default admin role where is_deletable = false
+        // The Administrator role: non-deletable and NOT the default employee role.
         const adminRole = await knex('role_permission.roles')
-            .where({ is_deletable: false }) // Or check if your column is named 'is_deleted' / 'deletable'
+            .where({ is_deletable: false })
+            .andWhere((qb) => qb.where({ is_default: false }).orWhereNull('is_default'))
             .first();
 
-        if (!adminRole) {
-            console.warn('⚠️ No default admin role found (where is_deletable = false). Skipping junction assignment.');
+        const defaultRole = await knex('role_permission.roles').where({ is_default: true }).first();
+
+        if (!adminRole && !defaultRole) {
+            console.warn('⚠️ No Administrator or default employee role found. Skipping junction assignment.');
             return;
         }
 
-        // 2. Fetch all permissions available in the system to grant to the admin
-        const permissions = await knex('role_permission.permissions')
-            .select('id')
+        const activePermissions = await knex('role_permission.permissions')
+            .select('id', 'slug')
             .where({ is_deleted: false });
 
-        if (!permissions || permissions.length === 0) {
-            console.warn('⚠️ No permissions found to assign. Make sure to run the permissions seeder first!');
+        if (activePermissions.length === 0) {
+            console.warn('⚠️ No permissions found to assign. Run the permissions seeder first!');
             return;
         }
 
-        // 3. Build the junction table mapping array
-        const junctionRows = permissions.map((perm) => {
-            return {
-                role_id: adminRole.id,
+        const buildLinks = (roleId, permissions) =>
+            permissions.map((perm) => ({
+                role_id: roleId,
                 permission_id: perm.id,
-                // include created_by/updated_by tracking if your junction table requires them:
                 created_by: 1,
-                updated_by: null
-            };
-        });
+                updated_by: null,
+            }));
 
-        // 4. Insert entries into the junction table safely
-        // Assumes your unique constraint on the junction table is a composite key: UNIQUE(role_id, permission_id)
-        await knex('role_permission.role_permissions')
-                .insert(junctionRows)
-                .onConflict(['role_id', 'permission_id']) 
-                .ignore(); // If the admin already has this permission, skip it cleanly
+        const grant = async (roleId, permissions, label) => {
+            if (!roleId || permissions.length === 0) return;
+            await knex('role_permission.role_permissions')
+                .insert(buildLinks(roleId, permissions))
+                .onConflict(['role_id', 'permission_id'])
+                .ignore();
+            console.log(`💪 Granted ${permissions.length} permissions to ${label} (Role ID: ${roleId}).`);
+        };
 
-        console.log(`💪 Successfully linked all ${junctionRows.length} permissions to the default Admin profile (Role ID: ${adminRole.id})!`);
+        // Administrator -> everything
+        await grant(adminRole?.id, activePermissions, 'Administrator');
 
+        // Default employee role -> self-service scope only
+        const selfServiceSet = new Set(SELF_SERVICE_PERMISSION_SLUGS);
+        const selfServicePermissions = activePermissions.filter((p) => selfServiceSet.has(p.slug));
+        await grant(defaultRole?.id, selfServicePermissions, 'default employee role');
+
+        // Prune links (for ANY role) that point at a soft-deleted permission.
+        const deadPermissionIds = await knex('role_permission.permissions')
+            .where({ is_deleted: true })
+            .pluck('id');
+
+        let pruned = 0;
+        if (deadPermissionIds.length) {
+            pruned = await knex('role_permission.role_permissions')
+                .whereIn('permission_id', deadPermissionIds)
+                .del();
+        }
+        console.log(`🧹 Pruned ${pruned} stale role -> permission links.`);
     } catch (error) {
         console.error('Error seeding role_permissions junction matrix:', error);
     }

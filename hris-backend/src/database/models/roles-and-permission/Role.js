@@ -97,22 +97,29 @@ class Role extends BaseModel {
         const roles = await this.query()
             .leftJoin('role_permission.employee_roles', 'role_permission.roles.id', 'role_permission.employee_roles.role_id')
             .leftJoin('role_permission.role_permissions', 'role_permission.roles.id', 'role_permission.role_permissions.role_id')
+            // Only count permissions that still exist (unused ones are soft-deleted)
+            .leftJoin('role_permission.permissions', function () {
+                this.on('role_permission.permissions.id', '=', 'role_permission.role_permissions.permission_id')
+                    .andOnVal('role_permission.permissions.is_deleted', '=', false);
+            })
             .select([
                 'role_permission.roles.id',
                 'role_permission.roles.name',
                 'role_permission.roles.slug',
                 'role_permission.roles.is_deletable',
+                'role_permission.roles.is_default',
                 'role_permission.roles.description',
                 db.raw('COUNT(DISTINCT role_permission.employee_roles.employee_id) AS user_count'),
-                db.raw('COUNT(DISTINCT role_permission.role_permissions.permission_id) AS permission_count'),
-                // 🔑 NEW: Aggregates matching permission IDs into a clean JSON array string
-                db.raw("COALESCE(JSON_AGG(role_permission.role_permissions.permission_id) FILTER (WHERE role_permission.role_permissions.permission_id IS NOT NULL), '[]') AS permission_id")
+                db.raw('COUNT(DISTINCT role_permission.permissions.id) AS permission_count'),
+                // 🔑 Aggregates matching (active) permission IDs into a clean JSON array string
+                db.raw("COALESCE(JSON_AGG(role_permission.permissions.id) FILTER (WHERE role_permission.permissions.id IS NOT NULL), '[]') AS permission_id")
             ])
             .groupBy(
                 'role_permission.roles.id', 
                 'role_permission.roles.name', 
                 'role_permission.roles.slug', 
                 'role_permission.roles.is_deletable', // Added to group-by to remain fully SQL compliant
+                'role_permission.roles.is_default',
                 'role_permission.roles.description'
             )
             .orderBy('role_permission.roles.name', 'asc');
@@ -128,6 +135,7 @@ class Role extends BaseModel {
                 name: role.name,
                 slug: role.slug,
                 is_deletable: Boolean(role.is_deletable),
+                is_default: Boolean(role.is_default),
                 description: role.description,
                 user_count: parseInt(role.user_count, 10) || 0,
                 permission_count: parseInt(role.permission_count, 10) || 0,

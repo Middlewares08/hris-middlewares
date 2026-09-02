@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { getRoles, updateRole, createRole, deleteRole } = require('../../module/admin/controller/roles-and-permission/RoleControler');
-const { getPermissionsByRoleId } = require('../../module/admin/controller/roles-and-permission/RolePermissionController')
+const { getPermissionsByRoleId, updateRolePermissions } = require('../../module/admin/controller/roles-and-permission/RolePermissionController')
 const { verifyToken } = require('../../middleware/authMiddleware');
 const { requirePermission } = require('../../middleware/permissionMiddleware');
 
@@ -12,5 +12,6 @@ router.put('/:id', verifyToken, requirePermission('roles-and-permissions:edit'),
 router.delete('/:id', verifyToken, requirePermission('roles-and-permissions:delete'), deleteRole);
 
 router.get('/:roleId/permissions', verifyToken, requirePermission('roles-and-permissions:view'), getPermissionsByRoleId);
+router.put('/:roleId/permissions', verifyToken, requirePermission('roles-and-permissions:edit'), updateRolePermissions);
 
 module.exports = router;

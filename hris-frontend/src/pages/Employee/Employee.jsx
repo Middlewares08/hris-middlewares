@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { CustomDataTable } from '../../components/CustomDataTable';
 import { useEmployees } from '../../hooks/useEmployee';
-import { Mail, Phone, MapPin, Trash2, ShieldAlert, PlusIcon, ChevronRight, ChevronLeft, Save } from 'lucide-react';
+import { Mail, Phone, MapPin, Trash2, ShieldAlert, PlusIcon, ChevronRight, ChevronLeft, Save, Pencil, ShieldCheck, User, Briefcase, CalendarDays } from 'lucide-react';
 import CustomLabel from '../../components/CustomLabel';
 import { CustomAvatar } from '../../components/CustomAvatar';
 import CustomButton from '../../components/CustomButton';
@@ -16,6 +16,7 @@ import CustomForm from '../../components/CustomForm';
 import { useRef } from 'react';
 import FaceRecognitionSection from './FaceRecognitionSection';
 import FaceClockInToggle from './FaceClockInToggle';
+import EditEmployeeModal from './EditEmployeeModal';
 
 const INITIAL_PAYLOAD = {
     lastname: BLANK,
@@ -48,21 +49,42 @@ const Employees = () => {
     const [payload, setPayload] = useState(INITIAL_PAYLOAD);
     const [currentStep, setCurrentStep] = useState(0);
 
+    // Edit drawer/modal local state
+    const [editingEmployee, setEditingEmployee] = useState(null);
+
     // Query hooks mapping to Server-side variables
-    const { 
-        employees, 
-        totalRecords, 
-        isLoading, 
+    const {
+        employees,
+        totalRecords,
+        isLoading,
         deleteEmployee,
         createEmployee,
+        updateEmployee,
+        isUpdating,
         error
     } = useEmployees({ page, limit, search });
 
     // Handle Delete Trigger Action
-    const handleDelete = async (uuid, e) => {
+    const handleDelete = async (uuid, e, onDone) => {
         e.stopPropagation(); // Stop row-click detail drawer expansion
         if (window.confirm("Are you sure you want to delete this employee?")) {
             await deleteEmployee(uuid);
+            if (typeof onDone === 'function') onDone();
+        }
+    };
+
+    // Open the edit modal for a row, closing the detail drawer first if it is open.
+    const handleEdit = (employee, closeDrawer) => {
+        if (typeof closeDrawer === 'function') closeDrawer();
+        setEditingEmployee(employee);
+    };
+
+    const handleUpdate = async (updatePayload) => {
+        try {
+            await updateEmployee({ uuid: editingEmployee.uuid, payload: updatePayload });
+            setEditingEmployee(null);
+        } catch (err) {
+            console.error(err);
         }
     };
 
@@ -251,19 +273,70 @@ const Employees = () => {
     ];
 
     // Details Drawer markup panel callback
-    const renderEmployeeDrawer = (employee) => {
+    const renderEmployeeDrawer = (employee, closeDrawer) => {
+        const fullName = [employee?.first_name, employee?.middle_name, employee?.last_name]
+            .filter(Boolean)
+            .join(' ');
+        const roles = Array.isArray(employee?.roles) ? employee.roles : [];
+
         return (
             <div className="space-y-6 pt-2 text-left">
                 {/* Header Profile Badge */}
-                <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 bg-indigo-50 border border-indigo-200 text-indigo-700 rounded-full flex items-center justify-center font-bold text-xl uppercase">
-                        {employee?.first_name[0]}{employee?.last_name[0]}
-                    </div>
-                    <div>
-                        <h4 className="font-bold text-xl text-gray-900">{`${employee?.first_name} ${employee?.last_name}`}</h4>
+                <div className="flex items-start gap-4">
+                    <CustomAvatar
+                        src={employee?.profile_url}
+                        firstName={employee?.first_name}
+                        lastName={employee?.last_name}
+                        size="h-14 w-14 text-lg"
+                    />
+                    <div className="min-w-0 flex-1">
+                        <h4 className="font-bold text-xl text-gray-900 truncate">{fullName || '—'}</h4>
                         <p className="text-sm text-gray-500">{employee?.position?.name || 'No Position Assigned'}</p>
                         <p className="text-xs font-mono text-gray-400 select-all">{employee?.employee_id || '—'}</p>
                     </div>
+                </div>
+
+                {/* Action bar */}
+                {(can('employee-management:edit') || can('employee-management:delete')) && (
+                    <div className="flex gap-2">
+                        {can('employee-management:edit') && (
+                            <button
+                                onClick={() => handleEdit(employee, closeDrawer)}
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 text-white rounded-lg text-xs font-medium hover:bg-slate-700 transition-colors"
+                            >
+                                <Pencil size={14} /> Edit Record
+                            </button>
+                        )}
+                        {can('employee-management:delete') && (
+                            <button
+                                onClick={(e) => handleDelete(employee.uuid, e, closeDrawer)}
+                                className="flex items-center gap-1.5 px-3 py-1.5 border border-red-200 text-red-600 rounded-lg text-xs font-medium hover:bg-red-50 transition-colors"
+                            >
+                                <Trash2 size={14} /> Delete
+                            </button>
+                        )}
+                    </div>
+                )}
+
+                <hr className="border-gray-100" />
+
+                {/* Roles */}
+                <div className="space-y-2">
+                    <h5 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Roles & Access</h5>
+                    {roles.length ? (
+                        <div className="flex flex-wrap gap-1.5">
+                            {roles.map((role) => (
+                                <span
+                                    key={role.id}
+                                    className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-indigo-50 text-indigo-700 text-xs font-medium border border-indigo-100"
+                                >
+                                    <ShieldCheck size={12} /> {role.name}
+                                </span>
+                            ))}
+                        </div>
+                    ) : (
+                        <p className="text-sm text-gray-400">No role assigned</p>
+                    )}
                 </div>
 
                 <hr className="border-gray-100" />
@@ -271,28 +344,50 @@ const Employees = () => {
                 {/* Information List */}
                 <div className="space-y-4">
                     <h5 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Contact & Division</h5>
-                    
+
                     <div className="flex items-center gap-3 text-sm text-gray-700">
-                        <Mail className="w-4 h-4 text-gray-400" />
-                        <span>{employee?.credentials?.email}</span>
+                        <Mail className="w-4 h-4 text-gray-400 shrink-0" />
+                        <span className="truncate">{employee?.credentials?.email || '—'}</span>
                     </div>
-                    
+
                     <div className="flex items-center gap-3 text-sm text-gray-700">
-                        <Phone className="w-4 h-4 text-gray-400" />
+                        <Phone className="w-4 h-4 text-gray-400 shrink-0" />
                         <span>{employee?.contact?.personal_phone || 'No phone number'}</span>
                     </div>
 
                     <div className="flex items-center gap-3 text-sm text-gray-700">
-                        <MapPin className="w-4 h-4 text-gray-400" />
+                        <User className="w-4 h-4 text-gray-400 shrink-0" />
+                        <span>{employee?.contact?.personal_email || 'No personal email'}</span>
+                    </div>
+
+                    <div className="flex items-center gap-3 text-sm text-gray-700">
+                        <MapPin className="w-4 h-4 text-gray-400 shrink-0" />
                         <span>{employee?.position?.department?.name || 'Unassigned Department'}</span>
                     </div>
+
+                    {employee?.contact?.emergency_contact_name && (
+                        <div className="flex items-center gap-3 text-sm text-gray-700">
+                            <ShieldAlert className="w-4 h-4 text-gray-400 shrink-0" />
+                            <span>
+                                {employee.contact.emergency_contact_name}
+                                {employee.contact.emergency_contact_relationship
+                                    ? ` (${employee.contact.emergency_contact_relationship})`
+                                    : ''}
+                                {employee.contact.emergency_contact_phone
+                                    ? ` · ${employee.contact.emergency_contact_phone}`
+                                    : ''}
+                            </span>
+                        </div>
+                    )}
                 </div>
 
                 <hr className="border-gray-100" />
 
                 {/* Compensation Block */}
                 <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 space-y-2">
-                    <h5 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Comp & Classification</h5>
+                    <h5 className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                        <Briefcase size={13} /> Comp &amp; Classification
+                    </h5>
                     <div className="flex justify-between items-center pt-1">
                         <span className="text-sm text-slate-600">Base Salary Rate:</span>
                         <span className="font-mono font-bold text-slate-900 text-base">
@@ -306,7 +401,9 @@ const Employees = () => {
                         <span className="text-sm font-medium text-slate-900 capitalize">{employee?.employment_type || '—'}</span>
                     </div>
                     <div className="flex justify-between items-center pt-1">
-                        <span className="text-sm text-slate-600">Date Hired:</span>
+                        <span className="text-sm text-slate-600 flex items-center gap-1">
+                            <CalendarDays size={13} /> Date Hired:
+                        </span>
                         <span className="text-sm font-medium text-slate-900">{employee?.date_hired ? formatDate(employee.date_hired, 'MMMM D, YYYY') : '—'}</span>
                     </div>
                 </div>
@@ -427,8 +524,17 @@ const Employees = () => {
                             />
                     }
                     
-                   
+
                 </>}
+            />
+
+            <EditEmployeeModal
+                key={editingEmployee?.uuid || 'edit-employee'}
+                isOpen={!!editingEmployee}
+                employee={editingEmployee}
+                onClose={() => setEditingEmployee(null)}
+                onSubmit={handleUpdate}
+                isSaving={isUpdating}
             />
         </div>
     );

@@ -22,6 +22,7 @@ import StatutoryTables from './pages/Payroll/StatutoryTables'
 import PayPeriods from './pages/Payroll/PayPeriods'
 import PayrollRuns from './pages/Payroll/PayrollRuns'
 import PayrollRunDetail from './pages/Payroll/PayrollRunDetail'
+import PayslipRequests from './pages/Payroll/PayslipRequests'
 import Announcements from './pages/Announcement/Announcements'
 import OvertimeRequests from './pages/Overtime/OvertimeRequests'
 import AttendanceLogs from './pages/Attendance/AttendanceLogs'
@@ -121,6 +122,7 @@ function App() {
           <Route path="payroll">
             <Route path="runs" element={<ProtectedElement element={<PayrollRuns />} permission="run-payroll:view" />} />
             <Route path="runs/:uuid" element={<ProtectedElement element={<PayrollRunDetail />} permission="run-payroll:view" />} />
+            <Route path="payslip-requests" element={<ProtectedElement element={<PayslipRequests />} permission="run-payroll:view" />} />
             <Route path="periods" element={<ProtectedElement element={<PayPeriods />} permission="run-payroll:view" />} />
             <Route path="components" element={<ProtectedElement element={<PayComponents />} permission="payroll-and-compensation:view" />} />
             <Route path="statutory-tables" element={<ProtectedElement element={<StatutoryTables />} permission="statutory-and-compliance:view" />} />

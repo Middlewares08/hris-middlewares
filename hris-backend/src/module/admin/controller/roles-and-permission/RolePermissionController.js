@@ -58,6 +58,88 @@ const getPermissionsByRoleId = async (req, res) => {
     }
 };
 
+/**
+ * PUT /api/roles/:roleId/permissions
+ * Replaces the full set of permissions bound to a role with the supplied list.
+ * Body: { permission_ids: number[] }
+ */
+const updateRolePermissions = async (req, res) => {
+    const { roleId } = req.params;
+    const { permission_ids: permissionIds } = req.body;
+
+    if (!Array.isArray(permissionIds)) {
+        return res.status(400).json({
+            success: false,
+            message: 'permission_ids must be an array of permission IDs.'
+        });
+    }
+
+    try {
+        const role = await knex('role_permission.roles')
+            .where({ id: roleId })
+            .first();
+
+        if (!role) {
+            return res.status(404).json({
+                success: false,
+                message: `Role with ID ${roleId} not found.`
+            });
+        }
+
+        // The Administrator profile always keeps full access. The default employee
+        // role (is_default) stays editable so HR can tune the self-service scope.
+        if (role.is_deletable === false && !role.is_default) {
+            return res.status(400).json({
+                success: false,
+                message: 'The system administrator role always retains full access and cannot be modified.'
+            });
+        }
+
+        // Keep only IDs that resolve to a real, non-deleted permission.
+        const requestedIds = [...new Set(permissionIds.map(Number).filter(Number.isInteger))];
+        const validIds = requestedIds.length
+            ? await knex('role_permission.permissions')
+                .whereIn('id', requestedIds)
+                .andWhere({ is_deleted: false })
+                .pluck('id')
+            : [];
+
+        const actorId = req.user?.id || null;
+
+        await knex.transaction(async (trx) => {
+            await trx('role_permission.role_permissions')
+                .where({ role_id: roleId })
+                .del();
+
+            if (validIds.length) {
+                await trx('role_permission.role_permissions').insert(
+                    validIds.map((permission_id) => ({
+                        role_id: Number(roleId),
+                        permission_id,
+                        created_by: actorId,
+                        updated_by: actorId
+                    }))
+                );
+            }
+        });
+
+        return res.status(200).json({
+            success: true,
+            role: { id: role.id, name: role.name, slug: role.slug },
+            count: validIds.length,
+            data: { role_id: Number(roleId), permission_id: validIds }
+        });
+
+    } catch (error) {
+        console.error('Error updating role permissions:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Internal server error while updating the permissions matrix.'
+        });
+    }
+};
+
 module.exports = {
-    getPermissionsByRoleId
+    getPermissionsByRoleId,
+    updateRolePermissions
 };

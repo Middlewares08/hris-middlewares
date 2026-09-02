@@ -1,12 +1,14 @@
 const BaseModel = require('../BaseModel');
 
-const STATUSES = ['pending', 'fulfilled', 'cancelled'];
+const STATUSES = ['pending', 'fulfilled', 'cancelled', 'declined'];
+const SOURCES = ['admin', 'employee']; // 'admin' → HR asked the employee; 'employee' → employee asked HR
 
 class DocumentRequest extends BaseModel {
     static get tableName() { return 'employee.document_requests'; }
     static get idColumn() { return 'id'; }
 
     static get STATUSES() { return STATUSES; }
+    static get SOURCES() { return SOURCES; }
 
     $beforeInsert(queryContext) {
         super.$beforeInsert(queryContext);
@@ -14,6 +16,7 @@ class DocumentRequest extends BaseModel {
         this.updated_at = this.created_at;
         if (queryContext.user) this.created_by = queryContext.user.id;
         if (!this.status) this.status = 'pending';
+        if (!this.source) this.source = 'admin';
     }
 
     $beforeUpdate(opt, queryContext) {
@@ -43,6 +46,15 @@ class DocumentRequest extends BaseModel {
                 modelClass: Employee,
                 join: {
                     from: 'employee.document_requests.created_by',
+                    to: 'employee.employees.id',
+                },
+                modify: employeeSummary,
+            },
+            reviewer: {
+                relation: BaseModel.BelongsToOneRelation,
+                modelClass: Employee,
+                join: {
+                    from: 'employee.document_requests.reviewed_by',
                     to: 'employee.employees.id',
                 },
                 modify: employeeSummary,

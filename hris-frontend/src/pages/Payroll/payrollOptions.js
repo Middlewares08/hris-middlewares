@@ -106,4 +106,6 @@ export const STATUS_TONE = {
     on_hold: 'bg-amber-100 text-amber-700',
     pending: 'bg-amber-100 text-amber-700',
     applied: 'bg-emerald-100 text-emerald-700',
+    fulfilled: 'bg-emerald-100 text-emerald-700',
+    rejected: 'bg-rose-100 text-rose-700',
 };

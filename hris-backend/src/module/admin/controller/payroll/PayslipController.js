@@ -3,14 +3,46 @@ const Payslip = require('../../../../database/models/payroll/Payslip');
 const PayrollRun = require('../../../../database/models/payroll/PayrollRun');
 const PayslipAdjustment = require('../../../../database/models/payroll/PayslipAdjustment');
 const PayComponent = require('../../../../database/models/payroll/PayComponent');
+const PayslipRequest = require('../../../../database/models/payroll/PayslipRequest');
 const Employee = require('../../../../database/models/employee/Employee');
 const { logActivity } = require('../../../../utils/activityLogger');
+const { buildPayslipPdfBuffer } = require('../../../../utils/payslipPdf');
 const {
     actorId, withActor, ok, created, fail, serverError,
     parsePagination, paginationMeta, isValidNumber, toBool, trimOrNull, definedOnly,
 } = require('./_helpers');
 
 const RELEASED_STATES = ['released']; // what an employee is allowed to see
+
+const PDF_GRAPH = '[lines, run.[period]]';
+
+// The Payslip.employee relation only selects name columns; the PDF also wants the
+// employee_id string + position/department, so load those separately and attach.
+const attachPdfEmployee = async (slip) => {
+    const emp = await Employee.query()
+        .findById(slip.employee_id)
+        .select('id', 'uuid', 'employee_id', 'first_name', 'last_name')
+        .withGraphFetched('position.department');
+    slip.employee = emp || slip.employee || null;
+    return slip;
+};
+
+// Turn a payslip into a safe attachment filename, e.g. "payslip-dela-cruz-june-2026.pdf".
+const pdfFilename = (slip) => {
+    const last = slip.employee?.last_name || `emp${slip.employee_id}`;
+    const period = slip.run?.period?.name || 'payslip';
+    const slug = (s) => String(s).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    return `payslip-${slug(last)}-${slug(period)}.pdf`;
+};
+
+const streamPayslipPdf = async (res, slip) => {
+    await attachPdfEmployee(slip);
+    const buffer = await buildPayslipPdfBuffer(slip);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${pdfFilename(slip)}"`);
+    res.setHeader('Content-Length', buffer.length);
+    return res.send(buffer);
+};
 
 /* ============================================================
  * ADMIN
@@ -49,6 +81,20 @@ const getByUuid = async (req, res) => {
         return ok(res, slip);
     } catch (error) {
         return serverError(res, 'payslip.getByUuid', error);
+    }
+};
+
+// GET /payroll/payslips/:uuid/pdf — download a branded PDF for any payslip.
+const getPdf = async (req, res) => {
+    try {
+        const slip = await Payslip.query()
+            .findOne({ 'payroll.payslips.uuid': req.params.uuid })
+            .where('payroll.payslips.is_deleted', false)
+            .withGraphFetched(PDF_GRAPH);
+        if (!slip) return fail(res, 404, 'Payslip not found.');
+        return await streamPayslipPdf(res, slip);
+    } catch (error) {
+        return serverError(res, 'payslip.getPdf', error);
     }
 };
 
@@ -224,13 +270,127 @@ const getMineByUuid = async (req, res) => {
     }
 };
 
+// GET /payroll/payslips/me/:uuid/pdf — employee downloads a PDF of their own released payslip.
+const getMinePdf = async (req, res) => {
+    try {
+        const employeeId = actorId(req);
+        if (!employeeId) return fail(res, 401, 'Unauthenticated request.');
+
+        const slip = await Payslip.query()
+            .findOne({ 'payroll.payslips.uuid': req.params.uuid })
+            .where('payroll.payslips.employee_id', employeeId)
+            .where('payroll.payslips.is_deleted', false)
+            .whereIn('payroll.payslips.status', RELEASED_STATES)
+            .withGraphFetched(PDF_GRAPH);
+        if (!slip) return fail(res, 404, 'Payslip not found.');
+        return await streamPayslipPdf(res, slip);
+    } catch (error) {
+        return serverError(res, 'payslip.getMinePdf', error);
+    }
+};
+
+/* ---- Payslip copy requests (self-service) ---- */
+
+const getMineRequests = async (req, res) => {
+    try {
+        const employeeId = actorId(req);
+        if (!employeeId) return fail(res, 401, 'Unauthenticated request.');
+
+        const rows = await PayslipRequest.query()
+            .where('payroll.payslip_requests.employee_id', employeeId)
+            .where('payroll.payslip_requests.is_deleted', false)
+            .withGraphFetched('[reviewer, payslip.[run.[period]]]')
+            .orderBy('payroll.payslip_requests.created_at', 'desc');
+
+        return ok(res, rows);
+    } catch (error) {
+        return serverError(res, 'payslipRequest.getMine', error);
+    }
+};
+
+const createRequest = async (req, res) => {
+    try {
+        const employeeId = actorId(req);
+        if (!employeeId) return fail(res, 401, 'Unauthenticated request.');
+
+        const { payslip_uuid } = req.body;
+        const reason = trimOrNull(req.body.reason);
+        if (!payslip_uuid) return fail(res, 400, 'payslip_uuid is required.');
+        if (!reason) return fail(res, 400, 'reason is required.');
+
+        const slip = await Payslip.query()
+            .findOne({ 'payroll.payslips.uuid': payslip_uuid })
+            .where('payroll.payslips.is_deleted', false);
+        if (!slip || Number(slip.employee_id) !== employeeId) return fail(res, 404, 'Payslip not found.');
+        if (!RELEASED_STATES.includes(slip.status)) {
+            return fail(res, 400, 'A copy can only be requested for a released payslip.');
+        }
+
+        const existing = await PayslipRequest.query()
+            .where({ employee_id: employeeId, payslip_id: slip.id, status: 'pending', is_deleted: false })
+            .first();
+        if (existing) return fail(res, 409, 'You already have a pending request for this payslip.');
+
+        const row = await PayslipRequest.query()
+            .insertAndFetch({
+                employee_id: employeeId,
+                payslip_id: slip.id,
+                reason,
+                status: 'pending',
+                created_by: employeeId,
+            })
+            .context(withActor(req));
+
+        await logActivity({
+            employeeId,
+            action: 'payroll.payslip_request_filed',
+            category: 'payroll',
+            description: `Requested an official copy of payslip ${slip.uuid}`,
+            metadata: { request_uuid: row.uuid, payslip_uuid: slip.uuid },
+            req,
+        });
+
+        return created(res, row);
+    } catch (error) {
+        return serverError(res, 'payslipRequest.create', error);
+    }
+};
+
+const cancelRequest = async (req, res) => {
+    try {
+        const employeeId = actorId(req);
+        if (!employeeId) return fail(res, 401, 'Unauthenticated request.');
+
+        const row = await PayslipRequest.query()
+            .findOne({ uuid: req.params.uuid })
+            .where('is_deleted', false);
+        if (!row || Number(row.employee_id) !== employeeId) return fail(res, 404, 'Payslip request not found.');
+        if (row.status !== 'pending') {
+            return fail(res, 409, `A ${row.status} request cannot be cancelled.`);
+        }
+
+        const updated = await PayslipRequest.query()
+            .patchAndFetchById(row.id, { status: 'cancelled', updated_by: employeeId })
+            .context(withActor(req));
+
+        return ok(res, updated, { message: 'Request cancelled.' });
+    } catch (error) {
+        return serverError(res, 'payslipRequest.cancel', error);
+    }
+};
+
 module.exports = {
     getAll,
     getByUuid,
+    getPdf,
     setStatus,
     listAdjustments,
     createAdjustment,
     removeAdjustment,
     getMine,
     getMineByUuid,
+    getMinePdf,
+    getMineRequests,
+    createRequest,
+    cancelRequest,
 };

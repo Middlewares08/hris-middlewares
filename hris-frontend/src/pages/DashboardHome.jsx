@@ -119,7 +119,7 @@ function DashboardHome() {
     const payrollCostTrend = data?.payrollCostTrend || [];
 
     return (
-        <div className="space-y-5">
+        <div className="space-y-5 text-left">
             <div className="flex items-center justify-between">
                 <div>
                     <h1 className="text-lg font-bold text-slate-800">Overview</h1>
