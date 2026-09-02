@@ -1,7 +1,9 @@
 // database/models/attendance/Attendance.js
 const BaseModel = require('../BaseModel');
 
-// 🎯 Standard office cutoff used to auto-flag late clock-ins (HH:mm, 24hr)
+// 🎯 Fallback office cutoff (HH:mm, 24hr) used ONLY when a row is written without
+// a resolved schedule. The normal path stamps `late_minutes` from the employee's
+// work_schedule (see utils/attendanceScheduleStamp) and this is never consulted.
 const LATE_CUTOFF = '09:15';
 
 class Attendance extends BaseModel {
@@ -38,16 +40,23 @@ class Attendance extends BaseModel {
         this.applyLateStatus();
     }
 
-    // Auto-flag as 'late' when clocking in past the cutoff, unless a status was explicitly forced
-    // (e.g. 'on_leave' / 'holiday' entries created by an admin should never be overridden)
+    // Reconcile `status` with lateness. An explicitly forced status
+    // (on_leave / holiday / absent / half_day) is never overridden.
     applyLateStatus() {
-        if (!this.time_in || this.status !== 'present') return;
+        if (this.status && this.status !== 'present' && this.status !== 'late') return;
 
-        // Compare in server-local time (not UTC) so the cutoff matches the office's clock
+        // Schedule-aware stamping already derived late_minutes against the
+        // employee's work_schedule — trust it.
+        if (this.late_minutes !== undefined && this.late_minutes !== null) {
+            this.status = Number(this.late_minutes) > 0 ? 'late' : (this.status || 'present');
+            return;
+        }
+
+        // Fallback: no schedule context on this write — use the fixed office cutoff.
+        if (!this.time_in) return;
         const clockIn = new Date(this.time_in);
         const hh = String(clockIn.getHours()).padStart(2, '0');
         const mm = String(clockIn.getMinutes()).padStart(2, '0');
-
         if (`${hh}:${mm}` > LATE_CUTOFF) {
             this.status = 'late';
         }

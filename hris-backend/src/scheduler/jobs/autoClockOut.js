@@ -1,5 +1,6 @@
 const Attendance = require('../../database/models/attendance/Attendance');
 const { logActivity } = require('../../utils/activityLogger');
+const { computeScheduleStamp, FORCED_STATUSES } = require('../../utils/attendanceScheduleStamp');
 
 // How many hours to credit an employee who forgot to clock out.
 const STANDARD_WORKDAY_HOURS = Number(process.env.STANDARD_WORKDAY_HOURS) || 9;
@@ -38,10 +39,19 @@ async function autoClockOut(trx) {
             new Date(row.time_in).getTime() + STANDARD_WORKDAY_HOURS * 3600 * 1000,
         ).toISOString();
 
+        // Flat cap stays (never credit phantom OT); just refresh the schedule
+        // columns / status now that a time_out exists.
+        const stamp = await computeScheduleStamp(trx, {
+            employeeId: row.employee_id, logDate: row.log_date,
+            timeIn: row.time_in, timeOut,
+            forcedStatus: FORCED_STATUSES.has(row.status) ? row.status : null,
+        });
+
         await Attendance.query(trx).patchAndFetchById(row.id, {
             time_out: timeOut,
             is_auto_closed: true,
             remarks: row.remarks ? `${row.remarks} | ${AUTO_REMARK}` : AUTO_REMARK,
+            ...stamp,
         });
 
         await logActivity({

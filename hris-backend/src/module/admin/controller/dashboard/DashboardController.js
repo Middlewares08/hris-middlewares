@@ -1,4 +1,5 @@
 const knex = require('../../../../database/connection');
+const { scheduledWorkdaysByEmployee } = require('../../../../utils/workSchedule');
 
 /**
  * 📊 Dashboard analytics — a single aggregate payload powering the admin
@@ -196,8 +197,16 @@ const getAnalytics = async (req, res) => {
             .filter((r) => ['present', 'late', 'half_day'].includes(r.status))
             .reduce((sum, r) => sum + toNum(r.count), 0);
 
-        const attendanceRateToday = activeHeadcount > 0
-            ? Math.round((attendedToday / activeHeadcount) * 100)
+        // Denominator = employees actually scheduled to work today (per their
+        // work_schedule, holidays excluded), not the whole active headcount.
+        const today = ymd(new Date());
+        const activeIds = (await knex('employee.employees')
+            .where({ is_active: true, is_deleted: false }).select('id')).map((e) => e.id);
+        const scheduledTodayMap = await scheduledWorkdaysByEmployee(knex, activeIds, today, today);
+        const scheduledToday = [...scheduledTodayMap.values()].filter((d) => d.length > 0).length;
+
+        const attendanceRateToday = scheduledToday > 0
+            ? Math.round((attendedToday / scheduledToday) * 100)
             : 0;
 
         const data = {
@@ -207,6 +216,8 @@ const getAnalytics = async (req, res) => {
                 activeHeadcount,
                 newHires30d: toNum(newHiresRow?.count),
                 attendanceRateToday,
+                attendedToday,
+                scheduledToday,
                 onLeaveToday: toNum(onLeaveRow?.count),
                 pendingLeave: toNum(pendingLeaveRow?.count),
                 pendingOvertime: toNum(pendingOvertimeRow?.count),

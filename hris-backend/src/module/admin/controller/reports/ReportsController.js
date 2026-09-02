@@ -1,5 +1,6 @@
 const knex = require('../../../../database/connection');
 const Setting = require('../../../../database/models/system/Setting');
+const { scheduledWorkdaysByEmployee } = require('../../../../utils/workSchedule');
 
 /**
  * 📈 HR Reports — one lightweight aggregate handler per report, powering the
@@ -53,17 +54,6 @@ const parseRange = (req, { defaultDays = 30, ytd = false } = {}) => {
     return { from, to };
 };
 
-/** Count Mon–Fri days in an inclusive [from, to] range — attendance-rate denominator. */
-const businessDaysBetween = (from, to) => {
-    const start = new Date(`${from}T00:00:00`);
-    const end = new Date(`${to}T00:00:00`);
-    let count = 0;
-    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-        const day = d.getDay();
-        if (day !== 0 && day !== 6) count += 1;
-    }
-    return count;
-};
 
 const monthKey = (v) => String(v).slice(0, 7); // YYYY-MM
 
@@ -144,7 +134,7 @@ const getAttendance = async (req, res) => {
     try {
         const { from, to } = parseRange(req, { defaultDays: 30 });
 
-        const [statusRows, perEmployee, activeHeadcountRow] = await Promise.all([
+        const [statusRows, perEmployee, activeEmployees] = await Promise.all([
             knex('attendance.attendance_logs')
                 .where('is_deleted', false)
                 .andWhereBetween('log_date', [from, to])
@@ -156,24 +146,31 @@ const getAttendance = async (req, res) => {
                 .where('al.is_deleted', false)
                 .andWhereBetween('al.log_date', [from, to])
                 .groupBy('e.id', 'e.first_name', 'e.last_name', 'e.employee_id', '_d.name')
-                .select('e.first_name', 'e.last_name', { employee_no: 'e.employee_id' })
+                .select({ employee_id: 'e.id' }, 'e.first_name', 'e.last_name', { employee_no: 'e.employee_id' })
                 .select(knex.raw("coalesce(_d.name, 'Unassigned') as department"))
                 .select(knex.raw("count(*) filter (where al.status in ('present','late','half_day'))::int as present_days"))
                 .select(knex.raw("count(*) filter (where al.status = 'late')::int as late_days"))
                 .select(knex.raw("count(*) filter (where al.status = 'absent')::int as absent_days"))
                 .select(knex.raw("count(*) filter (where al.status = 'on_leave')::int as leave_days"))
+                .select(knex.raw('coalesce(sum(al.late_minutes), 0)::int as late_minutes'))
+                .select(knex.raw('coalesce(sum(al.undertime_minutes), 0)::int as undertime_minutes'))
                 .select(knex.raw('min(al.time_in) as first_in'))
                 .select(knex.raw('max(al.time_out) as last_out'))
                 .orderByRaw('late_days desc, present_days desc'),
 
-            knex('employee.employees').where({ is_deleted: false, is_active: true }).count({ count: '*' }).first(),
+            knex('employee.employees').where({ is_deleted: false, is_active: true }).select('id'),
         ]);
 
         const counts = { present: 0, late: 0, half_day: 0, absent: 0, on_leave: 0, holiday: 0 };
         statusRows.forEach((r) => { counts[r.status] = toNum(r.count); });
 
-        const activeHeadcount = toNum(activeHeadcountRow?.count);
-        const scheduled = activeHeadcount * businessDaysBetween(from, to);
+        // Scheduled-day denominators come from each employee's work_schedule
+        // (holiday-excluded), not a flat Mon–Fri × headcount guess.
+        const scheduledByEmp = await scheduledWorkdaysByEmployee(
+            knex, activeEmployees.map((e) => e.id), from, to,
+        );
+        const scheduled = [...scheduledByEmp.values()].reduce((s, days) => s + days.length, 0);
+
         const attended = counts.present + counts.late + counts.half_day;
         const attendanceRate = scheduled > 0 ? round2((attended / scheduled) * 100) : 0;
         const totalLogs = Object.values(counts).reduce((s, n) => s + n, 0);
@@ -188,20 +185,29 @@ const getAttendance = async (req, res) => {
                 punctualityRate,
                 lateCount: counts.late,
                 absentCount: counts.absent,
+                scheduledDays: scheduled,
                 totalLogs,
             },
             statusBreakdown: Object.entries(counts).map(([status, count]) => ({ status, count })),
-            rows: perEmployee.map((r) => ({
-                employee: fullName(r),
-                employeeNo: r.employee_no || null,
-                department: r.department,
-                presentDays: toNum(r.present_days),
-                lateDays: toNum(r.late_days),
-                absentDays: toNum(r.absent_days),
-                leaveDays: toNum(r.leave_days),
-                firstIn: r.first_in ? new Date(r.first_in).toISOString() : null,
-                lastOut: r.last_out ? new Date(r.last_out).toISOString() : null,
-            })),
+            rows: perEmployee.map((r) => {
+                const scheduledDays = (scheduledByEmp.get(Number(r.employee_id)) || []).length;
+                const present = toNum(r.present_days);
+                return {
+                    employee: fullName(r),
+                    employeeNo: r.employee_no || null,
+                    department: r.department,
+                    scheduledDays,
+                    presentDays: present,
+                    lateDays: toNum(r.late_days),
+                    absentDays: toNum(r.absent_days),
+                    leaveDays: toNum(r.leave_days),
+                    lateMinutes: toNum(r.late_minutes),
+                    undertimeMinutes: toNum(r.undertime_minutes),
+                    attendanceRate: scheduledDays > 0 ? round2((present / scheduledDays) * 100) : null,
+                    firstIn: r.first_in ? new Date(r.first_in).toISOString() : null,
+                    lastOut: r.last_out ? new Date(r.last_out).toISOString() : null,
+                };
+            }),
         });
     } catch (error) {
         return fail(res, error, 'attendance');

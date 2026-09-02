@@ -15,6 +15,7 @@ import { basicInfoValidationSchema, employmentValidationSchema, contactInfoValid
 import CustomForm from '../../components/CustomForm';
 import { useRef } from 'react';
 import FaceRecognitionSection from './FaceRecognitionSection';
+import EmployeeScheduleSection from './EmployeeScheduleSection';
 import FaceClockInToggle from './FaceClockInToggle';
 import EditEmployeeModal from './EditEmployeeModal';
 import SeparationFormModal from '../Reports/SeparationFormModal';
@@ -419,6 +420,10 @@ const Employees = () => {
                         <span className="text-sm font-medium text-slate-900">{employee?.date_hired ? formatDate(employee.date_hired, 'MMMM D, YYYY') : '—'}</span>
                     </div>
                 </div>
+
+                <hr className="border-gray-100" />
+
+                <EmployeeScheduleSection employee={employee} />
 
                 <hr className="border-gray-100" />
 

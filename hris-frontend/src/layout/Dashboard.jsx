@@ -84,6 +84,16 @@ const Dashboard = () => {
                     path: '/dashboard/employee/positions',
                     permission: 'positions:view'
                 },
+                {
+                    label: 'Work Schedules',
+                    path: '/dashboard/employee/work-schedules',
+                    permission: 'shift-and-rostering:view'
+                },
+                {
+                    label: 'Holiday Calendar',
+                    path: '/dashboard/employee/holidays',
+                    permission: 'shift-and-rostering:view'
+                },
                 // {
                 //     label: 'Statutory & Compliance',
                 //     path: '/dashboard/employee/statutory-and-compliance',

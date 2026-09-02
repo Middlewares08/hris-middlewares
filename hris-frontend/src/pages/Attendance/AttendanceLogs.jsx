@@ -153,9 +153,38 @@ function AttendanceLogs() {
         { header: 'Time In', render: (r) => <span className="text-slate-700">{fmtTime(r.time_in)}</span> },
         { header: 'Time Out', render: (r) => <span className="text-slate-700">{fmtTime(r.time_out)}</span> },
         { header: 'Hours', render: (r) => <span className="font-medium text-slate-700">{r.worked_hours != null ? `${r.worked_hours}h` : '—'}</span> },
-        { header: 'Status', render: (r) => <Pill value={r.status} /> },
+        {
+            header: 'Late / UT',
+            render: (r) => {
+                const late = Number(r.late_minutes) || 0;
+                const ut = Number(r.undertime_minutes) || 0;
+                if (!late && !ut) return <span className="text-slate-300">—</span>;
+                return (
+                    <span className="text-xs font-medium">
+                        {late > 0 && <span className="text-rose-600">{late}m late</span>}
+                        {late > 0 && ut > 0 && <span className="text-slate-300"> · </span>}
+                        {ut > 0 && <span className="text-amber-600">{ut}m UT</span>}
+                    </span>
+                );
+            },
+        },
+        {
+            header: 'Status',
+            render: (r) => (
+                <div className="flex flex-wrap items-center gap-1">
+                    <Pill value={r.status} />
+                    {r.is_holiday && <span className="rounded bg-indigo-50 px-1.5 py-0.5 text-[10px] font-semibold text-indigo-600">Holiday</span>}
+                    {r.is_rest_day && <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-500">Rest day</span>}
+                </div>
+            ),
+        },
         { header: 'Source', render: (r) => <span className="text-sm capitalize text-slate-500">{String(r.source || '—').replace(/_/g, ' ')}</span> },
     ];
+
+    const fmtSched = (r) => {
+        if (!r.scheduled_start || !r.scheduled_end) return r.is_rest_day ? 'Rest day' : '—';
+        return `${fmtTime(r.scheduled_start)}–${fmtTime(r.scheduled_end)}${r.scheduled_hours != null ? ` (${r.scheduled_hours}h)` : ''}`;
+    };
 
     const drawer = (row, close) => (
         <div className="mt-4 space-y-4">
@@ -171,6 +200,9 @@ function AttendanceLogs() {
                     <div><dt className="text-xs text-slate-400">Time in</dt><dd>{fmtTime(row.time_in)}</dd></div>
                     <div><dt className="text-xs text-slate-400">Time out</dt><dd>{fmtTime(row.time_out)}</dd></div>
                     <div><dt className="text-xs text-slate-400">Hours worked</dt><dd>{row.worked_hours != null ? `${row.worked_hours}h` : '—'}</dd></div>
+                    <div><dt className="text-xs text-slate-400">Scheduled shift</dt><dd>{fmtSched(row)}</dd></div>
+                    <div><dt className="text-xs text-slate-400">Late</dt><dd>{Number(row.late_minutes) ? `${row.late_minutes} min` : '—'}</dd></div>
+                    <div><dt className="text-xs text-slate-400">Undertime</dt><dd>{Number(row.undertime_minutes) ? `${row.undertime_minutes} min` : '—'}</dd></div>
                     <div><dt className="text-xs text-slate-400">Source</dt><dd className="capitalize">{String(row.source || '—').replace(/_/g, ' ')}</dd></div>
                     {row.remarks && <div className="col-span-2"><dt className="text-xs text-slate-400">Remarks</dt><dd className="whitespace-pre-wrap">{row.remarks}</dd></div>}
                 </dl>

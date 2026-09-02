@@ -1,6 +1,7 @@
 const Attendance = require('../../../../database/models/attendance/Attendance');
 const { logActivity } = require('../../../../utils/activityLogger');
 const { verifyFacePunch } = require('../../../../utils/facePunch');
+const { computeScheduleStamp, FORCED_STATUSES } = require('../../../../utils/attendanceScheduleStamp');
 
 const formatTime = (iso) => new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 
@@ -159,12 +160,18 @@ const clockIn = async (req, res) => {
             return res.status(face.status).json({ success: false, message: face.message, faceRequired: true });
         }
 
+        const timeIn = new Date().toISOString();
+        const stamp = await computeScheduleStamp(Attendance.knex(), {
+            employeeId, logDate: today, timeIn, timeOut: null,
+        });
+
         const log = await Attendance.query().insertAndFetch({
             employee_id: employeeId,
             log_date: today,
-            time_in: new Date().toISOString(),
+            time_in: timeIn,
             source: face.ok ? 'biometric' : (req.body?.source || 'web'),
-            created_by: employeeId
+            created_by: employeeId,
+            ...stamp,
         });
 
         await logActivity({
@@ -215,9 +222,16 @@ const clockOut = async (req, res) => {
             return res.status(face.status).json({ success: false, message: face.message, faceRequired: true });
         }
 
+        const timeOut = new Date().toISOString();
+        const stamp = await computeScheduleStamp(Attendance.knex(), {
+            employeeId, logDate: today, timeIn: existing.time_in, timeOut,
+            forcedStatus: FORCED_STATUSES.has(existing.status) ? existing.status : null,
+        });
+
         const log = await Attendance.query().patchAndFetchById(existing.id, {
-            time_out: new Date().toISOString(),
-            updated_by: employeeId
+            time_out: timeOut,
+            updated_by: employeeId,
+            ...stamp,
         });
 
         await logActivity({
@@ -258,15 +272,21 @@ const createAttendance = async (req, res) => {
             return res.status(400).json({ success: false, message: `Attendance for this employee on ${log_date} already exists.` });
         }
 
+        const stamp = await computeScheduleStamp(Attendance.knex(), {
+            employeeId: employee_id, logDate: log_date,
+            timeIn: time_in || null, timeOut: time_out || null,
+            forcedStatus: status || null,
+        });
+
         const attendance = await Attendance.query().insertAndFetch({
             employee_id,
             log_date,
             time_in: time_in || null,
             time_out: time_out || null,
-            status: status || 'present',
             source: source || 'manual',
             remarks: remarks || null,
-            created_by: req.user?.id ? parseInt(req.user.id, 10) : null
+            created_by: req.user?.id ? parseInt(req.user.id, 10) : null,
+            ...stamp,
         });
 
         await logActivity({
@@ -298,13 +318,23 @@ const updateAttendance = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Attendance record not found.' });
         }
 
+        const nextTimeIn = time_in !== undefined ? time_in : attendance.time_in;
+        const nextTimeOut = time_out !== undefined ? time_out : attendance.time_out;
+        const stamp = await computeScheduleStamp(Attendance.knex(), {
+            employeeId: attendance.employee_id,
+            logDate: attendance.log_date,
+            timeIn: nextTimeIn,
+            timeOut: nextTimeOut,
+            forcedStatus: status || (FORCED_STATUSES.has(attendance.status) ? attendance.status : null),
+        });
+
         const updated = await Attendance.query().patchAndFetchById(attendance.id, {
             time_in,
             time_out,
-            status,
             source,
             remarks,
-            updated_by: req.user?.id ? parseInt(req.user.id, 10) : null
+            updated_by: req.user?.id ? parseInt(req.user.id, 10) : null,
+            ...stamp,
         });
 
         await logActivity({

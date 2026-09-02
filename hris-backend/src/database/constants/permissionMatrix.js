@@ -34,6 +34,7 @@ const ADMIN_PERMISSION_MATRIX = {
     'employee-management': ['view', 'create', 'edit', 'delete'],
     'attendance-logs': ['view', 'create', 'edit', 'delete'],
     'attendance-kiosk': ['view', 'create', 'edit', 'delete'],
+    'shift-and-rostering': ['view', 'create', 'edit', 'delete'], // work schedules + holiday calendar
     'face-recognition': ['view', 'create', 'edit', 'delete'],
     'leave-request': ['view', 'edit', 'delete'],
     'overtime-tracker': ['view', 'edit', 'delete'],

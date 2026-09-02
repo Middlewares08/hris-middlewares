@@ -50,6 +50,33 @@ class LeaveRequest extends BaseModel {
         return spanDays;
     }
 
+    /**
+     * Set of 'YYYY-MM-DD' calendar dates covered by an APPROVED leave for an
+     * employee that intersect [start, end] (inclusive). Used by payroll / the
+     * absent-marking job to tell "unlogged but on leave" from "absent".
+     */
+    static async approvedDatesInRange(trx, employeeId, start, end) {
+        const s = String(start).substring(0, 10);
+        const e = String(end).substring(0, 10);
+        const rows = await LeaveRequest.query(trx)
+            .where({ employee_id: employeeId, is_deleted: false, status: 'approved' })
+            .where('start_date', '<=', e)
+            .where('end_date', '>=', s)
+            .select('start_date', 'end_date');
+
+        const out = new Set();
+        for (const r of rows) {
+            const cur = new Date(`${String(r.start_date).substring(0, 10)}T00:00:00Z`);
+            const last = new Date(`${String(r.end_date).substring(0, 10)}T00:00:00Z`);
+            while (cur <= last) {
+                const d = cur.toISOString().substring(0, 10);
+                if (d >= s && d <= e) out.add(d);
+                cur.setUTCDate(cur.getUTCDate() + 1);
+            }
+        }
+        return out;
+    }
+
     static get relationMappings() {
         const Employee = require('../employee/Employee');
 

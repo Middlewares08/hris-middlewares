@@ -27,9 +27,11 @@ const EmployeeComponentAssignment = require('../../../database/models/payroll/Em
 const StatutoryTable = require('../../../database/models/payroll/StatutoryTable');
 const Employee = require('../../../database/models/employee/Employee');
 const OvertimeRequest = require('../../../database/models/attendance/OvertimeRequest');
+const LeaveRequest = require('../../../database/models/attendance/LeaveRequest');
 const Setting = require('../../../database/models/system/Setting');
+const { scheduledWorkdaysByEmployee } = require('../../../utils/workSchedule');
 
-const LATE_CUTOFF = '09:15'; // mirrors attendance/Attendance.js
+const LATE_CUTOFF = '09:15'; // fallback only — used for attendance rows written before the schedule module
 const THIRTEENTH_MONTH_TAX_EXEMPT_CEILING = 90000; // NIRC sec. 32(B)(7)(e)
 
 const PERIODS_PER_MONTH = {
@@ -404,24 +406,57 @@ async function aggregateAttendance(trx, employeeId, start, end, otEnabled = fals
         .andWhere('is_deleted', false)
         .andWhere('log_date', '>=', start)
         .andWhere('log_date', '<=', end)
-        .select('log_date', 'status', 'time_in', 'time_out');
+        .select(
+            'log_date', 'status', 'time_in', 'time_out',
+            'scheduled_hours', 'late_minutes', 'undertime_minutes',
+            'is_rest_day', 'is_holiday',
+        );
 
     let workedDays = 0;
     let workedHours = 0;
     let absentDays = 0;
     let lateMinutes = 0;
+    let undertimeMinutes = 0;
+    const loggedDates = new Set();
 
     for (const r of rows) {
+        loggedDates.add(String(r.log_date).substring(0, 10));
+
         if (r.status === 'present' || r.status === 'late') workedDays += 1;
         else if (r.status === 'half_day') workedDays += 0.5;
         else if (r.status === 'absent') absentDays += 1;
 
+        // Prefer the schedule-derived figures persisted at punch time; fall back
+        // to a punch-derived estimate only for pre-schedule rows that were never
+        // stamped (schedule_id / late_minutes null).
+        if (r.late_minutes != null || r.undertime_minutes != null) {
+            lateMinutes += toNum(r.late_minutes);
+            undertimeMinutes += toNum(r.undertime_minutes);
+        } else if (r.status === 'late' && r.time_in) {
+            lateMinutes += minutesPastCutoff(r.time_in, LATE_CUTOFF);
+        }
+
         if (r.time_in && r.time_out) {
             const ms = new Date(r.time_out).getTime() - new Date(r.time_in).getTime();
-            if (ms > 0) workedHours += ms / 3600000;
+            if (ms > 0) {
+                let hrs = ms / 3600000;
+                // Attendance never pays past the scheduled shift — overtime must
+                // be filed (credited separately below).
+                const cap = toNum(r.scheduled_hours);
+                if (cap > 0 && !r.is_rest_day && !r.is_holiday) hrs = Math.min(hrs, cap);
+                workedHours += hrs;
+            }
         }
-        if (r.status === 'late' && r.time_in) {
-            lateMinutes += minutesPastCutoff(r.time_in, LATE_CUTOFF);
+    }
+
+    // Safety net: a scheduled workday with no log at all and no approved leave is
+    // an absence, even if the nightly markAbsent job hasn't reconciled it yet.
+    const scheduledDates = (await scheduledWorkdaysByEmployee(trx, [employeeId], start, end))
+        .get(Number(employeeId)) || [];
+    if (scheduledDates.length) {
+        const leaveDates = await LeaveRequest.approvedDatesInRange(trx, employeeId, start, end);
+        for (const d of scheduledDates) {
+            if (!loggedDates.has(d) && !leaveDates.has(d)) absentDays += 1;
         }
     }
 
@@ -435,8 +470,9 @@ async function aggregateAttendance(trx, employeeId, start, end, otEnabled = fals
         worked_days: round2(workedDays),
         worked_hours: round2(workedHours),
         absent_days: round2(absentDays),
+        scheduled_days: scheduledDates.length,
         late_minutes: Math.round(lateMinutes),
-        undertime_minutes: 0,
+        undertime_minutes: Math.round(undertimeMinutes),
         overtime_hours: round2(overtimeHours),
     };
 }

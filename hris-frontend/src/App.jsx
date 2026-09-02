@@ -10,6 +10,8 @@ import Landing from './pages/Landing'
 import RolesAndPermission from './pages/Maintenance/RolesAndPermission'
 import Department from './pages/LookupSetting/Department'
 import Position from './pages/LookupSetting/Position'
+import WorkSchedule from './pages/LookupSetting/WorkSchedule'
+import Holidays from './pages/LookupSetting/Holidays'
 import StatutoryAndCompliance from './pages/Employee/StatutoryAndCompliance'
 import Identification from './pages/Employee/StatutoryAndCompliance/Identification'
 import Resume from './pages/Employee/StatutoryAndCompliance/Resume'
@@ -99,6 +101,14 @@ function App() {
             <Route
               path="positions"
               element={<ProtectedElement element={<Position />} permission="positions:view" />}
+            />
+            <Route
+              path="work-schedules"
+              element={<ProtectedElement element={<WorkSchedule />} permission="shift-and-rostering:view" />}
+            />
+            <Route
+              path="holidays"
+              element={<ProtectedElement element={<Holidays />} permission="shift-and-rostering:view" />}
             />
             <Route path="/dashboard/employee/statutory-and-compliance" element={<StatutoryAndCompliance />}>
               <Route index element={<Index />} />

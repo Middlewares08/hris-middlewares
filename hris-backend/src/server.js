@@ -90,6 +90,13 @@ app.use('/employee', employeeRoutes);
 const attendanceRoutes = require("../src/route/admin/attendanceRoutes");
 app.use('/attendance', attendanceRoutes);
 
+// WORK SCHEDULES + HOLIDAY CALENDAR (shift & rostering)
+const workScheduleRoutes = require("../src/route/admin/workScheduleRoutes");
+app.use('/work-schedules', workScheduleRoutes);
+
+const holidayRoutes = require("../src/route/admin/holidayRoutes");
+app.use('/holidays', holidayRoutes);
+
 
 // FACE RECOGNITION (biometric enrollment for clock-in)
 const faceEnrollmentRoutes = require("../src/route/admin/faceEnrollmentRoutes");

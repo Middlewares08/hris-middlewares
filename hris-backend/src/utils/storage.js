@@ -6,6 +6,8 @@ const {
     PutObjectCommand,
     GetObjectCommand,
     DeleteObjectCommand,
+    ListObjectsV2Command,
+    HeadObjectCommand,
 } = require('@aws-sdk/client-s3');
 const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 
@@ -129,6 +131,43 @@ async function deleteObject(key, { bucket } = {}) {
 }
 
 /**
+ * List every object key in a bucket (optionally under a prefix), following
+ * pagination. Returns `[{ key, size, lastModified }]`.
+ *
+ * For the nightly storage reconciler only — never call this on a request path.
+ */
+async function listAllKeys({ bucket, prefix } = {}) {
+    const Bucket = resolveBucket(bucket);
+    const Prefix = (prefix ?? PREFIX) || undefined;
+    const out = [];
+    let ContinuationToken;
+    do {
+        // eslint-disable-next-line no-await-in-loop
+        const page = await client().send(
+            new ListObjectsV2Command({ Bucket, Prefix, ContinuationToken }),
+        );
+        for (const o of page.Contents || []) {
+            out.push({ key: o.Key, size: o.Size, lastModified: o.LastModified });
+        }
+        ContinuationToken = page.IsTruncated ? page.NextContinuationToken : undefined;
+    } while (ContinuationToken);
+    return out;
+}
+
+/** True if the object still exists. 404 → false; a real error is rethrown. */
+async function objectExists(key, { bucket } = {}) {
+    if (!isStoredKey(key)) return false;
+    try {
+        await client().send(new HeadObjectCommand({ Bucket: resolveBucket(bucket), Key: key }));
+        return true;
+    } catch (err) {
+        const code = err.$metadata?.httpStatusCode;
+        if (code === 404 || err.name === 'NotFound' || err.name === 'NoSuchKey') return false;
+        throw err;
+    }
+}
+
+/**
  * Resolve a stored `file_link` into something a browser can open:
  *  - legacy base64 data URI → returned unchanged
  *  - S3 object key          → short-lived presigned GET URL
@@ -157,5 +196,7 @@ module.exports = {
     getObjectBuffer,
     getPresignedUrl,
     deleteObject,
+    listAllKeys,
+    objectExists,
     resolveFileUrl,
 };

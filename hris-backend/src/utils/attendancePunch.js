@@ -1,5 +1,6 @@
 const Attendance = require('../database/models/attendance/Attendance');
 const { logActivity } = require('./activityLogger');
+const { computeScheduleStamp, FORCED_STATUSES } = require('./attendanceScheduleStamp');
 
 const formatTime = (iso) =>
     new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
@@ -29,14 +30,20 @@ async function punchByEmployee({ employeeId, actorId = null, source = 'kiosk', f
     }
 
     if (!existing) {
+        const timeIn = new Date().toISOString();
+        const stamp = await computeScheduleStamp(Attendance.knex(), {
+            employeeId, logDate, timeIn, timeOut: null,
+        });
+
         const log = await Attendance.query()
             .context({ user: actorId ? { id: actorId } : undefined })
             .insertAndFetch({
                 employee_id: employeeId,
                 log_date: logDate,
-                time_in: new Date().toISOString(),
+                time_in: timeIn,
                 source,
                 created_by: actorId,
+                ...stamp,
             });
 
         await logActivity({
@@ -51,11 +58,18 @@ async function punchByEmployee({ employeeId, actorId = null, source = 'kiosk', f
         return { ok: true, action: 'in', log };
     }
 
+    const timeOut = new Date().toISOString();
+    const stamp = await computeScheduleStamp(Attendance.knex(), {
+        employeeId, logDate, timeIn: existing.time_in, timeOut,
+        forcedStatus: FORCED_STATUSES.has(existing.status) ? existing.status : null,
+    });
+
     const log = await Attendance.query()
         .context({ user: actorId ? { id: actorId } : undefined })
         .patchAndFetchById(existing.id, {
-            time_out: new Date().toISOString(),
+            time_out: timeOut,
             updated_by: actorId,
+            ...stamp,
         });
 
     await logActivity({
