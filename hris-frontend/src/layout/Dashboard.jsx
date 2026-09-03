@@ -57,12 +57,7 @@ const Dashboard = () => {
             path: '/dashboard', 
             permission: 'dashboard:view' 
         },
-        {
-            icon: <FileBarChart className='hover:cursor-pointer' size={20} />,
-            label: 'Reports',
-            path: '/dashboard/reports',
-            permission: 'reports:view'
-        },
+        
         {
             icon: <GroupIcon className='hover:cursor-pointer' size={20}/>,
             label: 'Employee Directory',
@@ -153,6 +148,12 @@ const Dashboard = () => {
             label: 'Attendance Kiosk',
             path: '/dashboard/attendance-kiosk',
             permission: 'attendance-kiosk:view',
+        },
+        {
+            icon: <FileBarChart className='hover:cursor-pointer' size={20} />,
+            label: 'Reports',
+            path: '/dashboard/reports',
+            permission: 'reports:view'
         },
         {
             icon: <Wrench className='hover:cursor-pointer' size={20} />,

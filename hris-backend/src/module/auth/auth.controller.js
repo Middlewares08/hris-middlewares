@@ -75,23 +75,25 @@ const login = async (req, res) => {
             return res.status(401).json({ message: 'Invalid credentials.' });
         }
 
-        // Look up the mobile number the second factor will be delivered to.
+        // Look up the destinations the second factor can be delivered to.
         const employee = await Employee.query()
             .findById(credentials.employee_id)
             .withGraphFetched('contact');
 
         const phone = employee?.contact?.personal_phone;
-        if (!phone) {
+        const otpEmail = credentials.email || employee?.contact?.personal_email;
+        if (!phone && !otpEmail) {
             return res.status(409).json({
-                message: 'No mobile number is on file for this account. Contact HR to enable sign-in.',
+                message: 'No mobile number or email is on file for this account. Contact HR to enable sign-in.',
             });
         }
 
         try {
-            const { destination, code } = await issueOtp({
+            const { destination, maskedEmail, channels, code } = await issueOtp({
                 employeeId: credentials.employee_id,
                 purpose: 'login_2fa',
                 phone,
+                email: otpEmail,
             });
 
             const tempToken = jwt.sign(
@@ -101,9 +103,11 @@ const login = async (req, res) => {
             );
 
             return res.status(200).json(withDevCode({
-                message: 'Password verified. Enter the code we texted you to continue.',
+                message: 'Password verified. Enter the code we sent you to continue.',
                 token: tempToken,
                 maskedPhone: destination,
+                maskedEmail,
+                channels,
             }, code));
         } catch (smsError) {
             if (smsError.code === 'COOLDOWN') {
@@ -221,17 +225,24 @@ const resendOtp = async (req, res) => {
             .findById(decoded.employeeId)
             .withGraphFetched('contact');
         const phone = employee?.contact?.personal_phone;
-        if (!phone) {
-            return res.status(409).json({ message: 'No mobile number is on file for this account.' });
+        const otpEmail = decoded.email || employee?.contact?.personal_email;
+        if (!phone && !otpEmail) {
+            return res.status(409).json({ message: 'No mobile number or email is on file for this account.' });
         }
 
         try {
-            const { destination, code } = await issueOtp({
+            const { destination, maskedEmail, channels, code } = await issueOtp({
                 employeeId: decoded.employeeId,
                 purpose: 'login_2fa',
                 phone,
+                email: otpEmail,
             });
-            return res.status(200).json(withDevCode({ message: 'A new code is on its way.', maskedPhone: destination }, code));
+            return res.status(200).json(withDevCode({
+                message: 'A new code is on its way.',
+                maskedPhone: destination,
+                maskedEmail,
+                channels,
+            }, code));
         } catch (smsError) {
             if (smsError.code === 'COOLDOWN') {
                 return res.status(429).json({ message: smsError.message, retryAfter: smsError.retryAfter });
@@ -273,10 +284,11 @@ const forgotPassword = async (req, res) => {
         }
 
         try {
-            const { destination, code } = await issueOtp({
+            const { destination, maskedEmail, channels, code } = await issueOtp({
                 employeeId: credentials.employee_id,
                 purpose: 'password_reset',
                 phone: onFile,
+                email: credentials.email,
             });
 
             const token = jwt.sign(
@@ -286,9 +298,11 @@ const forgotPassword = async (req, res) => {
             );
 
             return res.status(200).json(withDevCode({
-                message: 'We texted a reset code to your registered number.',
+                message: 'We sent a reset code to your registered contact details.',
                 token,
                 maskedPhone: destination,
+                maskedEmail,
+                channels,
             }, code));
         } catch (smsError) {
             if (smsError.code === 'COOLDOWN') {

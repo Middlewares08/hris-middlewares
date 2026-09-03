@@ -1,6 +1,7 @@
 const Document = require('../../../../database/models/employee/Document');
 const DocumentRequest = require('../../../../database/models/employee/DocumentRequest');
 const { logActivity } = require('../../../../utils/activityLogger');
+const { notifyDocumentRequested } = require('../../../../utils/notify');
 const {
     uploadBuffer,
     deleteObject,
@@ -592,6 +593,14 @@ const createDocumentRequest = async (req, res) => {
             description: `HR requested document "${request.label}"`,
             metadata: { document_request_uuid: request.uuid, due_date: request.due_date },
             req,
+        });
+
+        // Best-effort email to the employee — never blocks the response.
+        notifyDocumentRequested({
+            employeeId: parseInt(employee_id, 10),
+            label: request.label,
+            note: request.note,
+            dueDate: request.due_date,
         });
 
         return res.status(201).json({ success: true, data: request });

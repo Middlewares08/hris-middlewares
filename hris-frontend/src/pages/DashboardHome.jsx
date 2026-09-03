@@ -125,7 +125,7 @@ function DashboardHome() {
         <div className="space-y-5 text-left">
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-lg font-bold text-slate-800">Overview</h1>
+                    <h1 className="text-lg font-bold text-slate-800 my-0!">Overview</h1>
                     <p className="text-xs text-slate-400">
                         {data?.generatedAt
                             ? `Updated ${moment(data.generatedAt).format('MMM D, YYYY h:mm A')}`

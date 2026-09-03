@@ -6,6 +6,7 @@
 
 const PayslipRequest = require('../../../../database/models/payroll/PayslipRequest');
 const { logActivity } = require('../../../../utils/activityLogger');
+const { notifyPayslipRequestFulfilled } = require('../../../../utils/notify');
 const {
     actorId, withActor, ok, fail, serverError,
     parsePagination, paginationMeta, trimOrNull,
@@ -64,6 +65,13 @@ const fulfill = async (req, res) => {
             description: `Payslip copy request ${row.uuid} fulfilled`,
             metadata: { request_uuid: row.uuid, payslip_id: row.payslip_id },
             req,
+        });
+
+        // Best-effort email to the employee — never blocks the response.
+        notifyPayslipRequestFulfilled({
+            employeeId: row.employee_id,
+            periodName: updated.payslip?.run?.period?.name || null,
+            remarks: updated.review_remarks,
         });
 
         return ok(res, updated, { message: 'Request fulfilled.' });

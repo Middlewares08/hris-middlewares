@@ -7,6 +7,7 @@ const PayslipLine = require('../../../../database/models/payroll/PayslipLine');
 const EmployeeComponentAssignment = require('../../../../database/models/payroll/EmployeeComponentAssignment');
 const { calculateRun } = require('../../services/payrollCalculator');
 const { logActivity } = require('../../../../utils/activityLogger');
+const { notifyPayrollRunApproved } = require('../../../../utils/notify');
 const {
     actorId, withActor, ok, created, fail, serverError,
     parsePagination, paginationMeta, trimOrNull, definedOnly, round2,
@@ -252,6 +253,10 @@ const approve = async (req, res) => {
             metadata: { run_uuid: run.uuid },
             req,
         });
+
+        // Best-effort email to every employee with a payslip in this run — the
+        // fan-out runs in the background and never blocks the response.
+        notifyPayrollRunApproved({ runId: run.id });
 
         return ok(res, updated, { message: 'Payroll run approved.' });
     } catch (error) {

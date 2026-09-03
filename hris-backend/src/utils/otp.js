@@ -1,16 +1,82 @@
 const crypto = require('crypto');
 const OtpCode = require('../database/models/auth/OtpCode');
 const { sendSms } = require('./sms');
+const { sendMail } = require('./mailer');
 
 const CODE_TTL_MINUTES = parseInt(process.env.OTP_TTL_MINUTES || '10', 10);
 const MAX_ATTEMPTS = parseInt(process.env.OTP_MAX_ATTEMPTS || '5', 10);
 // Smallest gap between two code requests for the same employee+purpose.
 const RESEND_COOLDOWN_SECONDS = parseInt(process.env.OTP_RESEND_COOLDOWN_SECONDS || '45', 10);
 
+const COMPANY = process.env.COMPANY_NAME || 'HRIS';
+
 const MESSAGES = {
-    login_2fa: (code) => `${code} is your HRIS sign-in code. It expires in ${CODE_TTL_MINUTES} minutes.`,
-    password_reset: (code) => `${code} is your HRIS password reset code. It expires in ${CODE_TTL_MINUTES} minutes. If this wasn't you, ignore this message.`,
+    login_2fa: (code) => `${code} is your ${COMPANY} sign-in code. It expires in ${CODE_TTL_MINUTES} minutes.`,
+    password_reset: (code) => `${code} is your ${COMPANY} password reset code. It expires in ${CODE_TTL_MINUTES} minutes. If this wasn't you, ignore this message.`,
 };
+
+const EMAIL_CONTENT = {
+    login_2fa: (code) => ({
+        subject: `${code} is your ${COMPANY} sign-in code`,
+        text:
+            `Your ${COMPANY} sign-in verification code is:\n\n` +
+            `    ${code}\n\n` +
+            `It expires in ${CODE_TTL_MINUTES} minutes. ` +
+            `If you didn't try to sign in, you can safely ignore this email.`,
+    }),
+    password_reset: (code) => ({
+        subject: `${code} is your ${COMPANY} password reset code`,
+        text:
+            `Your ${COMPANY} password reset code is:\n\n` +
+            `    ${code}\n\n` +
+            `It expires in ${CODE_TTL_MINUTES} minutes. ` +
+            `If this wasn't you, ignore this email — your password will not change.`,
+    }),
+};
+
+/**
+ * Deliver the plaintext code over every channel we have a destination for
+ * (SMS and/or email). Best-effort per channel: succeeds as long as ONE channel
+ * goes through; throws only when every attempted channel failed.
+ */
+async function deliverCode({ purpose, code, phone, email }) {
+    const attempts = [];
+
+    if (phone) {
+        attempts.push(
+            sendSms(phone, (MESSAGES[purpose] || MESSAGES.login_2fa)(code))
+                .then((r) => ({ channel: 'sms', ok: true, stub: !!r?.stub }))
+                .catch((error) => ({ channel: 'sms', ok: false, error })),
+        );
+    }
+    if (email) {
+        const { subject, text } = (EMAIL_CONTENT[purpose] || EMAIL_CONTENT.login_2fa)(code);
+        attempts.push(
+            sendMail({ to: email, subject, text })
+                .then((r) => ({ channel: 'email', ok: true, stub: !!r?.stub }))
+                .catch((error) => ({ channel: 'email', ok: false, error })),
+        );
+    }
+
+    if (attempts.length === 0) {
+        throw new Error('No delivery channel (mobile number or email) is on file for this account.');
+    }
+
+    const results = await Promise.all(attempts);
+    results.forEach((r) => r.error && console.error(`OTP ${r.channel} delivery failed:`, r.error.message));
+
+    // OK if a real provider accepted it, OR if every channel we tried is a
+    // console stub (local dev with no gateway wired up). A real send that throws
+    // must NOT be masked by the SMS console stub "succeeding".
+    const realSuccess = results.some((r) => r.ok && !r.stub);
+    const allStubSuccess = results.every((r) => r.ok && r.stub);
+    if (!realSuccess && !allStubSuccess) {
+        const err = new Error('Could not send your verification code. Please try again.');
+        err.code = 'DELIVERY_FAILED';
+        throw err;
+    }
+    return results;
+}
 
 function generateCode() {
     // 6 digits, zero-padded, uniformly distributed.
@@ -32,15 +98,28 @@ function maskDestination(value) {
     return `${head}${'•'.repeat(Math.max(3, str.length - headLen - 4))}${tail}`;
 }
 
+/** "juan.delacruz@acme.com" -> "ju••••••••••@acme.com" */
+function maskEmail(value) {
+    if (!value) return null;
+    const [user, domain] = String(value).split('@');
+    if (!domain) return maskDestination(value);
+    const head = user.length <= 2 ? user.slice(0, 1) : user.slice(0, 2);
+    return `${head}${'•'.repeat(Math.max(3, user.length - head.length))}@${domain}`;
+}
+
 /**
  * Issue a fresh code: invalidates any live code for the same employee+purpose,
- * stores the hash, and texts the plaintext to `phone`.
+ * stores the hash, and delivers the plaintext over every channel supplied
+ * (`phone` via SMS and/or `email`). At least one of `phone` / `email` is required.
  *
- * @returns {Promise<{ code: string, destination: string, expiresAt: string, resend: boolean }>}
+ * @returns {Promise<{ code: string, destination: string, maskedPhone: ?string,
+ *                      maskedEmail: ?string, channels: string[], expiresAt: string,
+ *                      resend: boolean }>}
  *          `code` is the plaintext — only surface it to clients outside production.
- * @throws  {Error} with `.code = 'COOLDOWN'` when called again too soon
+ * @throws  {Error} with `.code = 'COOLDOWN'` when called again too soon,
+ *          or `.code = 'DELIVERY_FAILED'` when no channel could be reached.
  */
-async function issueOtp({ employeeId, purpose, phone, trx }) {
+async function issueOtp({ employeeId, purpose, phone, email, trx }) {
     const recent = await OtpCode.query(trx)
         .where({ employee_id: employeeId, purpose })
         .whereNull('consumed_at')
@@ -64,22 +143,34 @@ async function issueOtp({ employeeId, purpose, phone, trx }) {
         .whereNull('consumed_at');
 
     const code = generateCode();
-    const masked = maskDestination(phone);
+    const maskedPhone = maskDestination(phone);
+    const maskedEmail = maskEmail(email);
+    // Primary display destination — phone first (keeps the existing `maskedPhone`
+    // contract), else the email.
+    const destination = maskedPhone || maskedEmail;
     const expiresAt = new Date(Date.now() + CODE_TTL_MINUTES * 60 * 1000).toISOString();
 
     await OtpCode.query(trx).insert({
         employee_id: employeeId,
         purpose,
         code_hash: hashCode(code),
-        destination: masked,
+        destination,
         attempts: 0,
         max_attempts: MAX_ATTEMPTS,
         expires_at: expiresAt,
     });
 
-    await sendSms(phone, (MESSAGES[purpose] || MESSAGES.login_2fa)(code));
+    const delivered = await deliverCode({ purpose, code, phone, email });
 
-    return { code, destination: masked, expiresAt, resend: !!recent };
+    return {
+        code,
+        destination,
+        maskedPhone,
+        maskedEmail,
+        channels: delivered.filter((r) => r.ok).map((r) => r.channel),
+        expiresAt,
+        resend: !!recent,
+    };
 }
 
 /**
@@ -118,6 +209,7 @@ module.exports = {
     verifyOtp,
     hashCode,
     maskDestination,
+    maskEmail,
     CODE_TTL_MINUTES,
     RESEND_COOLDOWN_SECONDS,
 };
