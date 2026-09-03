@@ -100,18 +100,18 @@ Seeders run in filename order and are idempotent (safe to re-run):
 
 | Seeder | Populates |
 |---|---|
+| `00_DefaultAdminSeeder.js` | The two immutable roles — **Administrator** (`is_deletable = false`) and the default employee role **User** (`is_default = true`, slug `user`) — plus the first-run admin account: an `employee.employees` row + `employee.credentials` row (bcrypt-hashed password) linked to the Administrator role. |
 | `01_ModuleSeeeder.js` | The module catalog (admin + self-service feature areas). |
 | `02_PermissionSeeder.js` | Every permission slug, derived from `src/database/constants/permissionMatrix.js`. |
 | `03_RolePermissionSeeder.js` | Grants the immutable **Administrator** role every permission and the default employee role the `SELF_SERVICE` subset; prunes stale links. |
 
-> **Note:** the seeders assume the **Administrator** role (`is_deletable = false`)
-> and the default employee role (`is_default = true`, slug `user`) already exist,
-> and they do **not** create any employee or login. Provisioning the first admin
-> account (an `employee.employees` row + an `employee.credentials` row with a
-> bcrypt-hashed password, linked to the Administrator role via
-> `role_permission.employee_roles`) is a manual bootstrap step for a fresh
-> database. Re-run `npx knex seed:run` afterward so the Administrator role picks
-> up its full permission set.
+> **Default admin login** (created by `00_DefaultAdminSeeder.js`): `admin@hris.local`
+> / `Admin@12345` — **change the password on first login.** Override before
+> seeding with `DEFAULT_ADMIN_EMAIL`, `DEFAULT_ADMIN_PASSWORD`,
+> `DEFAULT_ADMIN_FIRST_NAME`, `DEFAULT_ADMIN_LAST_NAME`. The account is linked to
+> the Administrator role, which `03_RolePermissionSeeder.js` grants every
+> permission (including the `admin-console:access` and `employee-portal:access`
+> login gates). All four seeders are idempotent.
 
 ### 6. Run the API and worker
 
