@@ -40,9 +40,11 @@ turns every job off on that instance.
 
 ## Current jobs
 
-| Job            | Default schedule | Purpose |
-| -------------- | ---------------- | ------- |
-| `autoClockOut` | `0 2 * * *`      | Stamps `time_out` on attendance rows where the employee clocked in but never out, capped at `STANDARD_WORKDAY_HOURS`, flagged `is_auto_closed` for manager review. Skips punches younger than `AUTO_CLOCK_OUT_MIN_OPEN_HOURS` (night-shift safety). |
+| Job                 | Default schedule | Purpose |
+| ------------------- | ---------------- | ------- |
+| `autoClockOut`      | `0 2 * * *`      | Stamps `time_out` on attendance rows where the employee clocked in but never out, capped at `STANDARD_WORKDAY_HOURS`, flagged `is_auto_closed` for manager review. Skips punches younger than `AUTO_CLOCK_OUT_MIN_OPEN_HOURS` (night-shift safety). Also refreshes the schedule columns. |
+| `markAbsent`        | `30 2 * * *`     | For each active employee × scheduled workday in the trailing `ABSENT_BACKFILL_DAYS` window with no attendance log: inserts `absent` (or `on_leave` if an approved leave covers it), stamped against the employee's `work_schedule`, skipping rest days / non-working holidays / pre-hire dates. Idempotent. |
+| `backfillSchedule`  | manual only      | `npm run job backfillSchedule` — stamps `schedule_id` / `scheduled_*` / `late_minutes` / `undertime_minutes` / `is_rest_day` / `is_holiday` on attendance rows written before the work-schedule module. Processes up to `BACKFILL_SCHEDULE_LIMIT` rows/run; re-run until `remaining` is 0. |
 
 ## When to outgrow this
 

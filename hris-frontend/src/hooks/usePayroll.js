@@ -9,6 +9,7 @@ import {
     payrollRunService,
     payslipService,
     payslipRequestService,
+    employerProfileService,
 } from '../services/payrollServices';
 import { downloadBlob, filenameFromHeaders } from '../utils/downloadBlob';
 
@@ -230,5 +231,40 @@ export function useRunAdjustments(runUuid) {
         create: createMutation.mutateAsync,
         remove: removeMutation.mutateAsync,
         isMutating: createMutation.isPending || removeMutation.isPending,
+    };
+}
+
+/**
+ * Employer profile — the single registered-employer identity row used by every
+ * government filing artifact. `_completeness` on the payload lists what's still
+ * missing before forms can be generated.
+ */
+export function useEmployerProfile() {
+    const qc = useQueryClient();
+
+    const query = useQuery({
+        queryKey: ['employerProfile'],
+        queryFn: () => employerProfileService.get(),
+        select: (res) => res?.data || null,
+        staleTime: 5 * 60 * 1000,
+    });
+
+    const updateMutation = useMutation({
+        mutationFn: (payload) => employerProfileService.update(payload),
+        onSuccess: (res) => {
+            toast.success(res?.message || 'Employer profile saved.');
+            qc.invalidateQueries({ queryKey: ['employerProfile'] });
+            qc.invalidateQueries({ queryKey: ['govForms'] });
+        },
+        onError: (err) => toast.error(errMsg(err, 'Failed to save employer profile.')),
+    });
+
+    return {
+        profile: query.data || null,
+        completeness: query.data?._completeness || { isComplete: false, missing: [] },
+        isLoading: query.isLoading,
+        error: query.isError ? errMsg(query.error, 'Failed to load employer profile.') : null,
+        save: updateMutation.mutateAsync,
+        isSaving: updateMutation.isPending,
     };
 }

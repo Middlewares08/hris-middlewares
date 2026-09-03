@@ -40,6 +40,7 @@ const ADMIN_PERMISSION_MATRIX = {
     'overtime-tracker': ['view', 'edit', 'delete'],
     'payroll-and-compensation': ['view', 'create', 'edit', 'delete'],
     'run-payroll': ['view', 'create', 'edit', 'delete'],
+    'government-forms': ['view', 'generate'], // BIR 2316/Alphalist, SSS R3, PhilHealth RF1, Pag-IBIG MCRF
     'statutory-and-compliance': ['view', 'create', 'edit', 'delete'],
     'roles-and-permissions': ['view', 'create', 'edit', 'delete'],
     'announcements': ['view', 'create', 'edit', 'delete'],

@@ -23,6 +23,8 @@ const Period = require('../../module/admin/controller/payroll/PayPeriodControlle
 const Run = require('../../module/admin/controller/payroll/PayrollRunController');
 const Payslip = require('../../module/admin/controller/payroll/PayslipController');
 const PayslipRequest = require('../../module/admin/controller/payroll/PayslipRequestController');
+const EmployerProfile = require('../../module/admin/controller/payroll/EmployerProfileController');
+const GovFiling = require('../../module/admin/controller/payroll/GovFilingController');
 
 const SETUP = 'payroll-and-compensation';
 const STAT = 'statutory-and-compliance';
@@ -82,6 +84,19 @@ router.get('/assignments/:uuid', verifyToken, requirePermission(`${SETUP}:view`)
 router.post('/assignments', verifyToken, requirePermission(`${SETUP}:create`), Assignment.create);
 router.put('/assignments/:uuid', verifyToken, requirePermission(`${SETUP}:edit`), Assignment.update);
 router.delete('/assignments/:uuid', verifyToken, requirePermission(`${SETUP}:delete`), Assignment.remove);
+
+/* ---------------------------------------------------------------- *
+ * EMPLOYER PROFILE (registered-employer identity for government filings)
+ * ---------------------------------------------------------------- */
+router.get('/employer-profile', verifyToken, requirePermission(`${SETUP}:view`), EmployerProfile.get);
+router.put('/employer-profile', verifyToken, requirePermission(`${SETUP}:edit`), EmployerProfile.update);
+
+/* ---------------------------------------------------------------- *
+ * GOVERNMENT FILING ARTIFACTS (BIR / SSS / PhilHealth / Pag-IBIG)
+ * ---------------------------------------------------------------- */
+router.get('/gov-forms', verifyToken, requirePermission('government-forms:view'), GovFiling.listForms);
+router.get('/gov-forms/preview', verifyToken, requirePermission('government-forms:view'), GovFiling.preview);
+router.get('/gov-forms/download', verifyToken, requirePermission('government-forms:generate'), GovFiling.download);
 
 /* ---------------------------------------------------------------- *
  * PAY PERIODS

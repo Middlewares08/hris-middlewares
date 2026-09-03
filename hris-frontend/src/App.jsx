@@ -25,6 +25,8 @@ import PayPeriods from './pages/Payroll/PayPeriods'
 import PayrollRuns from './pages/Payroll/PayrollRuns'
 import PayrollRunDetail from './pages/Payroll/PayrollRunDetail'
 import PayslipRequests from './pages/Payroll/PayslipRequests'
+import EmployerProfile from './pages/Payroll/EmployerProfile'
+import GovernmentForms from './pages/Payroll/GovernmentForms'
 import Announcements from './pages/Announcement/Announcements'
 import OvertimeRequests from './pages/Overtime/OvertimeRequests'
 import AttendanceLogs from './pages/Attendance/AttendanceLogs'
@@ -164,6 +166,8 @@ function App() {
             <Route path="periods" element={<ProtectedElement element={<PayPeriods />} permission="run-payroll:view" />} />
             <Route path="components" element={<ProtectedElement element={<PayComponents />} permission="payroll-and-compensation:view" />} />
             <Route path="statutory-tables" element={<ProtectedElement element={<StatutoryTables />} permission="statutory-and-compliance:view" />} />
+            <Route path="employer-profile" element={<ProtectedElement element={<EmployerProfile />} permission="payroll-and-compensation:view" />} />
+            <Route path="government-forms" element={<ProtectedElement element={<GovernmentForms />} permission="government-forms:view" />} />
           </Route>
 
         </Route>

@@ -42,4 +42,8 @@ router.get('/me/statutory', verifyToken, requirePermission('my-government-detail
 router.patch('/me/statutory', verifyToken, requirePermission('my-government-details:edit'), authController.updateStatutory);
 router.get('/me/employment', verifyToken, requirePermission('my-profile:view'), authController.getEmploymentHistory);
 
+// Work schedule + holiday calendar (employee PWA, read-only)
+router.get('/me/schedule', verifyToken, requirePermission('my-attendance:view'), authController.getMySchedule);
+router.get('/me/holidays', verifyToken, authController.getMyHolidays);
+
 module.exports = router;

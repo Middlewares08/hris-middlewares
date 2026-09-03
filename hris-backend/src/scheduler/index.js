@@ -6,6 +6,7 @@ require('../database/connection');
 const { runJob } = require('./runJob');
 const autoClockOut = require('./jobs/autoClockOut');
 const markAbsent = require('./jobs/markAbsent');
+const backfillSchedule = require('./jobs/backfillSchedule');
 const retentionStampDocuments = require('./jobs/retentionStampDocuments');
 const retentionPurgeDocuments = require('./jobs/retentionPurgeDocuments');
 const retentionPurgeFaceData = require('./jobs/retentionPurgeFaceData');
@@ -30,6 +31,12 @@ const schedule = [
         cron: process.env.MARK_ABSENT_CRON || '30 2 * * *', // daily, 02:30 (after autoClockOut)
         handler: markAbsent,
         description: 'Create absent / on-leave rows for scheduled workdays with no punch.',
+    },
+    {
+        name: 'backfillSchedule',
+        manualOnly: true, // run once via `npm run job backfillSchedule`; never on a cron
+        handler: backfillSchedule,
+        description: 'Stamp schedule columns on attendance rows written before the work schedule module.',
     },
     {
         name: 'retentionStampDocuments',
@@ -71,6 +78,7 @@ function start() {
 
     const tasks = [];
     for (const job of schedule) {
+        if (job.manualOnly) continue; // only runnable via `npm run job <name>`
         if (!cron.validate(job.cron)) {
             console.error(`[scheduler] invalid cron "${job.cron}" for ${job.name} — not registered`);
             continue;

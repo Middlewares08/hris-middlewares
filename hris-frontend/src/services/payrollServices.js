@@ -40,6 +40,11 @@ export const payslipService = {
     downloadPdf: async (uuid) => apiClient.get(`${BASE}/payslips/${uuid}/pdf`, { responseType: 'blob' }),
 };
 
+export const employerProfileService = {
+    get: async () => (await apiClient.get(`${BASE}/employer-profile`)).data,
+    update: async (payload) => (await apiClient.put(`${BASE}/employer-profile`, payload)).data,
+};
+
 export const payslipRequestService = {
     getAll: async (params = {}) => (await apiClient.get(`${BASE}/payslip-requests`, { params })).data,
     fulfill: async (uuid, payload = {}) => (await apiClient.patch(`${BASE}/payslip-requests/${uuid}/fulfill`, payload)).data,

@@ -126,6 +126,8 @@ const Dashboard = () => {
                 { label: 'Pay Periods', path: '/dashboard/payroll/periods', permission: 'run-payroll:view' },
                 { label: 'Pay Components', path: '/dashboard/payroll/components', permission: 'payroll-and-compensation:view' },
                 { label: 'Statutory Tables', path: '/dashboard/payroll/statutory-tables', permission: 'statutory-and-compliance:view' },
+                { label: 'Government Forms', path: '/dashboard/payroll/government-forms', permission: 'government-forms:view' },
+                { label: 'Employer Profile', path: '/dashboard/payroll/employer-profile', permission: 'payroll-and-compensation:view' },
             ]
         },
         {

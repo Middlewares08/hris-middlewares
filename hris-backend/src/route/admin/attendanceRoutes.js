@@ -6,6 +6,7 @@ const {
     getAttendanceByUuid,
     getAttendanceByEmployee,
     getMyAttendance,
+    getMyAttendanceSummary,
     clockIn,
     clockOut,
     createAttendance,
@@ -23,6 +24,7 @@ const { singleFile } = require('../../middleware/uploadMiddleware');
 router.post('/clock-in', verifyToken, requirePermission('my-attendance:create'), singleFile('image'), clockIn);
 router.post('/clock-out', verifyToken, requirePermission('my-attendance:create'), singleFile('image'), clockOut);
 router.get('/me', verifyToken, requirePermission('my-attendance:view'), getMyAttendance); // 🎯 Must be declared before '/:uuid' or it'll be swallowed as a uuid param
+router.get('/me/summary', verifyToken, requirePermission('my-attendance:view'), getMyAttendanceSummary);
 
 // ATTENDANCE LOGS (admin/manager access, gated by the 'Attendance Logs' module permissions)
 router.get('/', verifyToken, requirePermission('attendance-logs:view'), getAllAttendance);

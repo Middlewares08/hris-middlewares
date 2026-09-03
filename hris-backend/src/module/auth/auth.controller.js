@@ -6,6 +6,10 @@ const Address = require('../../database/models/employee/Address');
 const GovernmentDetail = require('../../database/models/employee/GovernmentDetail');
 const EmployeeCompensation = require('../../database/models/payroll/EmployeeCompensation');
 const Permission = require('../../database/models/roles-and-permission/Permission');
+const WorkSchedule = require('../../database/models/attendance/WorkSchedule');
+const EmployeeScheduleAssignment = require('../../database/models/attendance/EmployeeScheduleAssignment');
+const Holiday = require('../../database/models/attendance/Holiday');
+const { resolveSchedule, holidayOn } = require('../../utils/workSchedule');
 const { issueOtp, verifyOtp: verifyOtpCode } = require('../../utils/otp');
 const { logActivity } = require('../../utils/activityLogger');
 
@@ -826,6 +830,92 @@ const getEmploymentHistory = async (req, res) => {
     }
 };
 
+/**
+ * The authenticated employee's own work schedule — the weekly pattern plus
+ * today's expected shift. Falls back to the org default when unassigned.
+ */
+const getMySchedule = async (req, res) => {
+    try {
+        const employeeId = req.user.id;
+        const today = new Date();
+        const todayYmd = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+        const assignment = await EmployeeScheduleAssignment.activeForEmployee(employeeId, todayYmd);
+        let schedule = null;
+        if (assignment) {
+            schedule = await WorkSchedule.query()
+                .findById(assignment.schedule_id)
+                .where('is_deleted', false)
+                .withGraphFetched('days');
+        }
+        if (!schedule) schedule = await WorkSchedule.defaultSchedule();
+
+        const shift = await resolveSchedule(WorkSchedule.knex(), employeeId, todayYmd);
+        const holiday = await holidayOn(WorkSchedule.knex(), todayYmd);
+
+        return res.status(200).json({
+            success: true,
+            data: {
+                assigned: !!assignment,
+                effectiveDate: assignment?.effective_date || null,
+                schedule: schedule ? {
+                    name: schedule.name,
+                    description: schedule.description,
+                    grace_minutes: schedule.grace_minutes,
+                    half_day_hours: schedule.half_day_hours,
+                    is_default: !!schedule.is_default,
+                    days: (schedule.days || []).map((d) => ({
+                        weekday: d.weekday,
+                        is_workday: !!d.is_workday,
+                        start_time: d.start_time,
+                        end_time: d.end_time,
+                        break_minutes: d.break_minutes,
+                    })),
+                } : null,
+                today: {
+                    date: todayYmd,
+                    isWorkday: shift.isWorkday,
+                    isRestDay: !shift.isWorkday,
+                    isHoliday: !!holiday,
+                    holidayName: holiday?.name || null,
+                    scheduledStart: shift.scheduledStart ? shift.scheduledStart.toISOString() : null,
+                    scheduledEnd: shift.scheduledEnd ? shift.scheduledEnd.toISOString() : null,
+                    scheduledHours: shift.scheduledHours,
+                    crossesMidnight: shift.crossesMidnight,
+                },
+            },
+        });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: 'Error retrieving your schedule.', err: error });
+    }
+};
+
+/**
+ * Read-only holiday calendar for the employee PWA. `?year=YYYY` (defaults to the
+ * current year). Holidays are non-sensitive, so only a valid session is required.
+ */
+const getMyHolidays = async (req, res) => {
+    try {
+        const year = /^\d{4}$/.test(String(req.query.year || ''))
+            ? req.query.year
+            : String(new Date().getFullYear());
+
+        const rows = await Holiday.inRange(Holiday.knex(), `${year}-01-01`, `${year}-12-31`);
+
+        return res.status(200).json({
+            success: true,
+            data: rows.map((h) => ({
+                uuid: h.uuid,
+                date: h.date,
+                name: h.name,
+                type: h.type,
+            })),
+        });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: 'Error retrieving the holiday calendar.', err: error });
+    }
+};
+
 module.exports = {
     login,
     verifyOtp,
@@ -842,4 +932,6 @@ module.exports = {
     getStatutory,
     updateStatutory,
     getEmploymentHistory,
+    getMySchedule,
+    getMyHolidays,
 };

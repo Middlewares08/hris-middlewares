@@ -1,7 +1,9 @@
 const Attendance = require('../../../../database/models/attendance/Attendance');
+const LeaveRequest = require('../../../../database/models/attendance/LeaveRequest');
 const { logActivity } = require('../../../../utils/activityLogger');
 const { verifyFacePunch } = require('../../../../utils/facePunch');
 const { computeScheduleStamp, FORCED_STATUSES } = require('../../../../utils/attendanceScheduleStamp');
+const { scheduledWorkdaysByEmployee } = require('../../../../utils/workSchedule');
 
 const formatTime = (iso) => new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 
@@ -131,6 +133,83 @@ const getMyAttendance = async (req, res) => {
         const logs = await query;
 
         return res.status(200).json({ success: true, data: logs });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+/**
+ * 🙋 Schedule-aware month-to-date attendance summary for the authenticated
+ * employee — powers the PWA "Attendance" stat tile. `?month=YYYY-MM` (defaults to
+ * the current month; the window never runs past today).
+ */
+const getMyAttendanceSummary = async (req, res) => {
+    try {
+        const employeeId = req.user?.id;
+        if (!employeeId) return res.status(401).json({ success: false, message: 'Unauthenticated request.' });
+
+        const now = new Date();
+        const ymNow = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        const month = /^\d{4}-\d{2}$/.test(String(req.query.month || '')) ? req.query.month : ymNow;
+
+        const [y, m] = month.split('-').map(Number);
+        const monthStart = `${month}-01`;
+        const monthEnd = `${month}-${String(new Date(y, m, 0).getDate()).padStart(2, '0')}`;
+        const todayYmd = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        // Don't count days that haven't happened yet.
+        const to = month === ymNow && todayYmd < monthEnd ? todayYmd : monthEnd;
+
+        const rows = await Attendance.query()
+            .where({ employee_id: employeeId, is_deleted: false })
+            .where('log_date', '>=', monthStart)
+            .where('log_date', '<=', to)
+            .select('log_date', 'status', 'late_minutes', 'undertime_minutes');
+
+        let workedDays = 0;
+        let absentDays = 0;
+        let leaveDays = 0;
+        let lateMinutes = 0;
+        let undertimeMinutes = 0;
+        const loggedDates = new Set();
+
+        for (const r of rows) {
+            loggedDates.add(String(r.log_date).substring(0, 10));
+            if (r.status === 'present' || r.status === 'late') workedDays += 1;
+            else if (r.status === 'half_day') workedDays += 0.5;
+            else if (r.status === 'absent') absentDays += 1;
+            else if (r.status === 'on_leave') leaveDays += 1;
+            lateMinutes += Number(r.late_minutes) || 0;
+            undertimeMinutes += Number(r.undertime_minutes) || 0;
+        }
+
+        const scheduledDates = (await scheduledWorkdaysByEmployee(Attendance.knex(), [employeeId], monthStart, to))
+            .get(Number(employeeId)) || [];
+        const leaveCoverage = await LeaveRequest.approvedDatesInRange(Attendance.knex(), employeeId, monthStart, to);
+        let unloggedAbsent = 0;
+        for (const d of scheduledDates) {
+            if (!loggedDates.has(d) && !leaveCoverage.has(d)) unloggedAbsent += 1;
+        }
+        absentDays += unloggedAbsent;
+
+        const scheduledDays = scheduledDates.length;
+        const attendanceRate = scheduledDays > 0
+            ? Math.round((workedDays / scheduledDays) * 100)
+            : 0;
+
+        return res.status(200).json({
+            success: true,
+            data: {
+                month,
+                range: { from: monthStart, to },
+                scheduledDays,
+                workedDays: Math.round(workedDays * 10) / 10,
+                absentDays,
+                leaveDays,
+                lateMinutes: Math.round(lateMinutes),
+                undertimeMinutes: Math.round(undertimeMinutes),
+                attendanceRate,
+            },
+        });
     } catch (error) {
         return res.status(500).json({ success: false, message: error.message });
     }
@@ -389,6 +468,7 @@ module.exports = {
     getAttendanceByUuid,
     getAttendanceByEmployee,
     getMyAttendance,
+    getMyAttendanceSummary,
     clockIn,
     clockOut,
     createAttendance,

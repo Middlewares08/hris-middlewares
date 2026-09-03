@@ -115,6 +115,14 @@ exports.seed = async function(knex) {
             updated_by: null
         },
         {
+            name: 'Government Forms',
+            slug: 'government-forms',
+            description: 'PH statutory filing artifacts — BIR 2316 / Alphalist, SSS R3, PhilHealth RF1, Pag-IBIG MCRF.',
+            access_type: 'ADMIN',
+            created_by: 1,
+            updated_by: null
+        },
+        {
             name: 'Deductions Manager',
             slug: 'deduction-manage',
             description: 'Taxes, statutory benefits, cash advances.',
