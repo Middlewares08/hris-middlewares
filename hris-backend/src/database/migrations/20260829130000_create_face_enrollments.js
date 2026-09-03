@@ -55,7 +55,7 @@ exports.up = async function (knex) {
     };
 
     const [modRow] = await knex('role_permission.modules')
-        .insert({ ...MODULE, created_by: 1 })
+        .insert({ ...MODULE, created_by: null })
         .onConflict('slug').merge(['name', 'description', 'access_type'])
         .returning('id');
     const moduleId = modRow.id ?? modRow;
@@ -73,7 +73,7 @@ exports.up = async function (knex) {
         slug: `${MODULE.slug}:${a.action}`,
         description: `Allows you to ${a.action} the ${MODULE.name.toLowerCase()} module dashboard options.`,
         is_deleted: false,
-        created_by: 1,
+        created_by: null,
     }));
     await knex('role_permission.permissions')
         .insert(permissions)
@@ -84,7 +84,7 @@ exports.up = async function (knex) {
         const permRows = await knex('role_permission.permissions')
             .whereIn('slug', permissions.map((p) => p.slug)).select('id');
         await knex('role_permission.role_permissions')
-            .insert(permRows.map((p) => ({ role_id: adminRole.id, permission_id: p.id, created_by: 1 })))
+            .insert(permRows.map((p) => ({ role_id: adminRole.id, permission_id: p.id, created_by: null })))
             .onConflict(['role_id', 'permission_id']).ignore();
     }
 };

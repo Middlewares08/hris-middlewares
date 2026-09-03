@@ -41,7 +41,7 @@ exports.seed = async function (knex) {
                 slug: `${mod.slug}:${action}`,
                 description: `Allows you to ${action} the ${mod.name.toLowerCase()} module dashboard options.`,
                 is_deleted: false,
-                created_by: 1,
+                created_by: null,
                 updated_by: null,
             };
 

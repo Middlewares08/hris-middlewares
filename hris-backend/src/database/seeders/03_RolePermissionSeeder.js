@@ -37,7 +37,7 @@ exports.seed = async function (knex) {
             permissions.map((perm) => ({
                 role_id: roleId,
                 permission_id: perm.id,
-                created_by: 1,
+                created_by: null,
                 updated_by: null,
             }));
 

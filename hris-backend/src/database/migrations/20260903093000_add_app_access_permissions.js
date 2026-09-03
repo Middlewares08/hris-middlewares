@@ -23,7 +23,7 @@ exports.up = async function (knex) {
                 slug: adminConsole.slug,
                 description: adminConsole.description,
                 access_type: ACCESS_TYPES.ADMIN,
-                created_by: 1,
+                created_by: null,
                 updated_by: null,
             })
             .returning('*');
@@ -38,7 +38,7 @@ exports.up = async function (knex) {
             slug: 'admin-console:access',
             description: 'Allows the account to sign in to the admin dashboard.',
             is_deleted: false,
-            created_by: 1,
+            created_by: null,
             updated_by: null,
         })
         .onConflict('slug')
@@ -68,7 +68,7 @@ exports.up = async function (knex) {
 
     if (links.length) {
         await knex('role_permission.role_permissions')
-            .insert(links.map((l) => ({ ...l, created_by: 1, updated_by: null })))
+            .insert(links.map((l) => ({ ...l, created_by: null, updated_by: null })))
             .onConflict(['role_id', 'permission_id'])
             .ignore();
     }

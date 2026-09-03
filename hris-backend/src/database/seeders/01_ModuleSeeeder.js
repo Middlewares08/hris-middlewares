@@ -15,7 +15,7 @@ exports.seed = async function(knex) {
         ...EXTRA_ADMIN_MODULES.map((mod) => ({
             ...mod,
             access_type: 'ADMIN',
-            created_by: 1,
+            created_by: null,
             updated_by: null,
         })),
         {
@@ -23,7 +23,7 @@ exports.seed = async function(knex) {
             slug: 'dashboard',
             description: 'Overview analytics (headcount, attendance rate today, payroll cost graphs).',
             access_type: 'ADMIN',
-            created_by: 1,
+            created_by: null,
             updated_by: null
         },
         {
@@ -31,7 +31,7 @@ exports.seed = async function(knex) {
             slug: 'reports',
             description: 'HR analytics & reports — headcount, attendance, absence, leave, overtime, payroll, turnover, new hires, separations, department stats.',
             access_type: 'ADMIN',
-            created_by: 1,
+            created_by: null,
             updated_by: null
         },
         {
@@ -39,7 +39,7 @@ exports.seed = async function(knex) {
             slug: 'employee-management',
             description: 'Master Employee Directory, onboarding tracks, and department profiles.',
             access_type: 'ADMIN',
-            created_by: 1,
+            created_by: null,
             updated_by: null
         },
         {
@@ -47,7 +47,7 @@ exports.seed = async function(knex) {
             slug: 'time-and-attendance',
             description: 'Manage Time and Attendance for employees.',
             access_type: 'ADMIN',
-            created_by: 1,
+            created_by: null,
             updated_by: null
         },
         {
@@ -55,7 +55,7 @@ exports.seed = async function(knex) {
             slug: 'attendance-logs',
             description: 'Daily time records sync.',
             access_type: 'ADMIN',
-            created_by: 1,
+            created_by: null,
             updated_by: null
         },
         {
@@ -63,7 +63,7 @@ exports.seed = async function(knex) {
             slug: 'face-recognition',
             description: 'Facial biometric enrollment for time & attendance clock-in.',
             access_type: 'ADMIN',
-            created_by: 1,
+            created_by: null,
             updated_by: null
         },
         {
@@ -71,7 +71,7 @@ exports.seed = async function(knex) {
             slug: 'attendance-kiosk',
             description: 'Shared face-recognition clock-in/out kiosk devices.',
             access_type: 'ADMIN',
-            created_by: 1,
+            created_by: null,
             updated_by: null
         },
         {
@@ -79,7 +79,7 @@ exports.seed = async function(knex) {
             slug: 'shift-and-rostering',
             description: 'Schedules, holidays, rotations.',
             access_type: 'ADMIN',
-            created_by: 1,
+            created_by: null,
             updated_by: null
         },
         {
@@ -87,7 +87,7 @@ exports.seed = async function(knex) {
             slug: 'leave-request',
             description: 'Approvals, tracking leave balances.',
             access_type: 'ADMIN',
-            created_by: 1,
+            created_by: null,
             updated_by: null
         },
         {
@@ -95,7 +95,7 @@ exports.seed = async function(knex) {
             slug: 'overtime-tracker',
             description: 'Filing and manager approvals.',
             access_type: 'ADMIN',
-            created_by: 1,
+            created_by: null,
             updated_by: null
         },
         {
@@ -103,7 +103,7 @@ exports.seed = async function(knex) {
             slug: 'payroll-and-compensation',
             description: 'Manage Payroll and Compensation for employees.',
             access_type: 'ADMIN',
-            created_by: 1,
+            created_by: null,
             updated_by: null
         },
         {
@@ -111,7 +111,7 @@ exports.seed = async function(knex) {
             slug: 'run-payroll',
             description: 'Active processing, cutoff calculation, bank files.',
             access_type: 'ADMIN',
-            created_by: 1,
+            created_by: null,
             updated_by: null
         },
         {
@@ -119,7 +119,7 @@ exports.seed = async function(knex) {
             slug: 'government-forms',
             description: 'PH statutory filing artifacts — BIR 2316 / Alphalist, SSS R3, PhilHealth RF1, Pag-IBIG MCRF.',
             access_type: 'ADMIN',
-            created_by: 1,
+            created_by: null,
             updated_by: null
         },
         {
@@ -127,7 +127,7 @@ exports.seed = async function(knex) {
             slug: 'deduction-manage',
             description: 'Taxes, statutory benefits, cash advances.',
             access_type: 'ADMIN',
-            created_by: 1,
+            created_by: null,
             updated_by: null
         },
         {
@@ -135,7 +135,7 @@ exports.seed = async function(knex) {
             slug: 'allowance-and-bonuses',
             description: 'Incentives, taxable allowances, 13th month.',
             access_type: 'ADMIN',
-            created_by: 1,
+            created_by: null,
             updated_by: null
         },
         {
@@ -143,7 +143,7 @@ exports.seed = async function(knex) {
             slug: 'salary-matrix',
             description: 'Pay scales and department grades.',
             access_type: 'ADMIN',
-            created_by: 1,
+            created_by: null,
             updated_by: null
         },
         {
@@ -151,7 +151,7 @@ exports.seed = async function(knex) {
             slug: 'roles-and-permissions',
             description: 'Your RBAC custom profile mapping matrix.',
             access_type: 'ADMIN',
-            created_by: 1,
+            created_by: null,
             updated_by: null
         },
         {
@@ -159,7 +159,7 @@ exports.seed = async function(knex) {
             slug: 'system-audit-logs',
             description: 'The trace logs showing who edited what',
             access_type: 'ADMIN',
-            created_by: 1,
+            created_by: null,
             updated_by: null
         },
         {
@@ -167,7 +167,7 @@ exports.seed = async function(knex) {
             slug: 'announcements',
             description: 'Company-wide announcements broadcast to the employee dashboard feed.',
             access_type: 'ADMIN',
-            created_by: 1,
+            created_by: null,
             updated_by: null
         },
         {
@@ -175,7 +175,7 @@ exports.seed = async function(knex) {
             slug: 'maintenance',
             description: 'Core system maintenance workspace structures and foundational business configurations.',
             access_type: 'ADMIN',
-            created_by: 1,
+            created_by: null,
             updated_by: null
         },
         {
@@ -183,7 +183,7 @@ exports.seed = async function(knex) {
             slug: 'lookups-setting',
             description: 'Manage global dropdown variables, system classification rules, and metadata keys used across the platform.',
             access_type: 'ADMIN',
-            created_by: 1,
+            created_by: null,
             updated_by: null
         },
         {
@@ -191,7 +191,7 @@ exports.seed = async function(knex) {
             slug: 'positions',
             description: 'Company-wide job catalog, career tracks, responsibilities, and associated operational titles.',
             access_type: 'ADMIN',
-            created_by: 1,
+            created_by: null,
             updated_by: null
         },
         {
@@ -199,7 +199,7 @@ exports.seed = async function(knex) {
             slug: 'departments',
             description: 'Organizational department boundaries, operational cost centers, and department leadership mapping.',
             access_type: 'ADMIN',
-            created_by: 1,
+            created_by: null,
             updated_by: null
         },
         {
@@ -207,7 +207,7 @@ exports.seed = async function(knex) {
             slug: 'pay-grades',
             description: 'Salary structures, bracket floors and ceilings, and statutory compensation grade levels.',
             access_type: 'ADMIN',
-            created_by: 1,
+            created_by: null,
             updated_by: null
         },
         {
@@ -215,7 +215,7 @@ exports.seed = async function(knex) {
             slug: 'statutory-and-compliance',
             description: 'Government contributions, tax tables, statutory brackets, and regulatory compliance settings.',
             access_type: 'ADMIN',
-            created_by: 1,
+            created_by: null,
             updated_by: null
         },
         {
@@ -223,7 +223,7 @@ exports.seed = async function(knex) {
             slug: 'identifications',
             description: 'Employee verification records, passport details, government-issued IDs, and license tracking.',
             access_type: 'ADMIN',
-            created_by: 1,
+            created_by: null,
             updated_by: null
         },
         {
@@ -231,7 +231,7 @@ exports.seed = async function(knex) {
             slug: 'benefits',
             description: 'Company-sponsored perks, healthcare plans, allowances, and enrollment program configurations.',
             access_type: 'ADMIN',
-            created_by: 1,
+            created_by: null,
             updated_by: null
         },
         {
@@ -239,14 +239,14 @@ exports.seed = async function(knex) {
             slug: 'resume',
             description: 'Work history records, educational credentials, skill sets, and digital document attachments.',
             access_type: 'ADMIN',
-            created_by: 1,
+            created_by: null,
             updated_by: null
         },
         // Employee self-service (PWA) modules
         ...SELF_SERVICE_MODULES.map((mod) => ({
             ...mod,
             access_type: ACCESS_TYPES.SELF_SERVICE,
-            created_by: 1,
+            created_by: null,
             updated_by: null,
         })),
     ];

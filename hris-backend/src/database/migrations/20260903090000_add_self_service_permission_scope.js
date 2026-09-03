@@ -38,7 +38,7 @@ exports.up = async function (knex) {
                 slug: mod.slug,
                 description: mod.description,
                 access_type: ACCESS_TYPES.SELF_SERVICE,
-                created_by: 1,
+                created_by: null,
                 updated_by: null,
             });
         } else {
@@ -66,7 +66,7 @@ exports.up = async function (knex) {
                     slug: `${mod.slug}:${action}`,
                     description: `Allows the employee to ${action} their own ${mod.name.replace(/^My /, '').toLowerCase()}.`,
                     is_deleted: false,
-                    created_by: 1,
+                    created_by: null,
                     updated_by: null,
                 })
                 .onConflict('slug')
@@ -89,7 +89,7 @@ exports.up = async function (knex) {
             selfServiceIds.map((permId) => ({
                 role_id: roleId,
                 permission_id: permId,
-                created_by: 1,
+                created_by: null,
                 updated_by: null,
             })),
         );
@@ -112,7 +112,7 @@ exports.up = async function (knex) {
                 .insert(orphanEmployees.map((employee_id) => ({
                     employee_id,
                     role_id: defaultRole.id,
-                    created_by: 1,
+                    created_by: null,
                     updated_by: null,
                 })))
                 .onConflict(['employee_id', 'role_id'])
