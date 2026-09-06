@@ -2,7 +2,7 @@
 //
 // Admin side of the payslip-request workflow. Employees file requests via the
 // self-service handlers on PayslipController; here HR lists, fulfils, rejects or
-// archives them. Gated by the already-seeded `run-payroll:*` permissions.
+// archives them. Gated by `payslip-requests:*`.
 
 const PayslipRequest = require('../../../../database/models/payroll/PayslipRequest');
 const { logActivity } = require('../../../../utils/activityLogger');

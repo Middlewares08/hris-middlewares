@@ -11,9 +11,9 @@ import { usePayslipRequests, downloadPayslipPdf } from '../../hooks/usePayroll';
 import Pill from './Pill';
 import { fmtDate } from './payrollOptions';
 
-const VIEW = 'run-payroll:view';
-const EDIT = 'run-payroll:edit';
-const DELETE = 'run-payroll:delete';
+const VIEW = 'payslip-requests:view';
+const EDIT = 'payslip-requests:edit';
+const DELETE = 'payslip-requests:delete';
 
 const employeeName = (e) => (e ? `${e.first_name} ${e.last_name}`.trim() : '—');
 const periodLabel = (payslip) => {

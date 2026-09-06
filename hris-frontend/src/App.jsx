@@ -160,13 +160,13 @@ function App() {
           </Route>
 
           <Route path="payroll">
-            <Route path="runs" element={<ProtectedElement element={<PayrollRuns />} permission="run-payroll:view" />} />
-            <Route path="runs/:uuid" element={<ProtectedElement element={<PayrollRunDetail />} permission="run-payroll:view" />} />
-            <Route path="payslip-requests" element={<ProtectedElement element={<PayslipRequests />} permission="run-payroll:view" />} />
-            <Route path="periods" element={<ProtectedElement element={<PayPeriods />} permission="run-payroll:view" />} />
-            <Route path="components" element={<ProtectedElement element={<PayComponents />} permission="payroll-and-compensation:view" />} />
+            <Route path="runs" element={<ProtectedElement element={<PayrollRuns />} permission="payroll-runs:view" />} />
+            <Route path="runs/:uuid" element={<ProtectedElement element={<PayrollRunDetail />} permission="payroll-runs:view" />} />
+            <Route path="payslip-requests" element={<ProtectedElement element={<PayslipRequests />} permission="payslip-requests:view" />} />
+            <Route path="periods" element={<ProtectedElement element={<PayPeriods />} permission="pay-periods:view" />} />
+            <Route path="components" element={<ProtectedElement element={<PayComponents />} permission="pay-components:view" />} />
             <Route path="statutory-tables" element={<ProtectedElement element={<StatutoryTables />} permission="statutory-and-compliance:view" />} />
-            <Route path="employer-profile" element={<ProtectedElement element={<EmployerProfile />} permission="payroll-and-compensation:view" />} />
+            <Route path="employer-profile" element={<ProtectedElement element={<EmployerProfile />} permission="employer-profile:view" />} />
             <Route path="government-forms" element={<ProtectedElement element={<GovernmentForms />} permission="government-forms:view" />} />
           </Route>
 

@@ -42,7 +42,7 @@ const Dashboard = () => {
 
     // Sidebar alert counts for pending requests employees have raised.
     const { data: pendingDocRequests = [] } = usePendingEmployeeDocumentRequests({ enabled: can('employee-documents:view') });
-    const { data: pendingPayslipRequests = [] } = usePendingPayslipRequests({ enabled: can('run-payroll:view') });
+    const { data: pendingPayslipRequests = [] } = usePendingPayslipRequests({ enabled: can('payslip-requests:view') });
 
     const badgeForPath = (path) => {
         if (path === DOCUMENTS_PATH) return pendingDocRequests.length;
@@ -116,13 +116,13 @@ const Dashboard = () => {
             label: 'Payroll',
             path: '/dashboard/payroll',
             children: [
-                { label: 'Payroll Runs', path: '/dashboard/payroll/runs', permission: 'run-payroll:view' },
-                { label: 'Payslip Requests', path: '/dashboard/payroll/payslip-requests', permission: 'run-payroll:view' },
-                { label: 'Pay Periods', path: '/dashboard/payroll/periods', permission: 'run-payroll:view' },
-                { label: 'Pay Components', path: '/dashboard/payroll/components', permission: 'payroll-and-compensation:view' },
+                { label: 'Payroll Runs', path: '/dashboard/payroll/runs', permission: 'payroll-runs:view' },
+                { label: 'Payslip Requests', path: '/dashboard/payroll/payslip-requests', permission: 'payslip-requests:view' },
+                { label: 'Pay Periods', path: '/dashboard/payroll/periods', permission: 'pay-periods:view' },
+                { label: 'Pay Components', path: '/dashboard/payroll/components', permission: 'pay-components:view' },
                 { label: 'Statutory Tables', path: '/dashboard/payroll/statutory-tables', permission: 'statutory-and-compliance:view' },
                 { label: 'Government Forms', path: '/dashboard/payroll/government-forms', permission: 'government-forms:view' },
-                { label: 'Employer Profile', path: '/dashboard/payroll/employer-profile', permission: 'payroll-and-compensation:view' },
+                { label: 'Employer Profile', path: '/dashboard/payroll/employer-profile', permission: 'employer-profile:view' },
             ]
         },
         {

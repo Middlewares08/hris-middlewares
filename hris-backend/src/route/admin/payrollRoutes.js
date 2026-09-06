@@ -2,10 +2,15 @@
 //
 // Mounted at /payroll (see server.js).
 //
-// Permission slugs reuse the already-seeded modules — no seeder run required:
-//   payroll-and-compensation:*  -> pay components, employee compensation, recurring assignments
+// One permission module per Payroll sidebar submenu page (see
+// PAYROLL_SUBMENU_MODULES in permissionMatrix.js):
+//   payroll-and-compensation:*  -> employee compensation, recurring assignments (Employee Directory pages)
+//   pay-components:*            -> pay components
 //   statutory-and-compliance:*  -> SSS / PhilHealth / Pag-IBIG / withholding-tax tables
-//   run-payroll:*               -> pay periods, payroll runs, payslips, adjustments
+//   pay-periods:*               -> pay periods
+//   payroll-runs:*              -> payroll runs, their payslips + adjustments
+//   payslip-requests:*          -> admin review of employee payslip-copy requests
+//   employer-profile:*          -> registered-employer identity for gov filings
 //
 // Employee self-service (own payslips) is gated by verifyToken only.
 
@@ -28,7 +33,11 @@ const GovFiling = require('../../module/admin/controller/payroll/GovFilingContro
 
 const SETUP = 'payroll-and-compensation';
 const STAT = 'statutory-and-compliance';
-const PROCESS = 'run-payroll';
+const COMPONENTS = 'pay-components';
+const PERIODS = 'pay-periods';
+const RUNS = 'payroll-runs';
+const REQUESTS = 'payslip-requests';
+const EMPLOYER_PROFILE = 'employer-profile';
 
 /* ---------------------------------------------------------------- *
  * SELF-SERVICE (employee PWA, gated by the 'My Payslips' scope) —
@@ -51,11 +60,11 @@ router.get('/periods/next', verifyToken, Period.getNext);
 /* ---------------------------------------------------------------- *
  * PAY COMPONENTS
  * ---------------------------------------------------------------- */
-router.get('/components', verifyToken, requirePermission(`${SETUP}:view`), Component.getAll);
-router.get('/components/:uuid', verifyToken, requirePermission(`${SETUP}:view`), Component.getByUuid);
-router.post('/components', verifyToken, requirePermission(`${SETUP}:create`), Component.create);
-router.put('/components/:uuid', verifyToken, requirePermission(`${SETUP}:edit`), Component.update);
-router.delete('/components/:uuid', verifyToken, requirePermission(`${SETUP}:delete`), Component.remove);
+router.get('/components', verifyToken, requirePermission(`${COMPONENTS}:view`), Component.getAll);
+router.get('/components/:uuid', verifyToken, requirePermission(`${COMPONENTS}:view`), Component.getByUuid);
+router.post('/components', verifyToken, requirePermission(`${COMPONENTS}:create`), Component.create);
+router.put('/components/:uuid', verifyToken, requirePermission(`${COMPONENTS}:edit`), Component.update);
+router.delete('/components/:uuid', verifyToken, requirePermission(`${COMPONENTS}:delete`), Component.remove);
 
 /* ---------------------------------------------------------------- *
  * STATUTORY TABLES
@@ -88,8 +97,8 @@ router.delete('/assignments/:uuid', verifyToken, requirePermission(`${SETUP}:del
 /* ---------------------------------------------------------------- *
  * EMPLOYER PROFILE (registered-employer identity for government filings)
  * ---------------------------------------------------------------- */
-router.get('/employer-profile', verifyToken, requirePermission(`${SETUP}:view`), EmployerProfile.get);
-router.put('/employer-profile', verifyToken, requirePermission(`${SETUP}:edit`), EmployerProfile.update);
+router.get('/employer-profile', verifyToken, requirePermission(`${EMPLOYER_PROFILE}:view`), EmployerProfile.get);
+router.put('/employer-profile', verifyToken, requirePermission(`${EMPLOYER_PROFILE}:edit`), EmployerProfile.update);
 
 /* ---------------------------------------------------------------- *
  * GOVERNMENT FILING ARTIFACTS (BIR / SSS / PhilHealth / Pag-IBIG)
@@ -101,43 +110,43 @@ router.get('/gov-forms/download', verifyToken, requirePermission('government-for
 /* ---------------------------------------------------------------- *
  * PAY PERIODS
  * ---------------------------------------------------------------- */
-router.get('/periods', verifyToken, requirePermission(`${PROCESS}:view`), Period.getAll);
-router.get('/periods/:uuid', verifyToken, requirePermission(`${PROCESS}:view`), Period.getByUuid);
-router.post('/periods', verifyToken, requirePermission(`${PROCESS}:create`), Period.create);
-router.put('/periods/:uuid', verifyToken, requirePermission(`${PROCESS}:edit`), Period.update);
-router.delete('/periods/:uuid', verifyToken, requirePermission(`${PROCESS}:delete`), Period.remove);
+router.get('/periods', verifyToken, requirePermission(`${PERIODS}:view`), Period.getAll);
+router.get('/periods/:uuid', verifyToken, requirePermission(`${PERIODS}:view`), Period.getByUuid);
+router.post('/periods', verifyToken, requirePermission(`${PERIODS}:create`), Period.create);
+router.put('/periods/:uuid', verifyToken, requirePermission(`${PERIODS}:edit`), Period.update);
+router.delete('/periods/:uuid', verifyToken, requirePermission(`${PERIODS}:delete`), Period.remove);
 
 /* ---------------------------------------------------------------- *
  * PAYROLL RUNS + queued ADJUSTMENTS
  * ---------------------------------------------------------------- */
-router.get('/runs', verifyToken, requirePermission(`${PROCESS}:view`), Run.getAll);
-router.get('/runs/:uuid', verifyToken, requirePermission(`${PROCESS}:view`), Run.getByUuid);
-router.post('/runs', verifyToken, requirePermission(`${PROCESS}:create`), Run.create);
-router.put('/runs/:uuid', verifyToken, requirePermission(`${PROCESS}:edit`), Run.update);
-router.post('/runs/:uuid/calculate', verifyToken, requirePermission(`${PROCESS}:edit`), Run.calculate);
-router.patch('/runs/:uuid/approve', verifyToken, requirePermission(`${PROCESS}:edit`), Run.approve);
-router.patch('/runs/:uuid/mark-paid', verifyToken, requirePermission(`${PROCESS}:edit`), Run.markPaid);
-router.patch('/runs/:uuid/cancel', verifyToken, requirePermission(`${PROCESS}:edit`), Run.cancel);
-router.delete('/runs/:uuid', verifyToken, requirePermission(`${PROCESS}:delete`), Run.remove);
+router.get('/runs', verifyToken, requirePermission(`${RUNS}:view`), Run.getAll);
+router.get('/runs/:uuid', verifyToken, requirePermission(`${RUNS}:view`), Run.getByUuid);
+router.post('/runs', verifyToken, requirePermission(`${RUNS}:create`), Run.create);
+router.put('/runs/:uuid', verifyToken, requirePermission(`${RUNS}:edit`), Run.update);
+router.post('/runs/:uuid/calculate', verifyToken, requirePermission(`${RUNS}:edit`), Run.calculate);
+router.patch('/runs/:uuid/approve', verifyToken, requirePermission(`${RUNS}:edit`), Run.approve);
+router.patch('/runs/:uuid/mark-paid', verifyToken, requirePermission(`${RUNS}:edit`), Run.markPaid);
+router.patch('/runs/:uuid/cancel', verifyToken, requirePermission(`${RUNS}:edit`), Run.cancel);
+router.delete('/runs/:uuid', verifyToken, requirePermission(`${RUNS}:delete`), Run.remove);
 
-router.get('/runs/:run_uuid/adjustments', verifyToken, requirePermission(`${PROCESS}:view`), Payslip.listAdjustments);
-router.post('/runs/:run_uuid/adjustments', verifyToken, requirePermission(`${PROCESS}:edit`), Payslip.createAdjustment);
-router.delete('/adjustments/:uuid', verifyToken, requirePermission(`${PROCESS}:edit`), Payslip.removeAdjustment);
+router.get('/runs/:run_uuid/adjustments', verifyToken, requirePermission(`${RUNS}:view`), Payslip.listAdjustments);
+router.post('/runs/:run_uuid/adjustments', verifyToken, requirePermission(`${RUNS}:edit`), Payslip.createAdjustment);
+router.delete('/adjustments/:uuid', verifyToken, requirePermission(`${RUNS}:edit`), Payslip.removeAdjustment);
 
 /* ---------------------------------------------------------------- *
  * PAYSLIPS (admin)
  * ---------------------------------------------------------------- */
-router.get('/payslips', verifyToken, requirePermission(`${PROCESS}:view`), Payslip.getAll);
-router.get('/payslips/:uuid/pdf', verifyToken, requirePermission(`${PROCESS}:view`), Payslip.getPdf);
-router.get('/payslips/:uuid', verifyToken, requirePermission(`${PROCESS}:view`), Payslip.getByUuid);
-router.patch('/payslips/:uuid/status', verifyToken, requirePermission(`${PROCESS}:edit`), Payslip.setStatus);
+router.get('/payslips', verifyToken, requirePermission(`${RUNS}:view`), Payslip.getAll);
+router.get('/payslips/:uuid/pdf', verifyToken, requirePermission(`${RUNS}:view`), Payslip.getPdf);
+router.get('/payslips/:uuid', verifyToken, requirePermission(`${RUNS}:view`), Payslip.getByUuid);
+router.patch('/payslips/:uuid/status', verifyToken, requirePermission(`${RUNS}:edit`), Payslip.setStatus);
 
 /* ---------------------------------------------------------------- *
  * PAYSLIP COPY REQUESTS (admin review)
  * ---------------------------------------------------------------- */
-router.get('/payslip-requests', verifyToken, requirePermission(`${PROCESS}:view`), PayslipRequest.getAll);
-router.patch('/payslip-requests/:uuid/fulfill', verifyToken, requirePermission(`${PROCESS}:edit`), PayslipRequest.fulfill);
-router.patch('/payslip-requests/:uuid/reject', verifyToken, requirePermission(`${PROCESS}:edit`), PayslipRequest.reject);
-router.delete('/payslip-requests/:uuid', verifyToken, requirePermission(`${PROCESS}:delete`), PayslipRequest.remove);
+router.get('/payslip-requests', verifyToken, requirePermission(`${REQUESTS}:view`), PayslipRequest.getAll);
+router.patch('/payslip-requests/:uuid/fulfill', verifyToken, requirePermission(`${REQUESTS}:edit`), PayslipRequest.fulfill);
+router.patch('/payslip-requests/:uuid/reject', verifyToken, requirePermission(`${REQUESTS}:edit`), PayslipRequest.reject);
+router.delete('/payslip-requests/:uuid', verifyToken, requirePermission(`${REQUESTS}:delete`), PayslipRequest.remove);
 
 module.exports = router;

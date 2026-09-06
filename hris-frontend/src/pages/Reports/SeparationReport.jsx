@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import moment from 'moment';
-import { LogOut, Plus, Clock3, Trash2 } from 'lucide-react';
+import { LogOut, Plus, Clock3, Trash2, Power } from 'lucide-react';
 import { useReport } from '../../hooks/useReports';
 import { useSeparations } from '../../hooks/useSeparations';
+import { useSettings } from '../../hooks/useSystem';
 import { can } from '../../utils/permissionCheck';
 import StatCard from '../../components/StatCard';
 import CustomButton from '../../components/CustomButton';
@@ -23,6 +24,40 @@ const TYPE_TONE = {
     death: 'bg-slate-200 text-slate-600',
     other: 'bg-slate-100 text-slate-600',
 };
+
+function DeferInactivationToggle() {
+    const { values, isLoading, updateSetting, isSaving } = useSettings();
+    const deferred = values['separation.defer_inactivation'] !== false;
+    const canEdit = can('maintenance:edit');
+
+    return (
+        <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-white p-4 text-left">
+            <div className="flex items-center gap-3">
+                <div className={`flex h-9 w-9 items-center justify-center rounded-lg ${deferred ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}>
+                    <Power size={16} />
+                </div>
+                <div>
+                    <p className="text-sm font-semibold text-slate-800">Defer inactivation to last working day</p>
+                    <p className="text-xs text-slate-400">
+                        {deferred
+                            ? 'A separated employee stays active and payable until their last working day; they\'re auto-inactivated once it arrives.'
+                            : 'Off: recording a separation inactivates the employee immediately, even if the last working day is in the future.'}
+                    </p>
+                </div>
+            </div>
+            <button
+                type="button"
+                disabled={!canEdit || isLoading || isSaving}
+                onClick={() => updateSetting({ key: 'separation.defer_inactivation', value: !deferred })}
+                className={`relative h-6 w-11 shrink-0 rounded-full transition-colors disabled:opacity-50 ${deferred ? 'bg-emerald-500' : 'bg-slate-300'}`}
+                aria-pressed={deferred}
+                title={canEdit ? 'Toggle deferred inactivation' : 'Requires maintenance:edit'}
+            >
+                <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${deferred ? 'left-5.5' : 'left-0.5'}`} />
+            </button>
+        </div>
+    );
+}
 
 function SeparationReport() {
     const { range, setFrom, setTo, params } = useReportRange('ytd');
@@ -68,6 +103,8 @@ function SeparationReport() {
         >
             {isLoading ? <ReportSkeleton /> : (
                 <div className="space-y-4">
+                    <DeferInactivationToggle />
+
                     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                         <StatCard label="Separations" value={fmtNum(kpis.total)} icon={LogOut} tone="amber" />
                         <StatCard label="Voluntary" value={fmtNum(kpis.voluntary)} icon={LogOut} tone="blue" />

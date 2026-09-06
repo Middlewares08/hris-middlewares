@@ -19,6 +19,11 @@ const REGISTRY = {
     // Master switch for the shared attendance kiosk (1:N face identification).
     // Admin-only: the kiosk reads it through its own token-authed /kiosk/config.
     'face.kiosk_enabled': { type: 'boolean', default: false, public: false },
+    // When on, recording a separation with a last_working_day (or separation_date,
+    // if that's unset) in the future leaves the employee active/payable until that
+    // date; the daily processSeparations job flips them inactive once it arrives.
+    // When off, restores the old behaviour: inactivate immediately on record creation.
+    'separation.defer_inactivation': { type: 'boolean', default: true, public: false },
 };
 
 class Setting extends BaseModel {

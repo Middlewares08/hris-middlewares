@@ -8,7 +8,7 @@ import NotFound from '../../components/NotFound';
 import { can } from '../../utils/permissionCheck';
 import { useEmployerProfile } from '../../hooks/usePayroll';
 
-const VIEW = 'payroll-and-compensation:view';
+const VIEW = 'employer-profile:view';
 
 const FIELDS = [
     'legal_name', 'trade_name', 'tin', 'tin_branch', 'rdo_code', 'business_category',
@@ -76,7 +76,7 @@ function EmployerProfile() {
 
     if (!can(VIEW)) return <NotFound />;
 
-    const readOnly = !can('payroll-and-compensation:edit');
+    const readOnly = !can('employer-profile:edit');
 
     return (
         <div className="mx-auto max-w-5xl space-y-6">

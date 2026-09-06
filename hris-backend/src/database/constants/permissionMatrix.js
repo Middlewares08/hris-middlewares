@@ -38,8 +38,13 @@ const ADMIN_PERMISSION_MATRIX = {
     'face-recognition': ['view', 'create', 'edit', 'delete'],
     'leave-request': ['view', 'edit', 'delete'],
     'overtime-tracker': ['view', 'edit', 'delete'],
-    'payroll-and-compensation': ['view', 'create', 'edit', 'delete'],
-    'run-payroll': ['view', 'create', 'edit', 'delete'],
+    'payroll-and-compensation': ['view', 'create', 'edit', 'delete'], // Employee Compensation + Bank Details (Employee Directory)
+    // Payroll sidebar submenu — one module per page, see PAYROLL_SUBMENU_MODULES below.
+    'payroll-runs': ['view', 'create', 'edit', 'delete'],
+    'payslip-requests': ['view', 'edit', 'delete'],
+    'pay-periods': ['view', 'create', 'edit', 'delete'],
+    'pay-components': ['view', 'create', 'edit', 'delete'],
+    'employer-profile': ['view', 'edit'],
     'government-forms': ['view', 'generate'], // BIR 2316/Alphalist, SSS R3, PhilHealth RF1, Pag-IBIG MCRF
     'statutory-and-compliance': ['view', 'create', 'edit', 'delete'],
     'roles-and-permissions': ['view', 'create', 'edit', 'delete'],
@@ -82,6 +87,18 @@ const EXTRA_ADMIN_MODULES = [
     { name: 'Admin Console', slug: 'admin-console', description: 'Controls whether an account can sign in to the admin dashboard at all.' },
 ];
 
+// One module per Payroll sidebar submenu page — rendered as a tree under a single
+// "Payroll" accordion in the Roles & Permission admin UI. Replaces the old
+// catch-all `run-payroll` module (payroll-and-compensation stays, but now only
+// covers Employee Compensation + Bank Details under the Employee menu).
+const PAYROLL_SUBMENU_MODULES = [
+    { name: 'Payroll Runs', slug: 'payroll-runs', description: 'Process payroll runs — calculate, approve, mark paid, cancel — and their payslips/adjustments.' },
+    { name: 'Payslip Requests', slug: 'payslip-requests', description: 'Review and fulfil employee requests for an official payslip copy.' },
+    { name: 'Pay Periods', slug: 'pay-periods', description: 'Define the cutoff/pay-date schedule payroll runs are calculated against.' },
+    { name: 'Pay Components', slug: 'pay-components', description: 'Earnings, deductions and other pay component definitions used across payroll.' },
+    { name: 'Employer Profile', slug: 'employer-profile', description: 'Registered-employer identity used on government filing artifacts.' },
+];
+
 const ACTION_LABELS = {
     access: 'Access',
     view: 'View',
@@ -113,6 +130,7 @@ module.exports = {
     SELF_SERVICE_PERMISSION_MATRIX,
     SELF_SERVICE_MODULES,
     EXTRA_ADMIN_MODULES,
+    PAYROLL_SUBMENU_MODULES,
     ADMIN_PERMISSION_SLUGS,
     SELF_SERVICE_PERMISSION_SLUGS,
     ACTIVE_PERMISSION_MATRIX,

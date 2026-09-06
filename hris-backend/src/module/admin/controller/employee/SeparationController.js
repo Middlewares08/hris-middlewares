@@ -1,10 +1,16 @@
 const knex = require('../../../../database/connection');
 const { logActivity } = require('../../../../utils/activityLogger');
+const Setting = require('../../../../database/models/system/Setting');
 
 /**
  * Employee separations — the offboarding record behind the turnover / separation
- * reports. Recording a separation flips the employee inactive in the same txn;
- * soft-deleting it flips them back when no other active separation remains.
+ * reports. Soft-deleting one flips the employee back to active when no other
+ * active separation remains.
+ *
+ * Whether recording a separation flips the employee inactive immediately or only
+ * once their last working day arrives depends on the `separation.defer_inactivation`
+ * setting (default on) — see createSeparation below and
+ * src/scheduler/jobs/processSeparations.js, which does the deferred flip.
  *
  * Gated by the existing `employee-management:*` permissions (see employeeRoutes).
  */
@@ -113,6 +119,15 @@ const createSeparation = async (req, res) => {
         const voluntary = typeof is_voluntary === 'boolean' ? is_voluntary : VOLUNTARY_TYPES.has(separation_type);
         const actor = actorId(req);
 
+        // Work cutoff: last_working_day if given (it may precede separation_date),
+        // otherwise separation_date. Deactivate now only if that date is today/past,
+        // or the defer setting is off — otherwise the employee stays active/payable
+        // and processSeparations flips them once the cutoff arrives.
+        const cutoffDate = isYmd(last_working_day) ? last_working_day : separation_date;
+        const today = new Date().toISOString().slice(0, 10);
+        const deferEnabled = await Setting.getBool('separation.defer_inactivation', true);
+        const deactivateNow = !deferEnabled || cutoffDate <= today;
+
         const [created] = await knex.transaction(async (trx) => {
             const inserted = await trx('employee.separations')
                 .insert({
@@ -129,9 +144,11 @@ const createSeparation = async (req, res) => {
                 })
                 .returning('*');
 
-            await trx('employee.employees')
-                .where({ id: employee_id })
-                .update({ is_active: false, updated_by: actor, updated_at: knex.fn.now() });
+            if (deactivateNow) {
+                await trx('employee.employees')
+                    .where({ id: employee_id })
+                    .update({ is_active: false, updated_by: actor, updated_at: knex.fn.now() });
+            }
 
             return inserted;
         });
@@ -141,11 +158,17 @@ const createSeparation = async (req, res) => {
             action: 'employee.separated',
             category: 'system',
             description: `${employee.first_name} ${employee.last_name} was separated (${separation_type}).`,
-            metadata: { separation_date, separation_type, voluntary },
+            metadata: { separation_date, separation_type, voluntary, cutoff_date: cutoffDate, deactivated_immediately: deactivateNow },
             req,
         });
 
-        return res.status(201).json({ success: true, message: 'Separation recorded. Employee set to inactive.', data: created });
+        return res.status(201).json({
+            success: true,
+            message: deactivateNow
+                ? 'Separation recorded. Employee set to inactive.'
+                : `Separation recorded. Employee stays active and payable until ${cutoffDate}.`,
+            data: created,
+        });
     } catch (error) {
         console.error('createSeparation error:', error);
         return res.status(500).json({ success: false, message: 'Server error recording the separation.' });

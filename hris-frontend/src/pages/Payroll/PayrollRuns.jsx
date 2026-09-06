@@ -15,7 +15,7 @@ import { RUN_TYPES, peso, fmtDate } from './payrollOptions';
 import { payrollRunValidationSchema } from '../../validation/payroll-run-validation';
 import Pill from './Pill';
 
-const VIEW = 'run-payroll:view';
+const VIEW = 'payroll-runs:view';
 
 function PayrollRuns() {
     const navigate = useNavigate();
@@ -101,7 +101,7 @@ function PayrollRuns() {
                             className="bg-slate-800 hover:bg-slate-700">Open run</CustomButton>
                     </div>
                 )}
-                actionButton={can('run-payroll:create') && (
+                actionButton={can('payroll-runs:create') && (
                     <CustomButton 
                         children='New Run'
                         onClick={() => setForm({ pay_period_id: '', run_type: 'regular', notes: '' })} 

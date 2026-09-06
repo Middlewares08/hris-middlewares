@@ -33,7 +33,7 @@ const toForm = (row) => ({
     display_order: s(row.display_order ?? 0),
 });
 
-const VIEW = 'payroll-and-compensation:view';
+const VIEW = 'pay-components:view';
 
 function PayComponents() {
     const { items, isLoading, error, create, update, remove, isMutating } = usePayComponents();
@@ -92,14 +92,14 @@ function PayComponents() {
                 {row.description && <p className="mt-3 text-sm text-slate-600">{row.description}</p>}
             </div>
             <div className="flex gap-2">
-                {can('payroll-and-compensation:edit') && (
+                {can('pay-components:edit') && (
                     <CustomButton 
                         children='Edit'
                         onClick={() => { close(); setForm(toForm(row)); }}
                         className="flex-1 py-2 border border-slate-200 rounded text-xs bg-white! text-blue-700! hover:bg-blue-50!"
                     />
                 )}
-                {can('payroll-and-compensation:delete') && !row.is_system && (
+                {can('pay-components:delete') && !row.is_system && (
                     <CustomButton 
                         children='Archive'
                         onClick={() => { close(); setToDelete(row); }}
@@ -136,7 +136,7 @@ function PayComponents() {
                 isLoading={isLoading}
                 searchPlaceholder="Search components..."
                 renderDrawerContent={drawer}
-                actionButton={can('payroll-and-compensation:create') && (
+                actionButton={can('pay-components:create') && (
                     <CustomButton 
                         children='Add Component'
                         onClick={() => setForm({ ...BLANK })} 

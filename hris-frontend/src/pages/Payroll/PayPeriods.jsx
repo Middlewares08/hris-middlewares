@@ -18,7 +18,7 @@ const BLANK = {
     name: '', period_start: '', period_end: '', pay_date: '',
     frequency: 'semi_monthly', sequence: 'first_cutoff', status: 'open', remarks: '',
 };
-const VIEW = 'run-payroll:view';
+const VIEW = 'pay-periods:view';
 
 function PayPeriods() {
     const { items, isLoading, error, create, update, remove, isMutating } = usePayPeriods();
@@ -65,14 +65,14 @@ function PayPeriods() {
                 {row.remarks && <p className="mt-3 text-sm text-slate-600">{row.remarks}</p>}
             </div>
             <div className="flex gap-2">
-                {can('run-payroll:edit') && (
+                {can('pay-periods:edit') && (
                     <CustomButton 
                         children='Edit'
                         onClick={() => { close(); setForm({ ...BLANK, ...row }); }}
                         className="flex-1 py-2 border border-slate-200 rounded text-xs bg-white! text-blue-700! hover:bg-blue-50!"
                     />
                 )}
-                {can('run-payroll:delete') && (
+                {can('pay-periods:delete') && (
                     <CustomButton 
                         children='Archive'
                         onClick={() => { close(); setToDelete(row); }}
@@ -109,7 +109,7 @@ function PayPeriods() {
                 isLoading={isLoading}
                 searchPlaceholder="Search periods..."
                 renderDrawerContent={drawer}
-                actionButton={can('run-payroll:create') && (
+                actionButton={can('pay-periods:create') && (
                     <CustomButton 
                         children='Add Period'
                         onClick={() => setForm({ ...BLANK })} 

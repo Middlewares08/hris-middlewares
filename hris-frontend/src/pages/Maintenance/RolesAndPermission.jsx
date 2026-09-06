@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useRoles } from '../../hooks/useRoles';
 import Loading from '../../components/Loading';
-import { CheckCircle2, Circle, CogIcon, LoaderPinwheel, PackageSearch, Pencil, Plus, Shield, Trash2 } from 'lucide-react';
+import { CheckCircle2, Circle, CogIcon, LoaderPinwheel, PackageSearch, Pencil, Plus, Shield, Trash2, Wallet } from 'lucide-react';
 import CustomLabel from '../../components/CustomLabel';
 import CustomModal from '../../components/CustomModal';
 import CustomInput from '../../components/CustomInput';
@@ -15,6 +15,20 @@ const SCOPES = [
     { key: 'ADMIN', label: 'Admin Console', hint: 'Permissions for the HR/admin dashboard' },
     { key: 'SELF_SERVICE', label: 'Employee Self-Service', hint: 'Permissions for the employee mobile app' },
 ];
+
+// One module per Payroll sidebar submenu page — grouped into a single tree
+// under one "Payroll" accordion instead of sitting as separate top-level rows.
+// Order here is the display order of the tree.
+const PAYROLL_TREE_SLUGS = [
+    'payroll-runs',
+    'payslip-requests',
+    'pay-periods',
+    'pay-components',
+    'statutory-and-compliance',
+    'government-forms',
+    'employer-profile',
+];
+const PAYROLL_MODULE_LABELS = { 'statutory-and-compliance': 'Statutory Tables' };
 
 const sameIdSet = (a = [], b = []) => {
     if (a.length !== b.length) return false;
@@ -43,6 +57,19 @@ export default function RolesAndPermission() {
         () => (modules || []).filter((m) => (m?.access_type || 'ADMIN') === scope),
         [modules, scope],
     );
+
+    // Payroll submenu modules are pulled out of the flat list and rendered as a
+    // tree under one "Payroll" accordion instead of separate top-level rows.
+    const { payrollModules, otherModules } = useMemo(() => {
+        const bySlug = Object.fromEntries(scopedModules.map((m) => [m?.slug, m]));
+        const payroll = PAYROLL_TREE_SLUGS.map((slug) => bySlug[slug]).filter(Boolean);
+        const payrollSlugSet = new Set(payroll.map((m) => m?.slug));
+        return {
+            payrollModules: payroll,
+            otherModules: scopedModules.filter((m) => !payrollSlugSet.has(m?.slug)),
+        };
+    }, [scopedModules]);
+    const payrollPermissionCount = payrollModules.reduce((sum, m) => sum + (m?.permission?.length || 0), 0);
 
     // Always read the selected role straight from the (re)fetched list so the
     // permission baseline stays fresh after a save.
@@ -407,7 +434,32 @@ export default function RolesAndPermission() {
                                             hasButton={false}
                                         />
                                     )}
-                                    {scopedModules.map((mod) => (
+                                    {payrollModules.length > 0 && (
+                                        <CustomAccordion
+                                            icon={<Wallet size={25} />}
+                                            title="Payroll"
+                                            description="Every Payroll submenu page, one permission set each."
+                                            badgeText={scope}
+                                            sideLabel={payrollPermissionCount + ' Permissions'}
+                                            initialOpen={false}
+                                            children={
+                                                <div className="space-y-3 pl-4 border-l-2 border-slate-200 ml-1.5">
+                                                    {payrollModules.map((mod) => (
+                                                        <CustomAccordion
+                                                            key={mod?.id}
+                                                            icon={<Shield size={18} />}
+                                                            title={PAYROLL_MODULE_LABELS[mod?.slug] || mod?.name}
+                                                            description={mod?.description}
+                                                            sideLabel={(mod?.permission?.length || 0) + ' Permissions'}
+                                                            initialOpen={false}
+                                                            children={renderPermissionCard(mod?.permission)}
+                                                        />
+                                                    ))}
+                                                </div>
+                                            }
+                                        />
+                                    )}
+                                    {otherModules.map((mod) => (
                                         <CustomAccordion
                                             key={mod?.id}
                                             icon={<Shield size={25} />}

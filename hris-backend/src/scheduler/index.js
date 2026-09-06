@@ -7,6 +7,7 @@ const { runJob } = require('./runJob');
 const autoClockOut = require('./jobs/autoClockOut');
 const markAbsent = require('./jobs/markAbsent');
 const backfillSchedule = require('./jobs/backfillSchedule');
+const processSeparations = require('./jobs/processSeparations');
 const retentionStampDocuments = require('./jobs/retentionStampDocuments');
 const retentionPurgeDocuments = require('./jobs/retentionPurgeDocuments');
 const retentionPurgeFaceData = require('./jobs/retentionPurgeFaceData');
@@ -37,6 +38,12 @@ const schedule = [
         manualOnly: true, // run once via `npm run job backfillSchedule`; never on a cron
         handler: backfillSchedule,
         description: 'Stamp schedule columns on attendance rows written before the work schedule module.',
+    },
+    {
+        name: 'processSeparations',
+        cron: process.env.PROCESS_SEPARATIONS_CRON || '15 1 * * *', // daily, 01:15
+        handler: processSeparations,
+        description: 'Inactivate employees whose separation work cutoff (last working day) has arrived.',
     },
     {
         name: 'retentionStampDocuments',

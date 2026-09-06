@@ -3,6 +3,7 @@ import CustomModal from '../../components/CustomModal';
 import CustomButton from '../../components/CustomButton';
 import { useEmployees } from '../../hooks/useEmployee';
 import { useSeparations } from '../../hooks/useSeparations';
+import { useSettings } from '../../hooks/useSystem';
 
 const SEPARATION_TYPES = [
     { value: 'resignation', label: 'Resignation', voluntary: true },
@@ -22,6 +23,8 @@ const todayYmd = () => new Date().toISOString().slice(0, 10);
  */
 function SeparationFormModal({ isOpen, onClose, lockedEmployee = null, onSaved }) {
     const { create, isMutating } = useSeparations();
+    const { values } = useSettings();
+    const deferEnabled = values['separation.defer_inactivation'] !== false;
     const [employeeSearch, setEmployeeSearch] = useState('');
     const { employees } = useEmployees({ page: 1, limit: 100, search: employeeSearch });
 
@@ -112,7 +115,7 @@ function SeparationFormModal({ isOpen, onClose, lockedEmployee = null, onSaved }
                     </div>
                 )}
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-3 text-left!">
                     <div>
                         <label className="mb-1 block text-xs font-medium text-slate-700">Separation date</label>
                         <input type="date" value={form.separation_date} onChange={(e) => set({ separation_date: e.target.value })}
@@ -150,7 +153,16 @@ function SeparationFormModal({ isOpen, onClose, lockedEmployee = null, onSaved }
                         className="w-full resize-none rounded-lg border border-gray-300 p-2 text-sm focus:outline-gray-600" />
                 </div>
 
-                <p className="text-xs text-slate-400">Recording this sets the employee to inactive. Removing the record later reinstates them.</p>
+                <p className="text-xs text-slate-400">
+                    {(() => {
+                        const cutoff = form.last_working_day || form.separation_date;
+                        const deactivateNow = !deferEnabled || !cutoff || cutoff <= todayYmd();
+                        return deactivateNow
+                            ? 'Recording this sets the employee to inactive immediately.'
+                            : `Recording this keeps the employee active and payable until ${cutoff}, then they're auto-inactivated.`;
+                    })()}
+                    {' '}Removing the record later reinstates them.
+                </p>
             </div>
         </CustomModal>
     );

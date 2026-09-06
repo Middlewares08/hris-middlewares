@@ -1,4 +1,4 @@
-const { SELF_SERVICE_MODULES, EXTRA_ADMIN_MODULES, ACCESS_TYPES } = require('../constants/permissionMatrix');
+const { SELF_SERVICE_MODULES, EXTRA_ADMIN_MODULES, PAYROLL_SUBMENU_MODULES, ACCESS_TYPES } = require('../constants/permissionMatrix');
 
 /**
  * @param { import("knex").Knex } knex
@@ -106,14 +106,12 @@ exports.seed = async function(knex) {
             created_by: null,
             updated_by: null
         },
-        {
-            name: 'Run Payroll',
-            slug: 'run-payroll',
-            description: 'Active processing, cutoff calculation, bank files.',
+        ...PAYROLL_SUBMENU_MODULES.map((mod) => ({
+            ...mod,
             access_type: 'ADMIN',
             created_by: null,
-            updated_by: null
-        },
+            updated_by: null,
+        })),
         {
             name: 'Government Forms',
             slug: 'government-forms',

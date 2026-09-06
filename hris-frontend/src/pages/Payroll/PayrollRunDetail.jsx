@@ -20,8 +20,8 @@ import { ADJUSTMENT_TYPES, peso, fmtDate } from './payrollOptions';
 import { payrollAdjustmentValidationSchema } from '../../validation/payroll-adjustment-validation';
 import Pill from './Pill';
 
-const VIEW = 'run-payroll:view';
-const EDIT = 'run-payroll:edit';
+const VIEW = 'payroll-runs:view';
+const EDIT = 'payroll-runs:edit';
 
 function StatCard({ label, value, strong }) {
     return (

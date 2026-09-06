@@ -3,7 +3,8 @@
  * their released payslips, stating a purpose (loan, visa, records ...). An admin reviews
  * it under Payroll and fulfils or rejects it. Mirrors attendance.overtime_requests.
  *
- * Reuses the already-seeded `run-payroll:*` permission slugs — no seeder run required.
+ * Gated by `payslip-requests:*` (split off `run-payroll` by
+ * 20260907110000_split_payroll_submenu_permissions.js).
  *
  * @param { import("knex").Knex } knex
  * @returns { Promise<void> }
