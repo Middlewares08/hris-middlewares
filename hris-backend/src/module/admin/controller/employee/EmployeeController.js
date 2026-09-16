@@ -3,6 +3,31 @@ const EmployeeCompensation = require('../../../../database/models/payroll/Employ
 const crypto = require('crypto');
 
 /**
+ * Derive a coarse government-IDs status from `government_details` without
+ * leaking the decrypted numbers into the directory list payload (that stays
+ * gated behind the `statutory-and-compliance` permission on its own screen).
+ * - 'complete': TIN present, and SSS/PhilHealth/Pag-IBIG are each either
+ *   filled in or explicitly marked exempt.
+ * - 'partial': the record exists but is missing at least one requirement.
+ * - 'none': the employee has never filled anything in.
+ */
+const computeGovernmentIdStatus = (gov) => {
+    if (!gov) return 'none';
+
+    const sssOk = !!gov.sss_number || !!gov.is_sss_exempt;
+    const philhealthOk = !!gov.philhealth_number || !!gov.is_philhealth_exempt;
+    const pagibigOk = !!gov.pagibig_number || !!gov.is_pagibig_exempt;
+    const tinOk = !!gov.tin_number;
+
+    if (tinOk && sssOk && philhealthOk && pagibigOk) return 'complete';
+
+    const hasAnyEntry = tinOk || gov.sss_number || gov.philhealth_number || gov.pagibig_number
+        || gov.is_sss_exempt || gov.is_philhealth_exempt || gov.is_pagibig_exempt;
+
+    return hasAnyEntry ? 'partial' : 'none';
+};
+
+/**
  * Build the next EMP-<year>-<4-digit seq> identifier. The sequence resets per
  * calendar year. Runs on the supplied transaction so concurrent creates see each
  * other's rows; the unique index on employee_id is the final backstop.
@@ -27,7 +52,7 @@ const getEmployees = async (req, res) => {
 
         let query = Employee.query()
             .where('employee.employees.is_deleted', false)
-            .withGraphFetched('[position.[department], credentials, compensation, contact, demographics, roles]');
+            .withGraphFetched('[position.[department], credentials, compensation, contact, demographics, roles, governmentDetails(governmentSummary)]');
 
         if (search) {
             query = query.where((builder) => {
@@ -46,9 +71,17 @@ const getEmployees = async (req, res) => {
             .orderBy('employee.employees.last_name', 'asc')
             .range(offset, offset + parseInt(limit, 10) - 1);
 
+        // Collapse the fetched government_details row into a status flag and
+        // drop the raw (decrypted) numbers — the list view has no business
+        // rendering actual SSS/TIN/etc values, only whether they're on file.
+        const data = result.results.map((employee) => {
+            const { governmentDetails, ...rest } = employee;
+            return { ...rest, government_id_status: computeGovernmentIdStatus(governmentDetails) };
+        });
+
         return res.status(200).json({
             success: true,
-            data: result.results,
+            data,
             totalRecords: result.total,
             currentPage: parseInt(page, 10),
             recordsPerPage: parseInt(limit, 10)

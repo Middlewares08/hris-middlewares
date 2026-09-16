@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import PropTypes from 'prop-types';
-import { AlertTriangle, Camera, Check, RefreshCw, Upload } from 'lucide-react';
+import { AlertTriangle, Camera, Check, Upload } from 'lucide-react';
 import CustomModal from './CustomModal';
 import CustomButton from './CustomButton';
+import CustomSelection from './CustomSelection';
 
 const MAX_DIM = 1024; // longest edge of the saved image
 const ACCEPTED = /^image\/(jpe?g|png|webp)$/i;
@@ -36,6 +37,7 @@ export default function FaceCaptureModal({ onClose, employeeName, onSubmit, savi
     const [notice, setNotice] = useState(null);
     const [preview, setPreview] = useState(null); // { url, blob }
     const [consent, setConsent] = useState(false);
+    const [consentError, setConsentError] = useState(false);
     const videoRef = useRef(null);
 
     const stopStream = useCallback(() => {
@@ -125,7 +127,12 @@ export default function FaceCaptureModal({ onClose, employeeName, onSubmit, savi
     };
 
     const submit = () => {
-        if (preview?.blob && consent) onSubmit({ blob: preview.blob, consent });
+        if (!preview?.blob) return;
+        if (!consent) {
+            setConsentError(true);
+            return;
+        }
+        onSubmit({ blob: preview.blob, consent });
     };
 
     return (
@@ -140,25 +147,25 @@ export default function FaceCaptureModal({ onClose, employeeName, onSubmit, savi
                     <CustomButton
                         size="sm"
                         onClick={onClose}
-                        className="w-auto! px-4 bg-white! text-slate-600! border border-slate-200 hover:bg-slate-50!"
+                        className="flex items-center gap-1.5 px-3 py-3 bg-slate-200 text-slate-600! rounded-lg text-xs font-medium hover:bg-slate-50! transition-colors"
                     >
                         Cancel
                     </CustomButton>
                     <CustomButton
                         size="sm"
                         onClick={submit}
-                        disabled={!preview || !consent}
+                        disabled={!preview}
                         isLoading={saving}
                         icon={Check}
                         iconPosition="left"
-                        className="w-auto! px-5"
+                        className="flex items-center gap-1.5 px-3 py-3 bg-slate-800 text-white rounded-lg text-xs font-medium hover:bg-slate-700 transition-colors"
                     >
                         Save Enrollment
                     </CustomButton>
                 </>
             }
         >
-            <div className="space-y-4">
+            <div className="space-y-4 max-h-[65vh] scrollbar-y-visible overflow-y-auto">
                 {!preview && (
                     <div className="flex gap-2">
                         {[
@@ -212,19 +219,17 @@ export default function FaceCaptureModal({ onClose, employeeName, onSubmit, savi
                         <CustomButton
                             size="sm"
                             onClick={retake}
-                            icon={RefreshCw}
                             iconPosition="left"
-                            className="w-auto! px-4 bg-white! text-slate-600! border border-slate-200 hover:bg-slate-50!"
+                            className="w-full rounded-lg border border-slate-200 bg-white! py-2 text-xs font-semibold text-slate-600! hover:bg-slate-50!"
                         >
                             Retake
                         </CustomButton>
                     ) : mode === 'camera' && stream ? (
                         <CustomButton
-                            size="sm"
+                            size="md"
                             onClick={capture}
-                            icon={Camera}
                             iconPosition="left"
-                            className="w-auto! px-6"
+                            className="w-full rounded-lg border border-slate-200 bg-white! py-2 text-xs font-semibold text-blue-700! hover:bg-blue-50!"
                         >
                             Capture
                         </CustomButton>
@@ -236,18 +241,17 @@ export default function FaceCaptureModal({ onClose, employeeName, onSubmit, savi
                     checks the image for a single clear face before it is saved.
                 </p>
 
-                <label className="flex items-start gap-2 text-xs text-slate-700">
-                    <input
-                        type="checkbox"
-                        checked={consent}
-                        onChange={(e) => setConsent(e.target.checked)}
-                        className="mt-0.5"
-                    />
-                    <span>
-                        The employee has consented to enrolling their facial biometric for time &amp;
-                        attendance verification, in line with the company privacy policy.
-                    </span>
-                </label>
+                <CustomSelection
+                    label="The employee has consented to enrolling their facial biometric for time & attendance verification, in line with the company privacy policy."
+                    checked={consent}
+                    onChange={(v) => {
+                        setConsent(v);
+                        if (v) setConsentError(false);
+                    }}
+                    indicatorPosition="left"
+                    error={consentError}
+                    errorLabel="Consent is required before this enrollment can be saved."
+                />
             </div>
         </CustomModal>
     );

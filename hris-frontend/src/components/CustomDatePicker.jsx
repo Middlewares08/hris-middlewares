@@ -137,6 +137,24 @@ const CustomDatePicker = ({
         setCurrentDate(new Date(year, month + 1, 1));
     };
 
+    const handleMonthSelect = (e) => {
+        setCurrentDate(new Date(year, Number(e.target.value), 1));
+    };
+
+    const handleYearSelect = (e) => {
+        setCurrentDate(new Date(Number(e.target.value), month, 1));
+    };
+
+    // Bounded by minDate/maxDate when provided, otherwise a generous default
+    // range so fields like Birthdate can jump back decades without paging.
+    const minYear = normalizedMin ? normalizedMin.getFullYear() : year - 100;
+    const maxYear = normalizedMax ? normalizedMax.getFullYear() : year + 10;
+    const yearOptions = [];
+    for (let y = maxYear; y >= minYear; y--) {
+        yearOptions.push(y);
+    }
+    if (!yearOptions.includes(year)) yearOptions.unshift(year);
+
     const handleDateSelect = (day) => {
         if (disabled || isDayDisabled(day)) return;
         const selected = new Date(year, month, day);
@@ -282,9 +300,26 @@ const CustomDatePicker = ({
                             >
                                 <ChevronLeft className="w-4 h-4" />
                             </button>
-                            <span className="text-sm font-bold text-gray-800">
-                                {months[month]} {year}
-                            </span>
+                            <div className="flex items-center gap-1">
+                                <select
+                                    value={month}
+                                    onChange={handleMonthSelect}
+                                    className="text-sm font-bold text-gray-800 bg-transparent outline-none cursor-pointer rounded-md px-1 py-0.5 hover:bg-gray-100"
+                                >
+                                    {months.map((m, idx) => (
+                                        <option key={m} value={idx}>{m}</option>
+                                    ))}
+                                </select>
+                                <select
+                                    value={year}
+                                    onChange={handleYearSelect}
+                                    className="text-sm font-bold text-gray-800 bg-transparent outline-none cursor-pointer rounded-md px-1 py-0.5 hover:bg-gray-100"
+                                >
+                                    {yearOptions.map((y) => (
+                                        <option key={y} value={y}>{y}</option>
+                                    ))}
+                                </select>
+                            </div>
                             <button 
                                 type="button" 
                                 onClick={handleNextMonth}

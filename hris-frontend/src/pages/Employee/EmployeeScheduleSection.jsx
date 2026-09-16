@@ -100,7 +100,7 @@ export default function EmployeeScheduleSection({ employee }) {
                 <CustomButton
                     children={current ? 'Change schedule' : 'Assign schedule'}
                     onClick={() => setEditing(true)}
-                    className="w-full rounded-lg border border-slate-200 bg-white! py-2 text-xs font-semibold text-blue-700! hover:bg-blue-50!"
+                    className="w-full cursor-pointer rounded-lg border border-slate-200 bg-white! py-2 text-xs font-semibold text-blue-700! hover:bg-blue-50!"
                 />
             )}
 

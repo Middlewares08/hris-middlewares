@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { CustomDataTable } from '../../components/CustomDataTable';
 import { useEmployees } from '../../hooks/useEmployee';
-import { Mail, Phone, MapPin, Trash2, ShieldAlert, PlusIcon, ChevronRight, ChevronLeft, Save, Pencil, ShieldCheck, User, Briefcase, CalendarDays } from 'lucide-react';
+import { Mail, Phone, MapPin, Trash2, ShieldAlert, PlusIcon, ChevronRight, ChevronLeft, Save, Pencil, ShieldCheck, User, Briefcase, CalendarDays, AlertTriangle, MinusCircle } from 'lucide-react';
 import CustomLabel from '../../components/CustomLabel';
 import { CustomAvatar } from '../../components/CustomAvatar';
 import CustomButton from '../../components/CustomButton';
@@ -34,6 +34,24 @@ const INITIAL_PAYLOAD = {
     rate_type: 'monthly',
     phone_number: BLANK,
     personal_email: BLANK
+};
+
+// Government IDs completeness badge — mirrors the 'complete' | 'partial' | 'none'
+// status computed server-side from employee.government_details (SSS/PhilHealth/
+// Pag-IBIG/TIN), so the sensitive numbers themselves never reach this list.
+const GOVERNMENT_ID_STATUS = {
+    complete: { label: 'Complete', icon: ShieldCheck, className: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+    partial: { label: 'Incomplete', icon: AlertTriangle, className: 'bg-amber-50 text-amber-700 border-amber-200' },
+    none: { label: 'Not on file', icon: MinusCircle, className: 'bg-gray-50 text-gray-500 border-gray-200' },
+};
+
+const GovernmentIdBadge = ({ status }) => {
+    const { label, icon: Icon, className } = GOVERNMENT_ID_STATUS[status] || GOVERNMENT_ID_STATUS.none;
+    return (
+        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-medium ${className}`}>
+            <Icon size={12} /> {label}
+        </span>
+    );
 };
 
 const Employees = () => {
@@ -153,6 +171,10 @@ const Employees = () => {
                 
                 
             )
+        },
+        {
+            header: 'Government IDs',
+            render: (row) => <GovernmentIdBadge status={row?.government_id_status} />
         },
         {
             header: 'Actions',
@@ -307,7 +329,7 @@ const Employees = () => {
                         {can('employee-management:edit') && (
                             <button
                                 onClick={() => handleEdit(employee, closeDrawer)}
-                                className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 text-white rounded-lg text-xs font-medium hover:bg-slate-700 transition-colors"
+                                className="flex items-center gap-1.5 px-3 py-1.5 cursor-pointer bg-slate-800 text-white rounded-lg text-xs font-medium hover:bg-slate-700 transition-colors"
                             >
                                 <Pencil size={14} /> Edit Record
                             </button>
@@ -315,7 +337,7 @@ const Employees = () => {
                         {can('employee-management:create') && employee?.is_active !== false && (
                             <button
                                 onClick={() => { closeDrawer?.(); setSeparatingEmployee({ id: employee.id, name: fullName || '—' }); }}
-                                className="flex items-center gap-1.5 px-3 py-1.5 border border-amber-200 text-amber-700 rounded-lg text-xs font-medium hover:bg-amber-50 transition-colors"
+                                className="flex items-center gap-1.5 px-3 py-1.5 cursor-pointer border border-amber-200 text-amber-700 rounded-lg text-xs font-medium hover:bg-amber-50 transition-colors"
                             >
                                 <CalendarDays size={14} /> Record Separation
                             </button>
@@ -323,7 +345,7 @@ const Employees = () => {
                         {can('employee-management:delete') && (
                             <button
                                 onClick={(e) => handleDelete(employee.uuid, e, closeDrawer)}
-                                className="flex items-center gap-1.5 px-3 py-1.5 border border-red-200 text-red-600 rounded-lg text-xs font-medium hover:bg-red-50 transition-colors"
+                                className="flex items-center gap-1.5 px-3 py-1.5 border cursor-pointer border-red-200 text-red-600 rounded-lg text-xs font-medium hover:bg-red-50 transition-colors"
                             >
                                 <Trash2 size={14} /> Delete
                             </button>

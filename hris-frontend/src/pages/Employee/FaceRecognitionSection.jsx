@@ -33,7 +33,7 @@ export default function FaceRecognitionSection({ employee }) {
 
     return (
         <>
-            <div className="space-y-3">
+            <div className="space-y-3 max-h-60 scrollbar-y-visible overflow-y-auto">
                 <h5 className="text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-2">
                     <ScanFace size={14} /> Face Recognition
                 </h5>
@@ -91,7 +91,7 @@ export default function FaceRecognitionSection({ employee }) {
                                 onClick={() => setModalOpen(true)}
                                 icon={ScanFace}
                                 iconPosition="left"
-                                className="w-auto! px-3 shrink-0"
+                                className="flex items-center gap-1.5 px-3 py-3 bg-slate-100 text-slate-600! rounded-lg text-xs font-medium hover:bg-slate-300! transition-colors cursor-pointer"
                             >
                                 Register Face
                             </CustomButton>

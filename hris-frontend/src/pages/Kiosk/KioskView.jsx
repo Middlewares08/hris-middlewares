@@ -22,6 +22,8 @@ const DETECT_INTERVAL_MS = 350;
 const COOLDOWN_MS = 12000;
 const RESULT_MS = 6500;
 const ERROR_MS = 5000;
+// Longest edge of a plain-photo punch frame (liveness-off mode).
+const MAX_DIM = 1024;
 
 function useClock() {
     const [now, setNow] = useState(() => new Date());
@@ -42,6 +44,7 @@ export default function KioskView() {
         localStorage.getItem('kioskToken') ? 'loading' : 'needsToken',
     );
     const [kioskName, setKioskName] = useState('');
+    const [livenessEnabled, setLivenessEnabled] = useState(true);
     const [fatal, setFatal] = useState(null); // message on needsToken / disabled
     const [result, setResult] = useState(null); // { kind:'in'|'out'|'none'|'error', employee?, time?, message }
 
@@ -62,6 +65,7 @@ export default function KioskView() {
             const res = await kioskDeviceService.getConfig();
             const cfg = res?.data || {};
             setKioskName(cfg.name || '');
+            setLivenessEnabled(cfg.livenessEnabled !== false);
             if (!cfg.ready) {
                 setFatal('This kiosk is not fully configured yet. Contact IT.');
                 setPhase('disabled');
@@ -117,11 +121,6 @@ export default function KioskView() {
         }
     }, []);
 
-    const beginVerify = useCallback(() => {
-        stopStream();
-        setPhase('verifying');
-    }, [stopStream]);
-
     const cooldownToIdle = useCallback((ms) => {
         cooldownUntilRef.current = Date.now() + COOLDOWN_MS;
         setTimeout(() => {
@@ -129,6 +128,78 @@ export default function KioskView() {
             setPhase('idle');
         }, ms);
     }, []);
+
+    /* ---------------- verify + punch ---------------- */
+
+    const submitPunch = useCallback(
+        async ({ livenessSessionId, image } = {}) => {
+            try {
+                const res = await kioskDeviceService.punch({ livenessSessionId, image });
+                if (res?.success) {
+                    const d = res.data;
+                    setResult({
+                        kind: d.action, // 'in' | 'out' | 'none'
+                        employee: d.employee,
+                        time: d.time,
+                        message: d.message,
+                    });
+                    setPhase('result');
+                    cooldownToIdle(RESULT_MS);
+                } else {
+                    setResult({ kind: 'error', message: res?.message || 'Verification failed. Please try again.' });
+                    setPhase('result');
+                    cooldownToIdle(ERROR_MS);
+                }
+            } catch (err) {
+                const code = err?.response?.data?.code;
+                if (err?.response?.status === 401 || code === 'KIOSK_UNAUTHORIZED') {
+                    localStorage.removeItem('kioskToken');
+                    setFatal('This device was deactivated. Enter a new kiosk token.');
+                    setPhase('needsToken');
+                    return;
+                }
+                setResult({
+                    kind: 'error',
+                    message: err?.response?.data?.message || 'Could not reach the server. Try again.',
+                });
+                setPhase('result');
+                cooldownToIdle(ERROR_MS);
+            }
+        },
+        [cooldownToIdle],
+    );
+
+    // Grab the current idle-preview frame, downscaled, for a liveness-off photo punch.
+    const capturePhoto = useCallback(() => {
+        const video = videoRef.current;
+        if (!video?.videoWidth) return Promise.resolve(null);
+        const scale = Math.min(1, MAX_DIM / Math.max(video.videoWidth, video.videoHeight));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(video.videoWidth * scale);
+        canvas.height = Math.round(video.videoHeight * scale);
+        canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+        return new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.9));
+    }, []);
+
+    const beginVerify = useCallback(async () => {
+        // Liveness-off: capture straight from the still-live idle stream, then punch —
+        // no separate "verifying" camera screen needed.
+        if (!livenessEnabled) {
+            const blob = await capturePhoto();
+            stopStream();
+            if (!blob) {
+                setResult({ kind: 'error', message: 'Could not capture a photo. Step back and try again.' });
+                setPhase('result');
+                cooldownToIdle(ERROR_MS);
+                return;
+            }
+            setPhase('verifying');
+            submitPunch({ image: blob });
+            return;
+        }
+        stopStream();
+        setPhase('verifying');
+    }, [livenessEnabled, capturePhoto, stopStream, submitPunch, cooldownToIdle]);
 
     // Run the preview + FaceDetector loop only while idle.
     useEffect(() => {
@@ -183,44 +254,9 @@ export default function KioskView() {
 
     useEffect(() => stopStream, [stopStream]);
 
-    /* ---------------- verify + punch ---------------- */
-
     const handleComplete = useCallback(
-        async (sessionId) => {
-            try {
-                const res = await kioskDeviceService.punch(sessionId);
-                if (res?.success) {
-                    const d = res.data;
-                    setResult({
-                        kind: d.action, // 'in' | 'out' | 'none'
-                        employee: d.employee,
-                        time: d.time,
-                        message: d.message,
-                    });
-                    setPhase('result');
-                    cooldownToIdle(RESULT_MS);
-                } else {
-                    setResult({ kind: 'error', message: res?.message || 'Verification failed. Please try again.' });
-                    setPhase('result');
-                    cooldownToIdle(ERROR_MS);
-                }
-            } catch (err) {
-                const code = err?.response?.data?.code;
-                if (err?.response?.status === 401 || code === 'KIOSK_UNAUTHORIZED') {
-                    localStorage.removeItem('kioskToken');
-                    setFatal('This device was deactivated. Enter a new kiosk token.');
-                    setPhase('needsToken');
-                    return;
-                }
-                setResult({
-                    kind: 'error',
-                    message: err?.response?.data?.message || 'Could not reach the server. Try again.',
-                });
-                setPhase('result');
-                cooldownToIdle(ERROR_MS);
-            }
-        },
-        [cooldownToIdle],
+        (sessionId) => submitPunch({ livenessSessionId: sessionId }),
+        [submitPunch],
     );
 
     const handleLivenessError = useCallback(() => {
@@ -309,6 +345,13 @@ export default function KioskView() {
     }
 
     if (phase === 'verifying') {
+        if (!livenessEnabled) {
+            return shell(
+                <div className="flex flex-col items-center px-6 text-center">
+                    <Loading size="lg" text="Verifying your photo" color="slate" />
+                </div>,
+            );
+        }
         return shell(
             <div className="w-full max-w-md px-4">
                 <p className="mb-3 text-center text-sm font-medium text-white/70">
@@ -398,7 +441,11 @@ export default function KioskView() {
                 <Clock size={22} />
                 Clock In / Out
             </button>
-            <p className="mt-3 text-xs text-white/30">Your face is verified live and matched to your HR profile.</p>
+            <p className="mt-3 text-xs text-white/30">
+                {livenessEnabled
+                    ? 'Your face is verified live and matched to your HR profile.'
+                    : 'Your photo is matched to your HR profile.'}
+            </p>
         </div>,
     );
 }

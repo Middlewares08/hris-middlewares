@@ -5,6 +5,8 @@ const Employee = require('../../../../database/models/employee/Employee');
 const Setting = require('../../../../database/models/system/Setting');
 const { logActivity } = require('../../../../utils/activityLogger');
 const { punchByEmployee } = require('../../../../utils/attendancePunch');
+const { parseIncomingImage } = require('../../../../utils/facePunch');
+const { MAX_FILE_BYTES } = require('../../../../middleware/uploadMiddleware');
 const { generateToken, hashToken } = require('../../../../utils/kioskAuth');
 const {
     createLivenessSession,
@@ -25,6 +27,7 @@ const {
 
 const actorId = (req) => (req.user?.id ? parseInt(req.user.id, 10) : null);
 const FACE_BUCKET_OPTS = { bucket: FACE_S3_BUCKET, prefix: FACE_S3_KEY_PREFIX };
+const ALLOWED_MIME = new Set(['image/jpeg', 'image/jpg', 'image/png', 'image/webp']);
 
 const featureReady = () => !!(FACE_S3_BUCKET && LIVENESS_ROLE_ARN && REKOGNITION_COLLECTION_ID);
 
@@ -36,11 +39,13 @@ const featureReady = () => !!(FACE_S3_BUCKET && LIVENESS_ROLE_ARN && REKOGNITION
 const getConfig = async (req, res) => {
     try {
         const kioskEnabled = await Setting.getBool('face.kiosk_enabled', false);
+        const livenessEnabled = await Setting.getBool('face.kiosk_liveness_enabled', true);
         return res.status(200).json({
             success: true,
             data: {
                 name: req.kiosk.name,
                 kioskEnabled,
+                livenessEnabled,
                 ready: featureReady(),
                 region: REKOGNITION_REGION,
             },
@@ -113,7 +118,11 @@ const publicEmployee = async (employee, enrollment) => {
     };
 };
 
-/** POST /kiosk/punch — identify the liveness-verified person and clock them in/out. */
+/**
+ * POST /kiosk/punch — identify the walk-up person and clock them in/out.
+ * Normally requires a passed liveness session; when `face.kiosk_liveness_enabled`
+ * is off, accepts a plain photo frame (multipart `image` or base64) instead.
+ */
 const punch = async (req, res) => {
     try {
         if (!featureReady()) {
@@ -124,61 +133,88 @@ const punch = async (req, res) => {
         }
 
         const sessionId = String(req.body?.liveness_session_id || '').trim();
-        if (!sessionId) {
-            return res.status(400).json({ success: false, code: 'NO_SESSION', message: 'A verification session is required.' });
-        }
+        const livenessRequired = await Setting.getBool('face.kiosk_liveness_enabled', true);
 
-        const session = await FaceLivenessSession.query().findOne({ session_id: sessionId });
-        if (!session || session.kiosk_device_id !== req.kiosk.id) {
-            return res.status(401).json({ success: false, code: 'BAD_SESSION', message: 'That verification session is not valid for this kiosk.' });
-        }
-        if (session.consumed_at) {
-            return res.status(409).json({ success: false, code: 'SESSION_USED', message: 'That verification was already used.' });
-        }
+        let frame;
+        let session = null;
+        let results = null;
+        let faceMethod = 'kiosk_liveness';
 
-        let results;
-        try {
-            results = await getLivenessResults(sessionId);
-            // Results can lag the browser's onAnalysisComplete by a beat — retry
-            // a couple of times while the session is still non-terminal.
-            for (let i = 0; i < 3 && ['CREATED', 'IN_PROGRESS'].includes(results.status); i += 1) {
-                await new Promise((r) => setTimeout(r, 700));
-                results = await getLivenessResults(sessionId);
+        if (sessionId) {
+            session = await FaceLivenessSession.query().findOne({ session_id: sessionId });
+            if (!session || session.kiosk_device_id !== req.kiosk.id) {
+                return res.status(401).json({ success: false, code: 'BAD_SESSION', message: 'That verification session is not valid for this kiosk.' });
             }
-        } catch (err) {
-            console.error('kiosk GetFaceLivenessSessionResults failed:', err.message);
-            return res.status(502).json({ success: false, code: 'LIVENESS_ERROR', message: 'Could not read the verification result.' });
-        }
+            if (session.consumed_at) {
+                return res.status(409).json({ success: false, code: 'SESSION_USED', message: 'That verification was already used.' });
+            }
 
-        console.log(
-            `kiosk liveness result — session=${sessionId} status=${results.status} confidence=${results.confidence} live=${results.live}`,
-        );
-
-        if (!results.live) {
-            await FaceLivenessSession.query().patchAndFetchById(session.id, {
-                status: 'failed',
-                confidence: results.confidence,
-                consumed_at: new Date().toISOString(),
-            });
-            const pct = results.confidence != null ? ` (score ${results.confidence.toFixed(0)}%)` : '';
-            return res.status(200).json({
-                success: false,
-                code: 'LIVENESS_FAILED',
-                message: `Liveness check failed${pct}. Face the camera in good, even light and hold still.`,
-                debug: { status: results.status, confidence: results.confidence },
-            });
-        }
-
-        let frame = results.referenceImage;
-        if (!frame && results.s3Object?.Bucket && results.s3Object?.Name) {
             try {
-                frame = await getObjectBuffer(results.s3Object.Name, { bucket: results.s3Object.Bucket });
+                results = await getLivenessResults(sessionId);
+                // Results can lag the browser's onAnalysisComplete by a beat — retry
+                // a couple of times while the session is still non-terminal.
+                for (let i = 0; i < 3 && ['CREATED', 'IN_PROGRESS'].includes(results.status); i += 1) {
+                    await new Promise((r) => setTimeout(r, 700));
+                    results = await getLivenessResults(sessionId);
+                }
             } catch (err) {
-                console.error('kiosk liveness ref image fetch failed:', err.message);
+                console.error('kiosk GetFaceLivenessSessionResults failed:', err.message);
+                return res.status(502).json({ success: false, code: 'LIVENESS_ERROR', message: 'Could not read the verification result.' });
             }
-        }
-        if (!frame) {
-            return res.status(502).json({ success: false, code: 'NO_FRAME', message: 'Verification returned no image. Try again.' });
+
+            console.log(
+                `kiosk liveness result — session=${sessionId} status=${results.status} confidence=${results.confidence} live=${results.live}`,
+            );
+
+            if (!results.live) {
+                await FaceLivenessSession.query().patchAndFetchById(session.id, {
+                    status: 'failed',
+                    confidence: results.confidence,
+                    consumed_at: new Date().toISOString(),
+                });
+                const pct = results.confidence != null ? ` (score ${results.confidence.toFixed(0)}%)` : '';
+                return res.status(200).json({
+                    success: false,
+                    code: 'LIVENESS_FAILED',
+                    message: `Liveness check failed${pct}. Face the camera in good, even light and hold still.`,
+                    debug: { status: results.status, confidence: results.confidence },
+                });
+            }
+
+            frame = results.referenceImage;
+            if (!frame && results.s3Object?.Bucket && results.s3Object?.Name) {
+                try {
+                    frame = await getObjectBuffer(results.s3Object.Name, { bucket: results.s3Object.Bucket });
+                } catch (err) {
+                    console.error('kiosk liveness ref image fetch failed:', err.message);
+                }
+            }
+            if (!frame) {
+                return res.status(502).json({ success: false, code: 'NO_FRAME', message: 'Verification returned no image. Try again.' });
+            }
+        } else {
+            if (livenessRequired) {
+                return res.status(400).json({ success: false, code: 'NO_SESSION', message: 'A verification session is required.' });
+            }
+
+            let img;
+            try {
+                img = parseIncomingImage(req);
+            } catch (err) {
+                return res.status(err.status || 400).json({ success: false, message: err.message });
+            }
+            if (!img) {
+                return res.status(422).json({ success: false, code: 'NO_IMAGE', message: 'A photo is required to continue.' });
+            }
+            if (!ALLOWED_MIME.has(img.contentType)) {
+                return res.status(400).json({ success: false, message: 'Only JPEG, PNG or WebP images are accepted.' });
+            }
+            if (img.buffer.length > MAX_FILE_BYTES) {
+                return res.status(400).json({ success: false, message: `Image exceeds the ${MAX_FILE_BYTES / (1024 * 1024)}MB limit.` });
+            }
+
+            frame = img.buffer;
+            faceMethod = 'kiosk_photo';
         }
 
         let match;
@@ -195,12 +231,15 @@ const punch = async (req, res) => {
             }
         }
 
+        // No liveness session to consume in the plain-photo path.
         const consume = (status) =>
-            FaceLivenessSession.query().patchAndFetchById(session.id, {
-                status,
-                confidence: results.confidence,
-                consumed_at: new Date().toISOString(),
-            });
+            session
+                ? FaceLivenessSession.query().patchAndFetchById(session.id, {
+                      status,
+                      confidence: results?.confidence,
+                      consumed_at: new Date().toISOString(),
+                  })
+                : Promise.resolve();
 
         if (!match) {
             await consume('passed');
@@ -241,9 +280,9 @@ const punch = async (req, res) => {
             actorId: null,
             source: 'kiosk',
             faceMeta: {
-                face_method: 'kiosk_liveness',
+                face_method: faceMethod,
                 face_similarity: match.similarity,
-                liveness_confidence: results.confidence,
+                liveness_confidence: results?.confidence ?? null,
                 kiosk_device_id: req.kiosk.id,
             },
             req,

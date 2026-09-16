@@ -19,6 +19,11 @@ const REGISTRY = {
     // Master switch for the shared attendance kiosk (1:N face identification).
     // Admin-only: the kiosk reads it through its own token-authed /kiosk/config.
     'face.kiosk_enabled': { type: 'boolean', default: false, public: false },
+    // When on (default), a kiosk punch must pass a Face Liveness challenge before its
+    // reference frame is used for 1:N search — rejects a printed-photo spoof. When off,
+    // the kiosk accepts a plain photo frame instead, with no anti-spoof check.
+    // Admin-only: the kiosk reads it through its own token-authed /kiosk/config.
+    'face.kiosk_liveness_enabled': { type: 'boolean', default: true, public: false },
     // When on, recording a separation with a last_working_day (or separation_date,
     // if that's unset) in the future leaves the employee active/payable until that
     // date; the daily processSeparations job flips them inactive once it arrives.

@@ -58,6 +58,7 @@ export default function KioskAdmin() {
 
     const { values, isLoading: settingsLoading, updateSetting, isSaving } = useSettings();
     const kioskOn = values['face.kiosk_enabled'] === true;
+    const livenessOn = values['face.kiosk_liveness_enabled'] !== false;
 
     const { data: devicesRes, isLoading } = useQuery({
         queryKey: ['kioskDevices'],
@@ -147,6 +148,19 @@ export default function KioskAdmin() {
                     on={kioskOn}
                     disabled={!canEdit || settingsLoading || isSaving}
                     onToggle={() => updateSetting({ key: 'face.kiosk_enabled', value: !kioskOn })}
+                />
+                <ToggleRow
+                    title="Liveness required"
+                    hint={
+                        !kioskOn
+                            ? 'Turn on the attendance kiosk first.'
+                            : livenessOn
+                              ? 'Kiosk punches require a passed liveness challenge — blocks a printed-photo spoof.'
+                              : 'Kiosk accepts a plain photo frame — no anti-spoof check.'
+                    }
+                    on={livenessOn && kioskOn}
+                    disabled={!canEdit || settingsLoading || isSaving || !kioskOn}
+                    onToggle={() => updateSetting({ key: 'face.kiosk_liveness_enabled', value: !livenessOn })}
                 />
                 <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-white p-4">
                     <div className="flex items-center gap-3">
