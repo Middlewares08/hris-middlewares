@@ -28,6 +28,17 @@ apiClient.interceptors.response.use(
     async (error) => {
         const originalRequest = error.config;
 
+        // The license expired — real-time kick-out (or a blocked new login).
+        // Distinct from a 401: no token refresh can fix this, so bail out
+        // immediately to a dedicated screen instead of the generic auth flow.
+        if (error.response?.data?.code === 'LICENSE_EXPIRED') {
+            localStorage.removeItem('accessToken');
+            if (window.location.pathname !== '/license-expired') {
+                window.location.href = '/license-expired';
+            }
+            return Promise.reject(error);
+        }
+
         // 1. Define routes that SHOULD NOT trigger a refresh/redirect on 401
         const skipRefreshRoutes = ['/auth/login', '/auth/login/verify-otp'];
         const isSkipRoute = skipRefreshRoutes.some(route => originalRequest.url.includes(route));

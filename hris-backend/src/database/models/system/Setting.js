@@ -29,6 +29,24 @@ const REGISTRY = {
     // date; the daily processSeparations job flips them inactive once it arrives.
     // When off, restores the old behaviour: inactivate immediately on record creation.
     'separation.defer_inactivation': { type: 'boolean', default: true, public: false },
+    // Master switch for the first-time Setup Wizard (see SetupController). When on,
+    // an admin whose required setup steps aren't done yet is redirected to the
+    // wizard on login. Turning this off retires the wizard permanently — e.g. once
+    // the org is fully onboarded, or an admin just wants it out of the way.
+    'setup.wizard_enabled': { type: 'boolean', default: true, public: false },
+    // How strictly an expired license is enforced (src/utils/licenseGuard.js).
+    // true (hard): every authenticated request is rejected in real time the
+    // instant the license expires — an already-open session gets kicked out.
+    // false (soft): only new logins are blocked; an already-open session keeps
+    // working until it separately expires. Configurable because this genuinely
+    // depends on the licensing contract, not a fixed product decision.
+    'license.hard_enforcement': { type: 'boolean', default: true, public: false },
+    // Flips true once the public Install Wizard (src/module/public/install.controller.js)
+    // has created the first admin account. Read unauthenticated (GET /public/install/status)
+    // to decide whether a fresh visitor gets routed to the install wizard at all — the
+    // single source of truth for "is this deployment set up yet", independent of whether
+    // that admin account later gets deleted.
+    'install.completed': { type: 'boolean', default: false, public: false },
 };
 
 class Setting extends BaseModel {

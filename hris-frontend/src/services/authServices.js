@@ -16,5 +16,11 @@ export const authService = {
     getCurrentProfile: async () => {
         const response = await apiClient.get('/auth/me');
         return response.data; // Resolves to the user layout data block
-    }
+    },
+
+    /** Consumes the token from an emailed reset/first-login link. payload = { token, password } */
+    resetPassword: async (payload) => {
+        const { data } = await apiClient.post('/auth/reset-password', payload);
+        return data;
+    },
 };

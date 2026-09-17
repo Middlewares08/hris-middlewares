@@ -357,5 +357,6 @@ module.exports = {
     getEmployeeByUuid,
     createEmployee,
     updateEmployee,
-    deleteEmployee
+    deleteEmployee,
+    generateEmployeeId,
 };

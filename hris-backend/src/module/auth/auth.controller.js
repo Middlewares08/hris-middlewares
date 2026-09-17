@@ -6,6 +6,8 @@ const Address = require('../../database/models/employee/Address');
 const GovernmentDetail = require('../../database/models/employee/GovernmentDetail');
 const EmployeeCompensation = require('../../database/models/payroll/EmployeeCompensation');
 const Permission = require('../../database/models/roles-and-permission/Permission');
+const LicenseActivation = require('../../database/models/system/LicenseActivation');
+const { isLicenseExpired } = require('../../utils/licenseGuard');
 const WorkSchedule = require('../../database/models/attendance/WorkSchedule');
 const EmployeeScheduleAssignment = require('../../database/models/attendance/EmployeeScheduleAssignment');
 const Holiday = require('../../database/models/attendance/Holiday');
@@ -63,6 +65,13 @@ const login = async (req, res) => {
 
         if (!email || !password) {
             return res.status(400).json({ message: 'Email and password are required.' });
+        }
+
+        // A new login is refused whenever the license is expired, regardless of
+        // hard/soft enforcement mode — soft mode only spares an already-open
+        // session, never a fresh sign-in.
+        if (await isLicenseExpired()) {
+            return res.status(403).json({ message: 'This license has expired. Contact your administrator to renew it.', code: 'LICENSE_EXPIRED' });
         }
 
         const credentials = await findCredentialByEmail(email);
@@ -391,11 +400,21 @@ const resetPassword = async (req, res) => {
         // Instance patch so Credential.$beforeUpdate sees opt.old and re-hashes.
         await credential.$query().patch({ password_hash: password });
 
+        const isInstallLink = decoded.otpId === 'install';
+        if (isInstallLink) {
+            // Best-effort — Maintenance > License bookkeeping must never block login.
+            try {
+                await LicenseActivation.markActivated(decoded.employeeId);
+            } catch (err) {
+                console.error('LicenseActivation.markActivated failed:', err.message);
+            }
+        }
+
         await logActivity({
             employeeId: decoded.employeeId,
             action: 'auth.password_reset',
             category: 'profile',
-            description: 'Password reset via SMS verification.',
+            description: isInstallLink ? 'Password set via the Install Wizard first-login link.' : 'Password reset via SMS verification.',
             req,
         });
 

@@ -56,6 +56,9 @@ const ADMIN_PERMISSION_MATRIX = {
     'resume': ['view', 'create', 'edit', 'delete'],
     'employee-documents': ['view', 'create', 'edit', 'delete'],
     'identifications': ['view'],
+    // guided first-time-setup checklist (Getting Started). `reset` is the "Start Fresh"
+    // full database wipe — deliberately its own action so it's never implied by `view`.
+    'setup-wizard': ['view', 'reset'],
 };
 
 // Employee self-service (PWA) permissions — module slug -> enforced actions.
@@ -85,6 +88,7 @@ const SELF_SERVICE_MODULES = [
 // Metadata for the extra ADMIN module rows that 01_ModuleSeeeder doesn't already carry.
 const EXTRA_ADMIN_MODULES = [
     { name: 'Admin Console', slug: 'admin-console', description: 'Controls whether an account can sign in to the admin dashboard at all.' },
+    { name: 'Setup Wizard', slug: 'setup-wizard', description: 'Guided first-time-setup checklist shown to a fresh install (e.g. company profile).' },
 ];
 
 // One module per Payroll sidebar submenu page — rendered as a tree under a single
@@ -105,6 +109,7 @@ const ACTION_LABELS = {
     create: 'Create',
     edit: 'Edit',
     delete: 'Delete',
+    reset: 'Reset',
 };
 
 const toSlugs = (matrix) =>

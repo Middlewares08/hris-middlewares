@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { 
-    ChevronLeft, 
-    ChevronRight, 
-    LayoutDashboard, 
-    Wrench, 
+import { Outlet, Navigate, useNavigate, useLocation } from 'react-router-dom';
+import {
+    ChevronLeft,
+    ChevronRight,
+    LayoutDashboard,
+    Wrench,
     LogOut,
     ChevronDown,
     GroupIcon,
@@ -13,13 +13,18 @@ import {
     Clock,
     ScanFace,
     ListChecks,
-    FileBarChart
+    FileBarChart,
+    Sparkles
 } from 'lucide-react';
 import { useLogout } from '../hooks/useLogout';
 import Header from './Header';
+import Loading from '../components/Loading';
 import { can } from '../utils/permissionCheck';
 import { usePendingEmployeeDocumentRequests } from '../hooks/useDocuments';
 import { usePendingPayslipRequests } from '../hooks/usePayroll';
+import { useSetupStatus } from '../hooks/useSetup';
+
+const SETUP_PATH = '/dashboard/setup';
 
 const DOCUMENTS_PATH = '/dashboard/employee/documents';
 const PAYSLIP_REQUESTS_PATH = '/dashboard/payroll/payslip-requests';
@@ -43,6 +48,13 @@ const Dashboard = () => {
     // Sidebar alert counts for pending requests employees have raised.
     const { data: pendingDocRequests = [] } = usePendingEmployeeDocumentRequests({ enabled: can('employee-documents:view') });
     const { data: pendingPayslipRequests = [] } = usePendingPayslipRequests({ enabled: can('payslip-requests:view') });
+
+    // Hard gate: an admin with pending required setup steps can't reach the rest of
+    // the dashboard until they're done (or someone flips `setup.wizard_enabled` off).
+    // Scoped to `setup-wizard:view` so a narrower custom role is never locked out of
+    // a checklist it has no permission to act on.
+    const { data: setupStatus, isLoading: setupLoading } = useSetupStatus();
+    const setupGateActive = setupStatus.wizardEnabled && !setupStatus.completed;
 
     const badgeForPath = (path) => {
         if (path === DOCUMENTS_PATH) return pendingDocRequests.length;
@@ -161,12 +173,23 @@ const Dashboard = () => {
             path: '/dashboard/maintenance', 
             permission: 'maintenance:view',
             children: [
-                { 
-                    label: 'Roles & Permission', 
-                    path: '/dashboard/maintenance/roles-and-permission', 
-                    permission: 'roles-and-permissions:view' 
+                {
+                    label: 'Roles & Permission',
+                    path: '/dashboard/maintenance/roles-and-permission',
+                    permission: 'roles-and-permissions:view'
                 },
-            ] 
+                {
+                    label: 'License',
+                    path: '/dashboard/maintenance/license',
+                    permission: 'maintenance:view'
+                },
+            ]
+        },
+        {
+            icon: <Sparkles className='hover:cursor-pointer' size={20} />,
+            label: 'Getting Started',
+            path: SETUP_PATH,
+            permission: 'setup-wizard:view',
         },
     ];
 
@@ -202,6 +225,14 @@ const Dashboard = () => {
             setOpenSubmenu(activeParent.label);
         }
     }, [location.pathname]);
+
+    if (setupLoading) {
+        return <Loading size="lg" fullPage />;
+    }
+
+    if (setupGateActive && location.pathname !== SETUP_PATH) {
+        return <Navigate to={SETUP_PATH} replace />;
+    }
 
     return (
         <div className="w-full max-w-none min-h-screen bg-gray-200 text-black">

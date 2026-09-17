@@ -1,13 +1,21 @@
 import './App.css'
 import { Toaster } from 'sonner'
-import { Navigate, Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import Login from './pages/Login'
 import ProtectedRoute from './layout/ProtectedRoute'
 import Dashboard from './layout/Dashboard'
 import DashboardHome from './pages/DashboardHome'
 import Employee from './pages/Employee/Employee'
 import Landing from './pages/Landing'
+import InstallWizard from './pages/Install/InstallWizard'
+import ResetPassword from './pages/ResetPassword'
+import LicenseExpired from './pages/LicenseExpired'
+import SetupWizard from './pages/Setup/SetupWizard'
+import Loading from './components/Loading'
+import { useInstallStatus } from './hooks/useInstall'
+import { useLicenseStatus } from './hooks/useLicense'
 import RolesAndPermission from './pages/Maintenance/RolesAndPermission'
+import License from './pages/Maintenance/License'
 import Department from './pages/LookupSetting/Department'
 import Position from './pages/LookupSetting/Position'
 import WorkSchedule from './pages/LookupSetting/WorkSchedule'
@@ -52,12 +60,48 @@ const ProtectedElement = ({ element, permission }) => {
     return can(permission) ? element : <Navigate to="/dashboard" replace />;
 };
 
+// App-wide gate, checked in order:
+//  1. A fresh deployment (no admin account created yet) is routed to /install
+//     no matter what URL a first visitor lands on. Once installed, /install
+//     itself redirects away so it can't be revisited after the fact — the
+//     backend independently refuses to run install twice either way.
+//  2. Once installed, an expired license bounces straight to /license-expired
+//     before the user ever reaches the login screen — this used to only be
+//     caught reactively, after a failed API call. /license-expired itself
+//     redirects away once the license is valid again.
+const InstallGate = ({ children }) => {
+    const location = useLocation();
+    const { installed, isLoading: isInstallLoading } = useInstallStatus();
+    const { expired: licenseExpired, isLoading: isLicenseLoading } = useLicenseStatus();
+
+    if (isInstallLoading || (installed && isLicenseLoading)) {
+        return <Loading size="lg" fullPage />;
+    }
+    if (!installed && location.pathname !== '/install') {
+        return <Navigate to="/install" replace />;
+    }
+    if (installed && location.pathname === '/install') {
+        return <Navigate to="/auth/login" replace />;
+    }
+    if (installed && licenseExpired && location.pathname !== '/license-expired') {
+        return <Navigate to="/license-expired" replace />;
+    }
+    if (installed && !licenseExpired && location.pathname === '/license-expired') {
+        return <Navigate to="/auth/login" replace />;
+    }
+    return children;
+};
+
 function App() {
 
   return (
     <>
       <Toaster richColors position="top-right" closeButton />
+      <InstallGate>
       <Routes>
+        <Route path="/install" element={<InstallWizard />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/license-expired" element={<LicenseExpired />} />
         <Route path="/auth/login" element={<Login />} />
         <Route path="/"  element={<Landing />} />
 
@@ -76,6 +120,8 @@ function App() {
           {/* <Route index element={<div>Welcome to the Stats Dashboard</div>} /> */}
           {/* Matches "/home" exactly */}
           <Route index  element={<DashboardHome />} />
+
+          <Route path="setup" element={<ProtectedElement element={<SetupWizard />} permission="setup-wizard:view" />} />
 
           {/* Matches "/dashboard/employee" */}
           <Route path="employee">
@@ -157,6 +203,7 @@ function App() {
 
           <Route path="maintenance">
             <Route path="roles-and-permission" element={<RolesAndPermission />} />
+            <Route path="license" element={<ProtectedElement element={<License />} permission="maintenance:view" />} />
           </Route>
 
           <Route path="payroll">
@@ -175,6 +222,7 @@ function App() {
         {/* Any unmatched path — full-screen 404, outside the dashboard shell */}
         <Route path="*" element={<NotFound />} />
       </Routes>
+      </InstallGate>
     </>
   )
 }

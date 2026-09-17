@@ -1,13 +1,14 @@
 // src/middleware/authMiddleware.js
 const jwt = require('jsonwebtoken');
+const { isLicenseExpired, isHardEnforcementOn } = require('../utils/licenseGuard');
 
-const verifyToken = (req, res, next) => {
+const verifyToken = async (req, res, next) => {
     try {
         const authHeader = req.headers.authorization;
-        
+
         if (!authHeader || !authHeader.startsWith('Bearer ')) {
-            return res.status(401).json({ 
-                message: 'Access denied. No authorization token provided.' 
+            return res.status(401).json({
+                message: 'Access denied. No authorization token provided.'
             });
         }
 
@@ -18,6 +19,13 @@ const verifyToken = (req, res, next) => {
         req.user = {
             id: decoded.userId
         };
+
+        // Real-time kick-out — only when `license.hard_enforcement` is on. In soft
+        // mode an already-open session like this one is deliberately left alone;
+        // only new logins get refused (see auth.controller.js login()).
+        if (await isLicenseExpired() && await isHardEnforcementOn()) {
+            return res.status(403).json({ message: 'This license has expired.', code: 'LICENSE_EXPIRED' });
+        }
 
         next();
     } catch (error) {

@@ -1,12 +1,17 @@
-const bcrypt = require('bcrypt');
 const { ACTIVE_PERMISSION_SLUGS } = require('../constants/permissionMatrix');
 
 /**
- * First-run bootstrap.
+ * First-run bootstrap — RBAC scaffolding only.
  *
- * Creates the two immutable RBAC roles the rest of the system assumes already
- * exist, then provisions a single default administrator account wired to the
- * Administrator role (which carries every permission).
+ * Creates the two immutable roles the rest of the system assumes already
+ * exist. Deliberately does NOT create an admin account (that used to happen
+ * here) — the first admin is now provisioned by the public Install Wizard
+ * (src/module/public/install.controller.js), which a fresh deployment's first
+ * visitor is routed through (product key + their own email; they get a
+ * first-login link by email rather than a shared default password). See
+ * [[hris-setup-wizard]] memory. Keeping this split means a deployment stays
+ * genuinely account-less — no login is possible — until someone completes
+ * that wizard, which is the whole point of gating it on a product key.
  *
  *   1. `Administrator` role  — `is_deletable = false`, `is_default = false`.
  *                              Gets EVERY active permission. Cannot be deleted or
@@ -17,32 +22,18 @@ const { ACTIVE_PERMISSION_SLUGS } = require('../constants/permissionMatrix');
  *                              (see Employee.$afterInsert / EmployeeController).
  *                              Its self-service grants are filled in by
  *                              03_RolePermissionSeeder.
- *   3. Default admin employee + login credentials + Administrator role link.
  *
  * Everything here is idempotent — safe to run on every `knex seed:run`.
  *
  * Runs FIRST (00_) so 01_ModuleSeeeder / 03_RolePermissionSeeder can resolve the
  * immutable roles. The bulk permission grant below is also performed by
  * 03_RolePermissionSeeder; it is repeated here so this seeder alone is enough to
- * (re)build a working admin once modules + permissions exist.
- *
- * Override the defaults with env vars:
- *   DEFAULT_ADMIN_EMAIL       (default: admin@hris.local)
- *   DEFAULT_ADMIN_PASSWORD    (default: Admin@12345 — change on first login)
- *   DEFAULT_ADMIN_FIRST_NAME  (default: System)
- *   DEFAULT_ADMIN_LAST_NAME   (default: Administrator)
+ * make the Administrator role fully usable once modules + permissions exist.
  *
  * @param { import("knex").Knex } knex
  * @returns { Promise<void> }
  */
 exports.seed = async function (knex) {
-    const admin = {
-        email: (process.env.DEFAULT_ADMIN_EMAIL || 'admin@hris.local').toLowerCase().trim(),
-        password: process.env.DEFAULT_ADMIN_PASSWORD || 'Admin@12345',
-        firstName: process.env.DEFAULT_ADMIN_FIRST_NAME || 'System',
-        lastName: process.env.DEFAULT_ADMIN_LAST_NAME || 'Administrator',
-    };
-
     const IMMUTABLE_ROLES = [
         {
             name: 'Administrator',
@@ -111,84 +102,5 @@ exports.seed = async function (knex) {
             .onConflict(['role_id', 'permission_id'])
             .ignore();
         console.log(`💪 Granted ${permissions.length} permissions to Administrator (Role ID: ${adminRole.id}).`);
-    }
-
-    // ------------------------------------------------------- 3. Default admin account
-    const existingCredential = await knex('employee.credentials').where({ email: admin.email }).first();
-
-    let adminEmployeeId = existingCredential?.employee_id;
-
-    if (existingCredential) {
-        console.log(`[SEED] Default admin "${admin.email}" already exists — skipping account creation.`);
-    } else {
-        await knex.transaction(async (trx) => {
-            const [employee] = await trx('employee.employees')
-                .insert({
-                    first_name: admin.firstName,
-                    last_name: admin.lastName,
-                    preferred_name: 'Admin',
-                    is_active: true,
-                    is_deleted: false,
-                })
-                .returning('id');
-
-            adminEmployeeId = employee.id ?? employee;
-
-            // Human-readable id — only claim EMP-<year>-0001 if it is still free.
-            const year = new Date().getFullYear();
-            const humanId = `EMP-${year}-0001`;
-            const taken = await trx('employee.employees').where({ employee_id: humanId }).first();
-            if (!taken) {
-                await trx('employee.employees').where({ id: adminEmployeeId }).update({ employee_id: humanId });
-            }
-
-            await trx('employee.contacts').insert({
-                employee_id: adminEmployeeId,
-                personal_email: admin.email,
-                personal_phone: '+630000000000',
-                emergency_contact_name: 'System Fallback',
-                emergency_contact_relationship: 'Other',
-                emergency_contact_phone: '+630000000000',
-            });
-
-            await trx('employee.demographics').insert({
-                employee_id: adminEmployeeId,
-                date_of_birth: '1970-01-01',
-                gender: 'Prefer not to say',
-                nationality: 'System',
-            });
-
-            await trx('employee.credentials').insert({
-                employee_id: adminEmployeeId,
-                email: admin.email,
-                // Match Credential model hashing (bcrypt, 12 rounds).
-                password_hash: await bcrypt.hash(admin.password, 12),
-            });
-        });
-
-        console.log('\n============================================================');
-        console.log('  DEFAULT ADMIN CREATED');
-        console.log(`  email    : ${admin.email}`);
-        console.log(
-            process.env.DEFAULT_ADMIN_PASSWORD
-                ? '  password : (from DEFAULT_ADMIN_PASSWORD env var)'
-                : `  password : ${admin.password}   <-- change this on first login`,
-        );
-        console.log('============================================================\n');
-    }
-
-    // --------------------------------------------------- 4. Link account -> Administrator
-    if (adminEmployeeId) {
-        await knex('role_permission.employee_roles')
-            .insert({
-                employee_id: adminEmployeeId,
-                role_id: adminRole.id,
-                is_deleted: false,
-                created_by: null,
-                updated_by: null,
-            })
-            .onConflict(['employee_id', 'role_id'])
-            .ignore();
-        console.log(`[SEED] Linked admin employee (ID: ${adminEmployeeId}) to the Administrator role.`);
     }
 };

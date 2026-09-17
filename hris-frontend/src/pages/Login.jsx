@@ -2,7 +2,6 @@
 import { Lock, Mail, ShieldCheck } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "../hooks/useAuth";
-import { useSystemInit } from '../hooks/useSystem';
 import CustomButton from "../components/CustomButton";
 import CustomInput from "../components/CustomInput";
 import ContactAdminModal from "../components/ContactAdminModal";
@@ -10,14 +9,11 @@ import ContactAdminModal from "../components/ContactAdminModal";
 function Login() {
     // Pull our centralized architectural states
     const { isVerifyOTP, login, verifyOtp, loading, error, tempToken } = useAuth();
-    const { initializeSystem, result } = useSystemInit();
-    
+
     // Controlled form inputs (initialized with safe empty strings)
     const [payload, setPayload] = useState({ email: "", password: "" });
     const [otpCode, setOtpCode] = useState("");
     const [contactOpen, setContactOpen] = useState(false);
-
-    console.log('result: ', result);
 
     const onChangeFields = (field, value) => {
         setPayload(prev => ({ ...prev, [field]: value }));
@@ -35,18 +31,6 @@ function Login() {
         // Re-pack variables into format required by authRoutes validator
         await verifyOtp({ token: tempToken, otp: otpCode, email: payload?.email }); // 'admin@hris.local'
         
-    };
-
-    const handleSetup = async () => {
-        try {
-            await initializeSystem();
-        } catch (err) {
-            // Caught gracefully by TanStack Query's error state variable automatically
-            // 💡 Temporary rich logging to catch the exact path mismatch
-            console.error("404 DEBUG - Attempted URL:", err.config?.url);
-            console.error("404 DEBUG - Combined Base URL:", err.config?.baseURL);
-            console.error("Initialization sequence failed:", err);
-        }
     };
 
   return (
@@ -151,45 +135,6 @@ function Login() {
                     />
                 </form>
             )}
-
-            {/* <div>
-                {!result ? (
-                    <button
-                        onClick={handleSetup}
-                        disabled={loading}
-                        className={`w-full py-3 px-4 rounded-xl font-semibold text-white text-sm transition-all duration-200 shadow-sm ${
-                        loading 
-                            ? 'bg-indigo-400 cursor-not-allowed' 
-                            : 'bg-indigo-600 hover:bg-indigo-700 active:scale-[0.99] cursor-pointer'
-                        }`}
-                    >
-                        {loading ? (
-                        <span className="flex items-center justify-center gap-2">
-                            <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                            </svg>
-                            Provisioning Core Tables...
-                        </span>
-                        ) : (
-                        'Run Database Initialization'
-                        )}
-                    </button>
-                    ) : (
-                    // Success Layout Box
-                    <div className="bg-emerald-50 border border-emerald-100 text-emerald-900 p-5 rounded-xl space-y-3 animate-fadeIn">
-                        <p className="font-bold text-base flex items-center gap-1.5 text-emerald-800">
-                        🎉 {result.message}
-                        </p>
-                        <div className="bg-white/70 backdrop-blur-sm p-3 rounded-lg border border-emerald-200/50 text-xs font-mono text-slate-700">
-                            <strong>Root Email:</strong> {result.default_email}
-                        </div>
-                        <p className="text-xs text-emerald-700/90 leading-relaxed pt-1">
-                        💡 <strong>Next Step:</strong> {result.note}
-                        </p>
-                    </div>
-                    )}
-            </div> */}
         </div>
     </div>
   );
