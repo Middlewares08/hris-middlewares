@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Save, ShieldCheck } from 'lucide-react';
+import { Save, ShieldCheck, GraduationCap, Plus, Trash2 } from 'lucide-react';
 import CustomModal from '../../components/CustomModal';
 import CustomInput from '../../components/CustomInput';
 import CustomDropdown from '../../components/CustomDropdown';
@@ -8,14 +8,37 @@ import CustomButton from '../../components/CustomButton';
 import CustomLabel from '../../components/CustomLabel';
 import { usePositions } from '../../hooks/usePosition';
 import { useRoles } from '../../hooks/useRoles';
-import { EMPLOYMENT_TYPES } from '../../utils/constants';
+import { EDUCATION_LEVELS, EMPLOYMENT_TYPES } from '../../utils/constants';
 import { RATE_TYPES } from '../Payroll/payrollOptions';
 import { handleNumberInput } from '../../utils/utils';
 
+// Server rows carry education_level/school_name/degree/year_started/
+// year_graduated/honors + an id; the form just needs the years as strings.
+const toEducationForm = (rows) =>
+    (Array.isArray(rows) ? rows : []).map((row) => ({
+        id: row.id,
+        education_level: row.education_level || 'college',
+        school_name: row.school_name || '',
+        degree: row.degree || '',
+        year_started: row.year_started ? String(row.year_started) : '',
+        year_graduated: row.year_graduated ? String(row.year_graduated) : '',
+        honors: row.honors || '',
+    }));
+
+const blankEducationEntry = () => ({
+    education_level: 'college',
+    school_name: '',
+    degree: '',
+    year_started: '',
+    year_graduated: '',
+    honors: '',
+});
+
 /**
  * Compact editor for an employee's core HR record: identity, job profile,
- * pay profile, and role assignments. Mirrors the fields the backend
- * `PATCH /employee/:uuid` endpoint accepts.
+ * pay profile, role assignments, and educational background. Mirrors the
+ * fields the backend `PATCH /employee/:uuid` + `PUT /employee/:uuid/education`
+ * endpoints accept.
  */
 const buildInitialState = (employee) => ({
     first_name: employee?.first_name || '',
@@ -28,6 +51,7 @@ const buildInitialState = (employee) => ({
     rate_type: employee?.compensation?.rate_type || 'monthly',
     effective_date: new Date().toISOString().substring(0, 10),
     role_ids: Array.isArray(employee?.roles) ? employee.roles.map((r) => r.id) : [],
+    education: toEducationForm(employee?.educationalBackgrounds),
 });
 
 const EditEmployeeModal = ({ isOpen, employee, onClose, onSubmit, isSaving = false }) => {
@@ -51,6 +75,14 @@ const EditEmployeeModal = ({ isOpen, employee, onClose, onSubmit, isSaving = fal
                 : [...form.role_ids, roleId],
         });
     };
+
+    const originalEducation = useMemo(() => toEducationForm(employee?.educationalBackgrounds), [employee]);
+    const educationChanged = JSON.stringify(form.education) !== JSON.stringify(originalEducation);
+
+    const updateEducationEntry = (index, fields) =>
+        set({ education: form.education.map((entry, i) => (i === index ? { ...entry, ...fields } : entry)) });
+    const addEducationEntry = () => set({ education: [...form.education, blankEducationEntry()] });
+    const removeEducationEntry = (index) => set({ education: form.education.filter((_, i) => i !== index) });
 
     const canSave = useMemo(
         () => form.first_name.trim() && form.last_name.trim() && !isSaving,
@@ -76,6 +108,21 @@ const EditEmployeeModal = ({ isOpen, employee, onClose, onSubmit, isSaving = fal
             payload.pay_rate = form.pay_rate;
             payload.rate_type = form.rate_type;
             payload.effective_date = form.effective_date;
+        }
+
+        // Only sent when actually edited — the parent uses its presence to decide
+        // whether to fire the separate PUT /employee/:uuid/education call.
+        if (educationChanged) {
+            payload.education = form.education
+                .filter((entry) => entry.school_name.trim())
+                .map((entry) => ({
+                    education_level: entry.education_level,
+                    school_name: entry.school_name.trim(),
+                    degree: entry.degree.trim() || null,
+                    year_started: entry.year_started || null,
+                    year_graduated: entry.year_graduated || null,
+                    honors: entry.honors.trim() || null,
+                }));
         }
 
         onSubmit(payload);
@@ -267,6 +314,104 @@ const EditEmployeeModal = ({ isOpen, employee, onClose, onSubmit, isSaving = fal
                             This employee will have no role and may lose self-service portal access.
                         </p>
                     )}
+                </section>
+
+                {/* Educational Background */}
+                <section className="space-y-4 border-t border-slate-100 pt-5">
+                    <CustomLabel
+                        variant="h3"
+                        children="Educational Background"
+                        addedClass="font-bold text-slate-500!"
+                    />
+
+                    <div className="space-y-4">
+                        {form.education.length === 0 && (
+                            <div className="flex flex-col items-center justify-center gap-2 py-6 border border-dashed border-slate-200 rounded-xl text-slate-400">
+                                <GraduationCap size={20} />
+                                <span className="text-sm">No education entries yet.</span>
+                            </div>
+                        )}
+
+                        {form.education.map((entry, index) => (
+                            <div key={entry.id ?? index} className="relative bg-slate-50 border border-slate-100 rounded-xl p-4 space-y-4">
+                                <button
+                                    type="button"
+                                    onClick={() => removeEducationEntry(index)}
+                                    className="absolute top-3 right-3 p-1.5 hover:bg-red-50 text-gray-400 hover:text-red-600 rounded-lg transition-colors cursor-pointer"
+                                    title="Remove entry"
+                                >
+                                    <Trash2 size={14} />
+                                </button>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pr-8">
+                                    <CustomDropdown
+                                        className="items-start! w-full"
+                                        label="Education Level"
+                                        options={EDUCATION_LEVELS}
+                                        value={entry.education_level}
+                                        onChange={(val) => updateEducationEntry(index, { education_level: val })}
+                                        renderProps="label"
+                                        returnProps="value"
+                                        placeholder="Select level"
+                                    />
+                                    <CustomInput
+                                        label="School Name"
+                                        labelPosition="left"
+                                        maxLength={150}
+                                        placeholder="Ex. University of Santo Tomas"
+                                        value={entry.school_name}
+                                        onChange={(e) => updateEducationEntry(index, { school_name: e.target.value })}
+                                    />
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <CustomInput
+                                        label="Degree / Course"
+                                        labelPosition="left"
+                                        maxLength={150}
+                                        placeholder="Ex. BS Computer Science"
+                                        value={entry.degree}
+                                        onChange={(e) => updateEducationEntry(index, { degree: e.target.value })}
+                                    />
+                                    <CustomInput
+                                        label="Honors"
+                                        labelPosition="left"
+                                        maxLength={100}
+                                        placeholder="Ex. Cum Laude"
+                                        value={entry.honors}
+                                        onChange={(e) => updateEducationEntry(index, { honors: e.target.value })}
+                                    />
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <CustomInput
+                                        label="Year Started"
+                                        labelPosition="left"
+                                        maxLength={4}
+                                        placeholder="Ex. 2016"
+                                        value={entry.year_started}
+                                        onChange={(e) => updateEducationEntry(index, { year_started: handleNumberInput(e.target.value) })}
+                                    />
+                                    <CustomInput
+                                        label="Year Graduated"
+                                        labelPosition="left"
+                                        maxLength={4}
+                                        placeholder="Ex. 2020"
+                                        value={entry.year_graduated}
+                                        onChange={(e) => updateEducationEntry(index, { year_graduated: handleNumberInput(e.target.value) })}
+                                    />
+                                </div>
+                            </div>
+                        ))}
+
+                        <button
+                            type="button"
+                            onClick={addEducationEntry}
+                            className="w-full flex items-center justify-center gap-2 py-2.5 border border-dashed border-slate-300 rounded-lg text-sm font-medium text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition-colors cursor-pointer"
+                        >
+                            <Plus size={16} /> Add Education Entry
+                        </button>
+                    </div>
                 </section>
             </div>
         </CustomModal>

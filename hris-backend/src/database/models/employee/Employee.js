@@ -40,6 +40,7 @@ class Employee extends BaseModel {
         if (graphData.demographics) await insertRelated('demographics', graphData.demographics);
         if (graphData.credentials) await insertRelated('credentials', graphData.credentials);
         if (graphData.governmentDetails) await insertRelated('governmentDetails', graphData.governmentDetails);
+        if (graphData.educationalBackgrounds?.length) await insertRelated('educationalBackgrounds', graphData.educationalBackgrounds);
 
         // Relate existing roles and positions (pivot joins)
         if (graphData.roles?.length) {
@@ -93,6 +94,7 @@ class Employee extends BaseModel {
         const Position = require('../lookups/Position');
         const GovernmentDetail = require('./GovernmentDetail');
         const EmployeeCompensation = require('../payroll/EmployeeCompensation');
+        const EducationalBackground = require('./EducationalBackground');
 
         return {
             contact: {
@@ -110,6 +112,11 @@ class Employee extends BaseModel {
                 relation: BaseModel.HasManyRelation,
                 modelClass: Address,
                 join: { from: 'employee.employees.id', to: 'employee.addresses.employee_id' }
+            },
+            educationalBackgrounds: {
+                relation: BaseModel.HasManyRelation,
+                modelClass: EducationalBackground,
+                join: { from: 'employee.employees.id', to: 'employee.educational_backgrounds.employee_id' }
             },
             credentials: {
                 relation: BaseModel.HasOneRelation,

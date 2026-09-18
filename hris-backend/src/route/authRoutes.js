@@ -42,6 +42,10 @@ router.get('/me/statutory', verifyToken, requirePermission('my-government-detail
 router.patch('/me/statutory', verifyToken, requirePermission('my-government-details:edit'), authController.updateStatutory);
 router.get('/me/employment', verifyToken, requirePermission('my-profile:view'), authController.getEmploymentHistory);
 
+// Employee self-service — educational background (repeatable list, replace-on-save)
+router.get('/me/education', verifyToken, requirePermission('my-education:view'), authController.getEducation);
+router.patch('/me/education', verifyToken, requirePermission('my-education:edit'), authController.updateEducation);
+
 // Work schedule + holiday calendar (employee PWA, read-only)
 router.get('/me/schedule', verifyToken, requirePermission('my-attendance:view'), authController.getMySchedule);
 router.get('/me/holidays', verifyToken, authController.getMyHolidays);

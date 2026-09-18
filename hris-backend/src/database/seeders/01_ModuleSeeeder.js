@@ -240,6 +240,14 @@ exports.seed = async function(knex) {
             created_by: null,
             updated_by: null
         },
+        {
+            name: 'Educational Background',
+            slug: 'employee-education',
+            description: 'Employee educational background records captured during onboarding.',
+            access_type: 'ADMIN',
+            created_by: null,
+            updated_by: null
+        },
         // Employee self-service (PWA) modules
         ...SELF_SERVICE_MODULES.map((mod) => ({
             ...mod,

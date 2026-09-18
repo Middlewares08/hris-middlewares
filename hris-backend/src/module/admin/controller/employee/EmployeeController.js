@@ -2,6 +2,24 @@ const Employee = require('../../../../database/models/employee/Employee'); // Re
 const EmployeeCompensation = require('../../../../database/models/payroll/EmployeeCompensation');
 const crypto = require('crypto');
 
+const EDUCATION_LEVELS = ['elementary', 'secondary', 'vocational', 'college', 'graduate'];
+
+// Drops incomplete rows (no school name) and coerces year fields to integers or
+// null, so a half-filled repeatable-row UI never reaches the database.
+const sanitizeEducation = (education) => {
+    if (!Array.isArray(education)) return [];
+    return education
+        .filter((row) => row && String(row.school_name || '').trim())
+        .map((row) => ({
+            education_level: EDUCATION_LEVELS.includes(row.education_level) ? row.education_level : 'college',
+            school_name: String(row.school_name).trim(),
+            degree: row.degree ? String(row.degree).trim() : null,
+            year_started: row.year_started ? parseInt(row.year_started, 10) || null : null,
+            year_graduated: row.year_graduated ? parseInt(row.year_graduated, 10) || null : null,
+            honors: row.honors ? String(row.honors).trim() : null,
+        }));
+};
+
 /**
  * Derive a coarse government-IDs status from `government_details` without
  * leaking the decrypted numbers into the directory list payload (that stays
@@ -52,7 +70,7 @@ const getEmployees = async (req, res) => {
 
         let query = Employee.query()
             .where('employee.employees.is_deleted', false)
-            .withGraphFetched('[position.[department], credentials, compensation, contact, demographics, roles, governmentDetails(governmentSummary)]');
+            .withGraphFetched('[position.[department], credentials, compensation, contact, demographics, roles, governmentDetails(governmentSummary), educationalBackgrounds]');
 
         if (search) {
             query = query.where((builder) => {
@@ -99,7 +117,7 @@ const getEmployeeByUuid = async (req, res) => {
         const { uuid } = req.params;
         const employee = await Employee.query()
             .findOne({ uuid, is_deleted: false })
-            .withGraphFetched('[position.[department], credentials, compensation, contact, demographics, roles]');
+            .withGraphFetched('[position.[department], credentials, compensation, contact, demographics, roles, educationalBackgrounds]');
 
         if (!employee) {
             return res.status(404).json({ success: false, message: 'Employee profile not found.' });
@@ -168,6 +186,9 @@ const createEmployee = async (req, res) => {
         },
     };
     if (b.position) graphData.position = { id: Number(b.position) };
+
+    const education = sanitizeEducation(b.education);
+    if (education.length) graphData.educationalBackgrounds = education;
 
     // Retry once if the generated employee_id collides with a concurrent insert.
     const runCreate = async () => Employee.transaction(async (trx) => {

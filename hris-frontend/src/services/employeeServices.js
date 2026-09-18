@@ -44,5 +44,13 @@ export const employeeService = {
     deleteEmployee: async (uuid) => {
         const response = await apiClient.delete(`${API_BASE_URL}/${uuid}`);
         return response.data;
+    },
+
+    /**
+     * Replace an employee's whole educational-background list
+     */
+    updateEmployeeEducation: async (uuid, education) => {
+        const response = await apiClient.put(`${API_BASE_URL}/${uuid}/education`, { education });
+        return response.data;
     }
 };

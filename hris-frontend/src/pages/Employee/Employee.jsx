@@ -1,15 +1,15 @@
 import { useState } from 'react';
 import { CustomDataTable } from '../../components/CustomDataTable';
 import { useEmployees } from '../../hooks/useEmployee';
-import { Mail, Phone, MapPin, Trash2, ShieldAlert, PlusIcon, ChevronRight, ChevronLeft, Save, Pencil, ShieldCheck, User, Briefcase, CalendarDays, AlertTriangle, MinusCircle } from 'lucide-react';
+import { Mail, Phone, MapPin, Trash2, ShieldAlert, PlusIcon, ChevronRight, ChevronLeft, Save, Pencil, ShieldCheck, User, Briefcase, CalendarDays, AlertTriangle, MinusCircle, GraduationCap } from 'lucide-react';
 import CustomLabel from '../../components/CustomLabel';
 import { CustomAvatar } from '../../components/CustomAvatar';
 import CustomButton from '../../components/CustomButton';
 import { can } from '../../utils/permissionCheck';
 import CustomModal from '../../components/CustomModal';
 import { CustomStepper } from '../../components/CustomStepper';
-import { BasicInformation, Benefits, ContactInformation, Employement } from './AddEmployee';
-import { BLANK } from '../../utils/constants';
+import { BasicInformation, Benefits, ContactInformation, Employement, EducationalBackground } from './AddEmployee';
+import { BLANK, EDUCATION_LEVELS } from '../../utils/constants';
 import { formatDate } from '../../utils/utils';
 import { basicInfoValidationSchema, employmentValidationSchema, contactInfoValidationSchema } from '../../validation/employee-validation';
 import CustomForm from '../../components/CustomForm';
@@ -33,7 +33,8 @@ const INITIAL_PAYLOAD = {
     pay_rate: BLANK,
     rate_type: 'monthly',
     phone_number: BLANK,
-    personal_email: BLANK
+    personal_email: BLANK,
+    education: []
 };
 
 // Government IDs completeness badge — mirrors the 'complete' | 'partial' | 'none'
@@ -44,6 +45,8 @@ const GOVERNMENT_ID_STATUS = {
     partial: { label: 'Incomplete', icon: AlertTriangle, className: 'bg-amber-50 text-amber-700 border-amber-200' },
     none: { label: 'Not on file', icon: MinusCircle, className: 'bg-gray-50 text-gray-500 border-gray-200' },
 };
+
+const EDUCATION_LEVEL_LABELS = EDUCATION_LEVELS.reduce((acc, { value, label }) => ({ ...acc, [value]: label }), {});
 
 const GovernmentIdBadge = ({ status }) => {
     const { label, icon: Icon, className } = GOVERNMENT_ID_STATUS[status] || GOVERNMENT_ID_STATUS.none;
@@ -59,7 +62,8 @@ const Employees = () => {
     const contactInfoRef = useRef(null);
     const employmentRef = useRef(null);
     const benefitRef = useRef(null);
-    const stepRefs = [basicInfoRef, employmentRef, benefitRef, contactInfoRef];
+    const educationRef = useRef(null);
+    const stepRefs = [basicInfoRef, employmentRef, benefitRef, contactInfoRef, educationRef];
 
     // Search & Pagination local state variables
     const [search, setSearch] = useState('');
@@ -83,6 +87,8 @@ const Employees = () => {
         createEmployee,
         updateEmployee,
         isUpdating,
+        updateEmployeeEducation,
+        isUpdatingEducation,
         refetch,
         error
     } = useEmployees({ page, limit, search });
@@ -104,7 +110,13 @@ const Employees = () => {
 
     const handleUpdate = async (updatePayload) => {
         try {
-            await updateEmployee({ uuid: editingEmployee.uuid, payload: updatePayload });
+            // Education lives on its own table/endpoint — split it off the core
+            // employee PATCH payload and replace the whole list separately.
+            const { education, ...employeePayload } = updatePayload;
+            await updateEmployee({ uuid: editingEmployee.uuid, payload: employeePayload });
+            if (education !== undefined) {
+                await updateEmployeeEducation({ uuid: editingEmployee.uuid, education });
+            }
             setEditingEmployee(null);
         } catch (err) {
             console.error(err);
@@ -284,14 +296,32 @@ const Employees = () => {
                     formRef={contactInfoRef}
                     initialValues={payload}
                     validationSchema={contactInfoValidationSchema}
-                    onSubmit={() => handleSubmit()}
+                    onSubmit={() => handleNext()}
                     content={(errors, touched) =>
                         <ContactInformation
-                            payload={payload} 
+                            payload={payload}
                             onChange={(data) => updatePayload(data)}
                             onNext={handleNext}
                             errors={errors}
                             touched={touched}
+                        />
+                    }
+                />
+            )
+        },
+        {
+            title: 'Education',
+            description: "Employee's educational background.",
+            content: (
+                <CustomForm
+                    id="education-form"
+                    formRef={educationRef}
+                    initialValues={payload}
+                    onSubmit={() => handleSubmit()}
+                    content={() =>
+                        <EducationalBackground
+                            payload={payload}
+                            onChange={(data) => updatePayload(data)}
                         />
                     }
                 />
@@ -445,6 +475,41 @@ const Employees = () => {
 
                 <hr className="border-gray-100" />
 
+                {/* Educational Background */}
+                <div className="space-y-2">
+                    <h5 className="text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+                        <GraduationCap size={13} /> Educational Background
+                    </h5>
+                    {employee?.educationalBackgrounds?.length ? (
+                        <div className="space-y-2">
+                            {employee.educationalBackgrounds.map((edu) => (
+                                <div key={edu.id} className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                                    <div className="flex justify-between items-start gap-2">
+                                        <span className="text-sm font-medium text-slate-800">{edu.school_name}</span>
+                                        <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 shrink-0">
+                                            {EDUCATION_LEVEL_LABELS[edu.education_level] || edu.education_level}
+                                        </span>
+                                    </div>
+                                    {(edu.degree || edu.honors) && (
+                                        <p className="text-xs text-slate-500 mt-0.5">
+                                            {[edu.degree, edu.honors].filter(Boolean).join(' · ')}
+                                        </p>
+                                    )}
+                                    {(edu.year_started || edu.year_graduated) && (
+                                        <p className="text-[11px] text-slate-400 mt-0.5">
+                                            {edu.year_started || '—'} to {edu.year_graduated || 'present'}
+                                        </p>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <p className="text-sm text-gray-400">No education on file</p>
+                    )}
+                </div>
+
+                <hr className="border-gray-100" />
+
                 <EmployeeScheduleSection employee={employee} />
 
                 <hr className="border-gray-100" />
@@ -541,7 +606,7 @@ const Employees = () => {
                         />
                     }
                     {
-                        (currentStep < 3) &&
+                        (currentStep < 4) &&
                             <CustomButton
                                 children={'Next'}
                                 onClick={() => stepRefs[currentStep]?.current?.submitForm()}
@@ -552,7 +617,7 @@ const Employees = () => {
                             />
                     }
                     {
-                        (currentStep > 2 ) &&
+                        (currentStep > 3 ) &&
                             <CustomButton
                                 children={'Register'}
                                 onClick={() => stepRefs[currentStep]?.current?.submitForm()}
@@ -573,7 +638,7 @@ const Employees = () => {
                 employee={editingEmployee}
                 onClose={() => setEditingEmployee(null)}
                 onSubmit={handleUpdate}
-                isSaving={isUpdating}
+                isSaving={isUpdating || isUpdatingEducation}
             />
 
             <SeparationFormModal

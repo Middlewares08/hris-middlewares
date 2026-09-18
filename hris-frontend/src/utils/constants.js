@@ -121,6 +121,14 @@ export const ATC_CODES = [
 ];
 
 
+export const EDUCATION_LEVELS = [
+  { label: 'Elementary', value: 'elementary' },
+  { label: 'Secondary / High School', value: 'secondary' },
+  { label: 'Vocational', value: 'vocational' },
+  { label: 'College', value: 'college' },
+  { label: 'Graduate / Post-graduate', value: 'graduate' },
+];
+
 export const RELATIONSHIP_OPTIONS = [
   { label: 'Spouse', value: 'spouse' },
   { label: 'Child', value: 'child' },

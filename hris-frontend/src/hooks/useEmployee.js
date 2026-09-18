@@ -42,6 +42,18 @@ export const useEmployees = (filters = { page: 1, limit: 10, search: '' }) => {
         }
     });
 
+    // Mutation: Replace Employee Education
+    const updateEducationMutation = useMutation({
+        mutationFn: ({ uuid, education }) => employeeService.updateEmployeeEducation(uuid, education),
+        onSuccess: (res) => {
+            queryClient.invalidateQueries(['employees']);
+            toast.success(res.message || 'Educational background updated.');
+        },
+        onError: (err) => {
+            toast.error(err.response?.data?.message || 'Failed to update educational background.');
+        }
+    });
+
     // Mutation: Delete Employee
     const deleteMutation = useMutation({
         mutationFn: employeeService.deleteEmployee,
@@ -64,6 +76,8 @@ export const useEmployees = (filters = { page: 1, limit: 10, search: '' }) => {
         isCreating: createMutation.isPending,
         updateEmployee: updateMutation.mutateAsync,
         isUpdating: updateMutation.isPending,
+        updateEmployeeEducation: updateEducationMutation.mutateAsync,
+        isUpdatingEducation: updateEducationMutation.isPending,
         deleteEmployee: deleteMutation.mutateAsync,
         isDeleting: deleteMutation.isPending,
     };

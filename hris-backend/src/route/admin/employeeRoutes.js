@@ -15,6 +15,10 @@ const {
 } = require('../../module/admin/controller/employee/GovernmentDetailController');
 
 const {
+    updateEmployeeEducation
+} = require('../../module/admin/controller/employee/EducationalBackgroundController');
+
+const {
     getEmployeesWithBankDetails,
     upsertBankDetails
 } = require('../../module/admin/controller/employee/BankDetailController');
@@ -53,6 +57,9 @@ router.get('/:uuid', requirePermission('employee-management:view'), getEmployeeB
 router.post('/', requirePermission('employee-management:create'), createEmployee);
 router.patch('/:uuid', requirePermission('employee-management:edit'), updateEmployee);
 router.delete('/:uuid', requirePermission('employee-management:delete'), deleteEmployee);
+
+// EDUCATIONAL BACKGROUND (admin post-creation edit; whole-list replace)
+router.put('/:uuid/education', requirePermission('employee-education:edit'), updateEmployeeEducation);
 
 // GOVERNMENT BENEFITS
 router.get('/list/benefits', requirePermission('benefits:view'), getEmployeesWithBenefits);

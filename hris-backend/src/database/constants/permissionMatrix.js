@@ -55,6 +55,7 @@ const ADMIN_PERMISSION_MATRIX = {
     'departments': ['view', 'create', 'edit', 'delete'],
     'benefits': ['view', 'edit', 'delete'],
     'resume': ['view', 'create', 'edit', 'delete'],
+    'employee-education': ['view', 'create', 'edit', 'delete'],
     'employee-documents': ['view', 'create', 'edit', 'delete'],
     'identifications': ['view'],
     // guided first-time-setup checklist (Getting Started). `reset` is the "Start Fresh"
@@ -72,6 +73,7 @@ const SELF_SERVICE_PERMISSION_MATRIX = {
     'my-leave': ['view', 'create', 'edit'],
     'my-overtime': ['view', 'create', 'edit'],
     'my-government-details': ['view', 'edit'],
+    'my-education': ['view', 'edit'],
 };
 
 // Metadata for the SELF_SERVICE module rows (01_ModuleSeeeder + the seed migration).
@@ -84,6 +86,7 @@ const SELF_SERVICE_MODULES = [
     { name: 'My Leave', slug: 'my-leave', description: 'Employee files, edits and cancels their own leave requests.' },
     { name: 'My Overtime', slug: 'my-overtime', description: 'Employee files, edits and cancels their own overtime requests.' },
     { name: 'My Government & Bank', slug: 'my-government-details', description: 'Employee manages their own SSS/PhilHealth/Pag-IBIG/TIN and payroll bank account.' },
+    { name: 'My Education', slug: 'my-education', description: 'Employee views and updates their own educational background records.' },
 ];
 
 // Metadata for the extra ADMIN module rows that 01_ModuleSeeeder doesn't already carry.

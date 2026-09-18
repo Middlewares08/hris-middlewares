@@ -1,5 +1,5 @@
 import CustomInput from "../../components/CustomInput";
-import { BLANK, EMPLOYMENT_TYPES, GENDER, NATIONALITIES, RELATIONSHIP_OPTIONS, RELIGIONS } from "../../utils/constants";
+import { BLANK, EDUCATION_LEVELS, EMPLOYMENT_TYPES, GENDER, NATIONALITIES, RELATIONSHIP_OPTIONS, RELIGIONS } from "../../utils/constants";
 import { CustomFileUploader } from "../../components/CustomFileUploader";
 import { useState } from "react";
 import CustomLabel from "../../components/CustomLabel";
@@ -12,6 +12,7 @@ import { useMemo } from "react";
 import { formatGovernmentId, handleNumberInput } from "../../utils/utils";
 import { RATE_TYPES } from "../Payroll/payrollOptions";
 import clsx from "clsx";
+import { GraduationCap, Plus, Trash2 } from "lucide-react";
 
 export const BasicInformation = ({ payload, onChange, errors, touched }) => {
 
@@ -570,7 +571,138 @@ export const ContactInformation = ({ payload, onChange, errors }) => {
                     placeholder="Choose relationship.."
                 />
             </div>
-                
+
+        </div>
+    );
+};
+
+const blankEducationEntry = () => ({
+    education_level: 'college',
+    school_name: BLANK,
+    degree: BLANK,
+    year_started: BLANK,
+    year_graduated: BLANK,
+    honors: BLANK,
+});
+
+export const EducationalBackground = ({ payload, onChange }) => {
+    const entries = payload?.education || [];
+
+    const updateEntries = (next) => onChange({ education: next });
+    const addEntry = () => updateEntries([...entries, blankEducationEntry()]);
+    const updateEntry = (index, fields) =>
+        updateEntries(entries.map((entry, i) => (i === index ? { ...entry, ...fields } : entry)));
+    const removeEntry = (index) => updateEntries(entries.filter((_, i) => i !== index));
+
+    return (
+        <div className="scrollbar-y-visible overflow-y-auto max-h-[50vh] border-t border-t-slate-200 py-4 px-2">
+            <CustomLabel
+                variant='h3'
+                children='Educational Background'
+                addedClass='font-bold text-slate-500! mb-1 text-center'
+            />
+            <p className="text-xs text-slate-400 text-center mb-5">
+                Optional — the employee can also fill this in themselves later from their portal.
+            </p>
+
+            <div className="space-y-4 px-3">
+                {entries.length === 0 && (
+                    <div className="flex flex-col items-center justify-center gap-2 py-8 border border-dashed border-slate-200 rounded-xl text-slate-400">
+                        <GraduationCap size={22} />
+                        <span className="text-sm">No education entries yet.</span>
+                    </div>
+                )}
+
+                {entries.map((entry, index) => (
+                    <div key={index} className="relative bg-slate-50 border border-slate-100 rounded-xl p-4 space-y-4">
+                        <button
+                            type="button"
+                            onClick={() => removeEntry(index)}
+                            className="absolute top-3 right-3 p-1.5 hover:bg-red-50 text-gray-400 hover:text-red-600 rounded-lg transition-colors cursor-pointer"
+                            title="Remove entry"
+                        >
+                            <Trash2 size={14} />
+                        </button>
+
+                        <div className="flex space-x-4 pr-8">
+                            <CustomDropdown
+                                className="items-start! w-full"
+                                label="Education Level"
+                                options={EDUCATION_LEVELS}
+                                value={entry.education_level}
+                                onChange={(val) => updateEntry(index, { education_level: val })}
+                                renderProps="label"
+                                returnProps="value"
+                                placeholder="Select level"
+                            />
+                            <CustomInput
+                                className="w-full"
+                                label="School Name"
+                                labelPosition="left"
+                                type="text"
+                                maxLength={150}
+                                placeholder="Ex. University of Santo Tomas"
+                                value={entry.school_name}
+                                onChange={(e) => updateEntry(index, { school_name: e.target.value })}
+                            />
+                        </div>
+
+                        <div className="flex space-x-4">
+                            <CustomInput
+                                className="w-full"
+                                label="Degree / Course"
+                                labelPosition="left"
+                                type="text"
+                                maxLength={150}
+                                placeholder="Ex. BS Computer Science"
+                                value={entry.degree}
+                                onChange={(e) => updateEntry(index, { degree: e.target.value })}
+                            />
+                            <CustomInput
+                                className="w-full"
+                                label="Honors"
+                                labelPosition="left"
+                                type="text"
+                                maxLength={100}
+                                placeholder="Ex. Cum Laude"
+                                value={entry.honors}
+                                onChange={(e) => updateEntry(index, { honors: e.target.value })}
+                            />
+                        </div>
+
+                        <div className="flex space-x-4">
+                            <CustomInput
+                                className="w-full"
+                                label="Year Started"
+                                labelPosition="left"
+                                type="text"
+                                maxLength={4}
+                                placeholder="Ex. 2016"
+                                value={entry.year_started}
+                                onChange={(e) => updateEntry(index, { year_started: handleNumberInput(e.target.value) })}
+                            />
+                            <CustomInput
+                                className="w-full"
+                                label="Year Graduated"
+                                labelPosition="left"
+                                type="text"
+                                maxLength={4}
+                                placeholder="Ex. 2020"
+                                value={entry.year_graduated}
+                                onChange={(e) => updateEntry(index, { year_graduated: handleNumberInput(e.target.value) })}
+                            />
+                        </div>
+                    </div>
+                ))}
+
+                <button
+                    type="button"
+                    onClick={addEntry}
+                    className="w-full flex items-center justify-center gap-2 py-2.5 border border-dashed border-slate-300 rounded-lg text-sm font-medium text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition-colors cursor-pointer"
+                >
+                    <Plus size={16} /> Add Education Entry
+                </button>
+            </div>
         </div>
     );
 };

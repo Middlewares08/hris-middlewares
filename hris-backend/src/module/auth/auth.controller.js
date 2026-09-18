@@ -818,6 +818,92 @@ const updateStatutory = async (req, res) => {
 };
 
 /* ------------------------------------------------------------------ *
+ * EMPLOYEE SELF-SERVICE — EDUCATIONAL BACKGROUND
+ *
+ * A small repeatable list (employee.educational_backgrounds), self-managed by
+ * the employee the same way they manage their statutory details. Saves replace
+ * the whole list rather than diffing individual rows, since entries can be
+ * freely added/removed on the client.
+ * ------------------------------------------------------------------ */
+
+const EDUCATION_LEVELS = ['elementary', 'secondary', 'vocational', 'college', 'graduate'];
+
+const getEducation = async (req, res) => {
+    try {
+        const employee = await Employee.query()
+            .findById(req.user.id)
+            .withGraphFetched('educationalBackgrounds');
+
+        if (!employee) {
+            return res.status(404).json({ success: false, message: 'Profile not found.' });
+        }
+
+        const education = [...(employee.educationalBackgrounds || [])].sort(
+            (a, b) => (b.year_graduated || 0) - (a.year_graduated || 0),
+        );
+
+        return res.status(200).json({ success: true, data: education });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: 'Error retrieving educational background.', err: error });
+    }
+};
+
+const updateEducation = async (req, res) => {
+    try {
+        const rows = req.body?.education;
+        if (!Array.isArray(rows)) {
+            return res.status(400).json({ success: false, message: 'education must be an array.' });
+        }
+
+        const sanitized = [];
+        for (const row of rows) {
+            const schoolName = String(row?.school_name || '').trim();
+            if (!schoolName) continue;
+
+            if (row?.education_level && !EDUCATION_LEVELS.includes(row.education_level)) {
+                return res.status(400).json({ success: false, message: `Invalid education level: ${row.education_level}` });
+            }
+
+            sanitized.push({
+                education_level: row.education_level || 'college',
+                school_name: schoolName,
+                degree: row.degree ? String(row.degree).trim() : null,
+                year_started: row.year_started ? parseInt(row.year_started, 10) || null : null,
+                year_graduated: row.year_graduated ? parseInt(row.year_graduated, 10) || null : null,
+                honors: row.honors ? String(row.honors).trim() : null,
+            });
+        }
+
+        const employee = await Employee.query().findById(req.user.id);
+        if (!employee) {
+            return res.status(404).json({ success: false, message: 'Profile not found.' });
+        }
+
+        const ctx = { user: req.user };
+        await Employee.transaction(async (trx) => {
+            // Replace-the-whole-list: simplest correct semantics for a client-side
+            // repeatable field array that can freely add/remove rows.
+            await employee.$relatedQuery('educationalBackgrounds', trx).delete();
+            if (sanitized.length) {
+                await employee.$relatedQuery('educationalBackgrounds', trx).context(ctx).insert(sanitized);
+            }
+        });
+
+        await logActivity({
+            employeeId: parseInt(req.user.id, 10),
+            action: 'profile.education_updated',
+            category: 'profile',
+            description: 'Updated educational background',
+            req,
+        });
+
+        return res.status(200).json({ success: true, message: 'Educational background updated.' });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+/* ------------------------------------------------------------------ *
  * EMPLOYEE SELF-SERVICE — EMPLOYMENT HISTORY (read-only)
  *
  * Nothing new is stored: this is assembled from the employee row (hire date,
@@ -964,6 +1050,8 @@ module.exports = {
     updatePreferences,
     getStatutory,
     updateStatutory,
+    getEducation,
+    updateEducation,
     getEmploymentHistory,
     getMySchedule,
     getMyHolidays,
