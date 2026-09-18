@@ -5,6 +5,7 @@ const { getSettings, getPublicSettings, updateSetting } = require('../module/adm
 const { getSetupStatus } = require('../module/admin/controller/system/SetupController');
 const { resetDatabase } = require('../module/admin/controller/system/SystemResetController');
 const { getLicenseActivations } = require('../module/admin/controller/system/LicenseController');
+const { getHealth } = require('../module/admin/controller/system/SchedulerHealthController');
 const { verifyToken } = require('../middleware/authMiddleware');
 const { requirePermission } = require('../middleware/permissionMiddleware');
 
@@ -24,5 +25,9 @@ router.post('/setup/reset', verifyToken, requirePermission('setup-wizard:reset')
 
 // License activation history — Maintenance dashboard, read-only.
 router.get('/license', verifyToken, requirePermission('maintenance:view'), getLicenseActivations);
+
+// Scheduler dead-man's-switch — per-job heartbeat, so "is the worker alive" is
+// checkable from the admin UI instead of SSH + `pm2 list`. See scheduler/health.js.
+router.get('/scheduler/health', verifyToken, requirePermission('maintenance:view'), getHealth);
 
 module.exports = router;

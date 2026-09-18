@@ -29,6 +29,11 @@ const REGISTRY = {
     // date; the daily processSeparations job flips them inactive once it arrives.
     // When off, restores the old behaviour: inactivate immediately on record creation.
     'separation.defer_inactivation': { type: 'boolean', default: true, public: false },
+    // Master switch for the nightly autoClockOut job (see scheduler/jobs/autoClockOut.js).
+    // When on (default), forgotten time-outs older than AUTO_CLOCK_OUT_MIN_OPEN_HOURS are
+    // stamped closed automatically. When off, the job is a no-op — open punches stay open
+    // for a manager to close manually. Admin-only: no employee-facing effect either way.
+    'attendance.auto_clock_out_enabled': { type: 'boolean', default: true, public: false },
     // Master switch for the first-time Setup Wizard (see SetupController). When on,
     // an admin whose required setup steps aren't done yet is redirected to the
     // wizard on login. Turning this off retires the wizard permanently — e.g. once

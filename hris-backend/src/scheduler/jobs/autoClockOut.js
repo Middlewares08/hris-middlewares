@@ -1,4 +1,5 @@
 const Attendance = require('../../database/models/attendance/Attendance');
+const Setting = require('../../database/models/system/Setting');
 const { logActivity } = require('../../utils/activityLogger');
 const { computeScheduleStamp, FORCED_STATUSES } = require('../../utils/attendanceScheduleStamp');
 
@@ -23,6 +24,9 @@ const AUTO_REMARK = `Auto clock-out: no time-out recorded (capped at ${STANDARD_
  * @param {import('knex').Knex.Transaction} trx
  */
 async function autoClockOut(trx) {
+    const enabled = await Setting.getBool('attendance.auto_clock_out_enabled', true, trx);
+    if (!enabled) return { skipped: true, reason: 'attendance.auto_clock_out_enabled is off' };
+
     const cutoffIso = new Date(Date.now() - MIN_OPEN_HOURS * 3600 * 1000).toISOString();
 
     const openLogs = await Attendance.query(trx)

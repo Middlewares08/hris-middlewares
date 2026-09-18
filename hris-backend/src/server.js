@@ -154,6 +154,24 @@ app.use('/reports', reportsRoutes);
 
 
 // ==========================================
+// Scheduler dead-man's-switch (see src/scheduler/health.js)
+// ==========================================
+// The worker process (src/worker.js) can die silently with nothing user-facing
+// breaking, so the check runs from here — the process actually being used —
+// rather than as a cron job inside the worker, which couldn't report its own
+// death. SCHEDULER_HEALTH_CHECK_ENABLED=false turns it off (e.g. in tests).
+if (String(process.env.SCHEDULER_HEALTH_CHECK_ENABLED).toLowerCase() !== 'false') {
+    const connection = require('./database/connection');
+    const { checkAndAlertSchedulerHealth } = require('./scheduler/health');
+    const intervalMs = (Number(process.env.SCHEDULER_HEALTH_CHECK_INTERVAL_MINUTES) || 60) * 60 * 1000;
+    const runCheck = () => checkAndAlertSchedulerHealth(connection)
+        .catch((error) => console.error('[scheduler health] check failed:', error.message));
+
+    setInterval(runCheck, intervalMs).unref();
+    setTimeout(runCheck, 60_000).unref(); // also check shortly after boot
+}
+
+// ==========================================
 // Server Initialization
 // ==========================================
 app.listen(PORT, () => {

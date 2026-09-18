@@ -10,6 +10,7 @@ import CustomLabel from '../../components/CustomLabel';
 import CustomForm from '../../components/CustomForm';
 import NotFound from '../../components/NotFound';
 import { can } from '../../utils/permissionCheck';
+import AutoClockOutToggle from './AutoClockOutToggle';
 import { useAttendanceLogs } from '../../hooks/useAttendance';
 import { useEmployees } from '../../hooks/useEmployee';
 import { attendanceLogValidationSchema } from '../../validation/attendance-log-validation';
@@ -245,6 +246,8 @@ function AttendanceLogs() {
                     <ShieldAlert size={16} /> {error}
                 </div>
             )}
+
+            <AutoClockOutToggle />
 
             <CustomDataTable
                 data={items}

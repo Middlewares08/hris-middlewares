@@ -184,13 +184,14 @@ const Dashboard = () => {
                     permission: 'maintenance:view'
                 },
             ]
-        },
-        {
-            icon: <Sparkles className='hover:cursor-pointer' size={20} />,
-            label: 'Getting Started',
-            path: SETUP_PATH,
-            permission: 'setup-wizard:view',
-        },
+        }
+        // ,
+        // {
+        //     icon: <Sparkles className='hover:cursor-pointer' size={20} />,
+        //     label: 'Getting Started',
+        //     path: SETUP_PATH,
+        //     permission: 'setup-wizard:view',
+        // },
     ];
 
     const menuItems = menuBlueprint
