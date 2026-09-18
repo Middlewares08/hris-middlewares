@@ -51,3 +51,10 @@ export const payslipRequestService = {
     reject: async (uuid, payload = {}) => (await apiClient.patch(`${BASE}/payslip-requests/${uuid}/reject`, payload)).data,
     remove: async (uuid) => (await apiClient.delete(`${BASE}/payslip-requests/${uuid}`)).data,
 };
+
+export const ewtPayeeService = {
+    ...crud('ewt-payees'),
+    listPayments: async (payeeUuid) => (await apiClient.get(`${BASE}/ewt-payees/${payeeUuid}/payments`)).data,
+    createPayment: async (payeeUuid, payload) => (await apiClient.post(`${BASE}/ewt-payees/${payeeUuid}/payments`, payload)).data,
+    removePayment: async (uuid) => (await apiClient.delete(`${BASE}/ewt-payments/${uuid}`)).data,
+};

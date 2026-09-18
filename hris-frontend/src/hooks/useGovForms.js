@@ -18,11 +18,16 @@ export function useGovFormCatalogue() {
 
 /**
  * Preview a form's aggregated rows + control totals + validation warnings.
- * `params` = { form, year, month }. Disabled until `form` + period are set.
+ * `params` = { form, year, month?, quarter?, source }. Disabled until `form` + the period
+ * fields the form's `source` needs (month for monthly, quarter for quarterly, neither for annual)
+ * are set.
  */
 export function useGovFormPreview(params) {
-    const ready = Boolean(params?.form && params?.year
-        && (params.period === 'year' || params.month));
+    const ready = Boolean(params?.form && params?.year && (
+        params.source === 'monthly' ? params.month
+            : params.source === 'quarterly' ? params.quarter
+                : true
+    ));
 
     const query = useQuery({
         queryKey: ['govForms', 'preview', params],
@@ -30,6 +35,7 @@ export function useGovFormPreview(params) {
             form: params.form,
             year: params.year,
             ...(params.month ? { month: params.month } : {}),
+            ...(params.quarter ? { quarter: params.quarter } : {}),
         }),
         select: (res) => res?.data || null,
         enabled: ready,

@@ -45,7 +45,8 @@ const ADMIN_PERMISSION_MATRIX = {
     'pay-periods': ['view', 'create', 'edit', 'delete'],
     'pay-components': ['view', 'create', 'edit', 'delete'],
     'employer-profile': ['view', 'edit'],
-    'government-forms': ['view', 'generate'], // BIR 2316/Alphalist, SSS R3, PhilHealth RF1, Pag-IBIG MCRF
+    'ewt-payees': ['view', 'create', 'edit', 'delete'], // contractor/professional/talent payee master + income payments, feeds BIR 2307
+    'government-forms': ['view', 'generate'], // BIR 2316/2307/Alphalist, SSS R3, PhilHealth RF1, Pag-IBIG MCRF
     'statutory-and-compliance': ['view', 'create', 'edit', 'delete'],
     'roles-and-permissions': ['view', 'create', 'edit', 'delete'],
     'announcements': ['view', 'create', 'edit', 'delete'],
@@ -101,6 +102,7 @@ const PAYROLL_SUBMENU_MODULES = [
     { name: 'Pay Periods', slug: 'pay-periods', description: 'Define the cutoff/pay-date schedule payroll runs are calculated against.' },
     { name: 'Pay Components', slug: 'pay-components', description: 'Earnings, deductions and other pay component definitions used across payroll.' },
     { name: 'Employer Profile', slug: 'employer-profile', description: 'Registered-employer identity used on government filing artifacts.' },
+    { name: 'EWT Payees', slug: 'ewt-payees', description: 'Payee master records (contractors, professionals, talents, suppliers) and their income payments subject to expanded withholding tax — feeds BIR Form 2307.' },
 ];
 
 const ACTION_LABELS = {

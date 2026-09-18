@@ -14,6 +14,7 @@ const knex = require('../../../../database/connection');
 const GovernmentDetail = require('../../../../database/models/employee/GovernmentDetail');
 const StatutoryTable = require('../../../../database/models/payroll/StatutoryTable');
 const EmployeeCompensation = require('../../../../database/models/payroll/EmployeeCompensation');
+const EwtPayment = require('../../../../database/models/payroll/EwtPayment');
 const { _internals } = require('../payrollCalculator');
 
 const { capSalary } = _internals;
@@ -402,4 +403,109 @@ async function annualCompensation(year, opts = {}) {
     };
 }
 
-module.exports = { monthlyContributions, annualCompensation, annualTaxDue, DEFAULT_STATUSES };
+/* ============================================================
+ * Quarterly EWT payments — BIR 2307
+ * ========================================================== */
+
+// Q1=Jan-Mar, Q2=Apr-Jun, Q3=Jul-Sep, Q4=Oct-Dec.
+const quarterWindow = (year, quarter) => {
+    const y = Number(year);
+    const q = Number(quarter);
+    const startMonth = (q - 1) * 3 + 1;
+    const endMonth = startMonth + 2;
+    const from = `${y}-${String(startMonth).padStart(2, '0')}-01`;
+    const to = `${y}-${String(endMonth).padStart(2, '0')}-${String(new Date(y, endMonth, 0).getDate()).padStart(2, '0')}`;
+    return { from, to };
+};
+
+/**
+ * @param {number} year
+ * @param {number} quarter  1-4
+ * @param {{ statuses?: string[] }} [opts]  `statuses` is accepted for a uniform call
+ *   signature with the other aggregators but unused — EWT payments have no run/status concept.
+ * @returns {Promise<{ period, rows, totals, warnings }>}
+ */
+async function quarterlyEWT(year, quarter, _opts = {}) {
+    const y = Number(year);
+    const q = Number(quarter);
+    const { from, to } = quarterWindow(y, q);
+
+    const payments = await EwtPayment.query()
+        .where({ is_deleted: false, period_year: y, period_quarter: q })
+        .withGraphFetched('payee')
+        .orderBy('payment_date', 'asc');
+
+    const warnings = [];
+    const byPayee = new Map();
+
+    for (const p of payments) {
+        const payee = p.payee;
+        if (!payee || payee.is_deleted) continue;
+        const pid = Number(payee.id);
+        if (!byPayee.has(pid)) {
+            byPayee.set(pid, {
+                payeeId: pid,
+                uuid: payee.uuid,
+                payeeType: payee.payee_type,
+                registeredName: payee.registered_name,
+                tradeName: payee.trade_name || null,
+                tin: payee.tin,
+                tinBranch: payee.tin_branch,
+                address: [payee.address_line1, payee.address_line2, payee.city, payee.province, payee.zip_code]
+                    .filter(Boolean).join(', ') || null,
+                isActive: payee.is_active !== false,
+                payments: [],
+                totalIncomePayment: 0,
+                totalTaxWithheld: 0,
+            });
+        }
+        const acc = byPayee.get(pid);
+        acc.payments.push({
+            uuid: p.uuid,
+            atcCode: p.atc_code,
+            atcDescription: p.atc_description,
+            taxRate: num(p.tax_rate),
+            incomePayment: num(p.income_payment_amount),
+            taxWithheld: num(p.tax_withheld_amount),
+            paymentDate: p.payment_date,
+            referenceNo: p.reference_no || null,
+        });
+        acc.totalIncomePayment += num(p.income_payment_amount);
+        acc.totalTaxWithheld += num(p.tax_withheld_amount);
+
+        if (p.payment_date < from || p.payment_date > to) {
+            warnings.push({
+                name: payee.registered_name,
+                issue: `Payment dated ${p.payment_date} was tagged to Q${q} ${y} but falls outside that calendar quarter.`,
+            });
+        }
+    }
+
+    const rows = [...byPayee.values()].map((r) => ({
+        ...r,
+        totalIncomePayment: round2(r.totalIncomePayment),
+        totalTaxWithheld: round2(r.totalTaxWithheld),
+        paymentCount: r.payments.length,
+    })).sort((a, b) => a.registeredName.localeCompare(b.registeredName));
+
+    for (const r of rows) {
+        if (!r.tin || r.tin.length !== 9) warnings.push({ name: r.registeredName, issue: 'No valid 9-digit TIN on file.' });
+        if (!r.isActive) warnings.push({ name: r.registeredName, issue: 'Payee is marked inactive but has payments in this period.' });
+    }
+
+    const totals = {
+        payees: rows.length,
+        paymentCount: rows.reduce((t, r) => t + r.paymentCount, 0),
+        totalIncomePayment: round2(rows.reduce((t, r) => t + r.totalIncomePayment, 0)),
+        totalTaxWithheld: round2(rows.reduce((t, r) => t + r.totalTaxWithheld, 0)),
+    };
+
+    return {
+        period: { year: y, quarter: q, from, to },
+        rows,
+        totals,
+        warnings,
+    };
+}
+
+module.exports = { monthlyContributions, annualCompensation, quarterlyEWT, annualTaxDue, DEFAULT_STATUSES };

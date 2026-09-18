@@ -7,6 +7,7 @@ const philhealthRF1 = require('./philhealthRF1');
 const pagibigMCRF = require('./pagibigMCRF');
 const birAlphalist = require('./birAlphalist');
 const bir2316 = require('./bir2316');
+const bir2307 = require('./bir2307');
 
 const REGISTRY = {
     'sss-r3': { writer: sssR3, formats: sssR3.formats, defaultFormat: 'txt', source: 'monthly' },
@@ -14,6 +15,7 @@ const REGISTRY = {
     'pagibig-mcrf': { writer: pagibigMCRF, formats: pagibigMCRF.formats, defaultFormat: 'txt', source: 'monthly' },
     'bir-alphalist': { writer: birAlphalist, formats: birAlphalist.formats, defaultFormat: 'dat', source: 'annual' },
     'bir-2316': { writer: bir2316, formats: bir2316.formats, defaultFormat: 'pdf', source: 'annual' },
+    'bir-2307': { writer: bir2307, formats: bir2307.formats, defaultFormat: 'pdf', source: 'quarterly' },
 };
 
 /**

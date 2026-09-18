@@ -35,6 +35,8 @@ import PayrollRunDetail from './pages/Payroll/PayrollRunDetail'
 import PayslipRequests from './pages/Payroll/PayslipRequests'
 import EmployerProfile from './pages/Payroll/EmployerProfile'
 import GovernmentForms from './pages/Payroll/GovernmentForms'
+import EwtPayees from './pages/Payroll/EwtPayees'
+import EwtPayeeDetail from './pages/Payroll/EwtPayeeDetail'
 import Announcements from './pages/Announcement/Announcements'
 import OvertimeRequests from './pages/Overtime/OvertimeRequests'
 import AttendanceLogs from './pages/Attendance/AttendanceLogs'
@@ -215,6 +217,8 @@ function App() {
             <Route path="statutory-tables" element={<ProtectedElement element={<StatutoryTables />} permission="statutory-and-compliance:view" />} />
             <Route path="employer-profile" element={<ProtectedElement element={<EmployerProfile />} permission="employer-profile:view" />} />
             <Route path="government-forms" element={<ProtectedElement element={<GovernmentForms />} permission="government-forms:view" />} />
+            <Route path="ewt-payees" element={<ProtectedElement element={<EwtPayees />} permission="ewt-payees:view" />} />
+            <Route path="ewt-payees/:uuid" element={<ProtectedElement element={<EwtPayeeDetail />} permission="ewt-payees:view" />} />
           </Route>
 
         </Route>

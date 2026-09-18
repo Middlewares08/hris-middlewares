@@ -10,6 +10,7 @@ import {
     payslipService,
     payslipRequestService,
     employerProfileService,
+    ewtPayeeService,
 } from '../services/payrollServices';
 import { downloadBlob, filenameFromHeaders } from '../utils/downloadBlob';
 
@@ -77,6 +78,51 @@ export const useCompensations = (params) => useResource('compensations', compens
 export const useComponentAssignments = (params) => useResource('componentAssignments', assignmentService, params);
 export const usePayPeriods = (params) => useResource('payPeriods', payPeriodService, params);
 export const usePayrollRuns = (params) => useResource('payrollRuns', payrollRunService, params);
+export const useEwtPayees = (params) => useResource('ewtPayees', ewtPayeeService, params);
+
+/* ---- EWT payee: income payments (nested sub-resource) ---- */
+export function useEwtPayments(payeeUuid) {
+    const qc = useQueryClient();
+    const invalidate = () => qc.invalidateQueries({ queryKey: ['ewtPayments', payeeUuid] });
+
+    const query = useQuery({
+        queryKey: ['ewtPayments', payeeUuid],
+        queryFn: () => ewtPayeeService.listPayments(payeeUuid),
+        select: (res) => res?.data || [],
+        enabled: Boolean(payeeUuid),
+    });
+
+    const createMutation = useMutation({
+        mutationFn: (payload) => ewtPayeeService.createPayment(payeeUuid, payload),
+        onSuccess: (res) => { toast.success(res?.message || 'Payment recorded.'); invalidate(); },
+        onError: (err) => toast.error(errMsg(err, 'Failed to record payment.')),
+    });
+
+    const removeMutation = useMutation({
+        mutationFn: (uuid) => ewtPayeeService.removePayment(uuid),
+        onSuccess: (res) => { toast.success(res?.message || 'Payment removed.'); invalidate(); },
+        onError: (err) => toast.error(errMsg(err, 'Failed to remove payment.')),
+    });
+
+    return {
+        payments: query.data || [],
+        isLoading: query.isLoading,
+        create: createMutation.mutateAsync,
+        remove: removeMutation.mutateAsync,
+        isMutating: createMutation.isPending || removeMutation.isPending,
+    };
+}
+
+/* ---- EWT payee: single record (for the detail page) ---- */
+export function useEwtPayee(uuid) {
+    const query = useQuery({
+        queryKey: ['ewtPayee', uuid],
+        queryFn: () => ewtPayeeService.getByUuid(uuid),
+        select: (res) => res?.data || null,
+        enabled: Boolean(uuid),
+    });
+    return { payee: query.data || null, isLoading: query.isLoading, error: query.isError ? errMsg(query.error, 'Failed to load payee.') : null };
+}
 
 /* ---- Payroll run: single record + lifecycle actions ---- */
 export function usePayrollRun(uuid) {

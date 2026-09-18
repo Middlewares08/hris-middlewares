@@ -91,6 +91,11 @@ export const COMPUTATION_HELP = {
 
 export const ADJUSTMENT_TYPES = [opt('earning', 'Earning'), opt('deduction', 'Deduction')];
 
+export const PAYEE_TYPES = [
+    opt('individual', 'Individual'),
+    opt('non_individual', 'Non-Individual (Business)'),
+];
+
 // tone classes for status pills, keyed by status value across runs / periods / payslips / adjustments
 export const STATUS_TONE = {
     draft: 'bg-slate-100 text-slate-600',

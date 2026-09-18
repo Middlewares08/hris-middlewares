@@ -7,7 +7,7 @@
 //   GET /payroll/gov-forms/preview?form&year&month  -> aggregated rows + totals + warnings
 //   GET /payroll/gov-forms/download?form&year&month&format[&employee_id]  -> the artifact
 
-const { monthlyContributions, annualCompensation } = require('../../services/govFilings/aggregate');
+const { monthlyContributions, annualCompensation, quarterlyEWT } = require('../../services/govFilings/aggregate');
 const { REGISTRY, generate } = require('../../services/govFilings/formats');
 const EmployerProfile = require('../../../../database/models/payroll/EmployerProfile');
 const { completeness } = require('./EmployerProfileController');
@@ -19,6 +19,7 @@ const FORMS = {
     'pagibig-mcrf': { agency: 'Pag-IBIG', title: 'Pag-IBIG Membership Contribution Remittance Form (MCRF)', period: 'month' },
     'bir-2316': { agency: 'BIR', title: 'Certificate of Compensation Payment / Tax Withheld (2316)', period: 'year' },
     'bir-alphalist': { agency: 'BIR', title: 'Alphabetical List of Employees (1604-C)', period: 'year' },
+    'bir-2307': { agency: 'BIR', title: 'Certificate of Creditable Tax Withheld at Source — Expanded (2307)', period: 'quarter' },
 };
 
 const catalogue = () => Object.entries(FORMS).map(([key, f]) => ({
@@ -44,17 +45,22 @@ const parseCommon = (req) => {
         : undefined;
 
     let month = null;
+    let quarter = null;
     if (entry.source === 'monthly') {
         month = Number(req.query.month);
         if (!(month >= 1 && month <= 12)) return { error: 'month (1-12) is required for this form.' };
+    } else if (entry.source === 'quarterly') {
+        quarter = Number(req.query.quarter);
+        if (!(quarter >= 1 && quarter <= 4)) return { error: 'quarter (1-4) is required for this form.' };
     }
-    return { key, entry, year, month, statuses };
+    return { key, entry, year, month, quarter, statuses };
 };
 
-const aggregateFor = (entry, { year, month, statuses }) =>
-    entry.source === 'monthly'
-        ? monthlyContributions(year, month, { statuses })
-        : annualCompensation(year, { statuses });
+const aggregateFor = (entry, { year, month, quarter, statuses }) => {
+    if (entry.source === 'monthly') return monthlyContributions(year, month, { statuses });
+    if (entry.source === 'quarterly') return quarterlyEWT(year, quarter, { statuses });
+    return annualCompensation(year, { statuses });
+};
 
 const preview = async (req, res) => {
     try {
@@ -85,6 +91,7 @@ const download = async (req, res) => {
 
         const format = req.query.format ? String(req.query.format) : undefined;
         const employeeId = req.query.employee_id ? Number(req.query.employee_id) : undefined;
+        const payeeId = req.query.payee_id ? Number(req.query.payee_id) : undefined;
 
         const profileRow = await EmployerProfile.singleton();
         const profile = typeof profileRow.toJSON === 'function' ? profileRow.toJSON() : profileRow;
@@ -95,7 +102,8 @@ const download = async (req, res) => {
         const data = await aggregateFor(c.entry, c);
         if (!data.rows.length) return fail(res, 404, 'No payroll data found for this period.');
 
-        const artifact = await generate(c.key, data, { profile }, format, employeeId ? { employeeId } : {});
+        const opts = { ...(employeeId ? { employeeId } : {}), ...(payeeId ? { payeeId } : {}) };
+        const artifact = await generate(c.key, data, { profile }, format, opts);
 
         res.setHeader('Content-Type', artifact.contentType);
         res.setHeader('Content-Disposition', `attachment; filename="${artifact.filename}"`);

@@ -104,6 +104,22 @@ export const EMPLOYMENT_TYPES = [
     },
 ].sort((a, b) => a.label.localeCompare(b.label));
 
+// Alphanumeric Tax Codes (ATC) for Expanded Withholding Tax — BIR Form 2307.
+// A best-effort shortlist of common codes, NOT the full BIR schedule and NOT
+// agency-certified. Mirrors `hris-backend/src/database/constants/atcCodes.js` —
+// keep both lists in sync. `rate` is carried on the value so the payment form
+// can prefill the tax rate when a code is picked.
+export const ATC_CODES = [
+    { id: generateUUID(), value: 'WI010', rate: 0.05, label: 'WI010 — Professional fees, individual (non-VAT) · 5%' },
+    { id: generateUUID(), value: 'WI011', rate: 0.10, label: 'WI011 — Professional fees, individual (VAT-registered) · 10%' },
+    { id: generateUUID(), value: 'WI070', rate: 0.10, label: 'WI070 — Professional fees, non-individual · 10%' },
+    { id: generateUUID(), value: 'WI050', rate: 0.10, label: 'WI050 — Talent fees, individual · 10%' },
+    { id: generateUUID(), value: 'WC010', rate: 0.05, label: 'WC010 — Rental, real/personal property · 5%' },
+    { id: generateUUID(), value: 'WC100', rate: 0.02, label: 'WC100 — General engineering/building contractors · 2%' },
+    { id: generateUUID(), value: 'WI640', rate: 0.10, label: 'WI640 — Payments to brokers/agents · 10%' },
+    { id: generateUUID(), value: 'WC160', rate: 0.15, label: 'WC160 — Income distribution to beneficiaries · 15%' },
+];
+
 
 export const RELATIONSHIP_OPTIONS = [
   { label: 'Spouse', value: 'spouse' },

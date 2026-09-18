@@ -24,6 +24,14 @@ const AGENCY_TONE = {
     'Pag-IBIG': 'bg-amber-50 text-amber-600 border-amber-200',
 };
 
+const SOURCE_LABEL = { monthly: 'Monthly', quarterly: 'Quarterly', annual: 'Annual' };
+const QUARTER_OPTS = [
+    { label: 'Q1 (Jan–Mar)', value: 1 },
+    { label: 'Q2 (Apr–Jun)', value: 2 },
+    { label: 'Q3 (Jul–Sep)', value: 3 },
+    { label: 'Q4 (Oct–Dec)', value: 4 },
+];
+
 // Per-form preview table columns + KPI tiles.
 const VIEWS = {
     'sss-r3': {
@@ -110,6 +118,21 @@ const VIEWS = {
             { header: 'Tax Withheld', render: (r) => peso(r.taxWithheld) },
         ],
     },
+    'bir-2307': {
+        totals: (t) => [
+            ['Payees', t.payees, Users, 'slate'],
+            ['Payments', t.paymentCount, Wallet, 'blue'],
+            ['Income Payment', peso(t.totalIncomePayment), Wallet, 'amber'],
+            ['Tax Withheld', peso(t.totalTaxWithheld), Landmark, 'violet'],
+        ],
+        columns: [
+            { header: 'Payee', render: (r) => <span className="font-medium text-slate-800">{r.registeredName}</span> },
+            { header: 'TIN', render: (r) => <span className="font-mono text-xs">{r.tin ? `${r.tin}-${r.tinBranch}` : <em className="text-rose-500">missing</em>}</span> },
+            { header: 'Payments', render: (r) => r.paymentCount },
+            { header: 'Income Payment', render: (r) => peso(r.totalIncomePayment) },
+            { header: 'Tax Withheld', render: (r) => <span className="font-semibold">{peso(r.totalTaxWithheld)}</span> },
+        ],
+    },
 };
 
 const FORMAT_LABEL = {
@@ -123,17 +146,20 @@ function GovernmentForms() {
     const now = moment();
     const [year, setYear] = useState(now.year());
     const [month, setMonth] = useState(now.month() + 1);
+    const [quarter, setQuarter] = useState(Math.floor(now.month() / 3) + 1);
     const [busyFmt, setBusyFmt] = useState(null);
 
     const form = forms.find((f) => f.key === formKey) || null;
     const isAnnual = form?.source === 'annual';
+    const isQuarterly = form?.source === 'quarterly';
 
     const previewParams = useMemo(() => ({
         form: formKey,
         year,
-        month: isAnnual ? undefined : month,
-        period: form?.source,
-    }), [formKey, year, month, isAnnual, form?.source]);
+        month: !isAnnual && !isQuarterly ? month : undefined,
+        quarter: isQuarterly ? quarter : undefined,
+        source: form?.source,
+    }), [formKey, year, month, quarter, isAnnual, isQuarterly, form?.source]);
 
     const { data, isLoading, error } = useGovFormPreview(previewParams);
     const view = VIEWS[formKey] || VIEWS['sss-r3'];
@@ -150,7 +176,7 @@ function GovernmentForms() {
         setBusyFmt(format);
         await downloadGovForm({
             form: formKey, year,
-            ...(isAnnual ? {} : { month }),
+            ...(isQuarterly ? { quarter } : isAnnual ? {} : { month }),
             format,
         });
         setBusyFmt(null);
@@ -171,8 +197,8 @@ function GovernmentForms() {
             </div>
 
             {/* Form picker */}
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-                {catLoading ? [0, 1, 2, 3, 4].map((i) => <div key={i} className="h-24 animate-pulse rounded-xl bg-slate-100" />)
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+                {catLoading ? [0, 1, 2, 3, 4, 5].map((i) => <div key={i} className="h-24 animate-pulse rounded-xl bg-slate-100" />)
                     : forms.map((f) => (
                         <button
                             key={f.key}
@@ -186,7 +212,7 @@ function GovernmentForms() {
                                 {f.agency}
                             </span>
                             <p className="mt-2 text-xs font-semibold leading-tight text-slate-800">{f.title.replace(/\s*\([^)]*\)\s*$/, '')}</p>
-                            <p className="mt-1 text-[10px] uppercase tracking-wide text-slate-400">{f.source === 'annual' ? 'Annual' : 'Monthly'}</p>
+                            <p className="mt-1 text-[10px] uppercase tracking-wide text-slate-400">{SOURCE_LABEL[f.source] || f.source}</p>
                         </button>
                     ))}
             </div>
@@ -196,9 +222,14 @@ function GovernmentForms() {
                 <div className="w-40">
                     <CustomDropdown label="Year" options={yearOpts} value={year} renderProps="label" returnProps="value" onChange={setYear} className="w-full items-start!" />
                 </div>
-                {!isAnnual && (
+                {!isAnnual && !isQuarterly && (
                     <div className="w-44">
                         <CustomDropdown label="Month" options={monthOpts} value={month} renderProps="label" returnProps="value" onChange={setMonth} className="w-full items-start!" />
+                    </div>
+                )}
+                {isQuarterly && (
+                    <div className="w-44">
+                        <CustomDropdown label="Quarter" options={QUARTER_OPTS} value={quarter} renderProps="label" returnProps="value" onChange={setQuarter} className="w-full items-start!" />
                     </div>
                 )}
                 <div className="ml-auto flex flex-wrap gap-2">
@@ -250,8 +281,12 @@ function GovernmentForms() {
             ) : data ? (
                 <div className="space-y-4">
                     <p className="text-xs text-slate-400">
-                        {isAnnual ? `Calendar year ${data.period.year}` : `${moment(data.period.from).format('MMMM YYYY')} · ${data.period.from} to ${data.period.to}`}
-                        {' · '}{data.rows.length} employee{data.rows.length === 1 ? '' : 's'}
+                        {isAnnual
+                            ? `Calendar year ${data.period.year}`
+                            : isQuarterly
+                                ? `Q${data.period.quarter} ${data.period.year} · ${data.period.from} to ${data.period.to}`
+                                : `${moment(data.period.from).format('MMMM YYYY')} · ${data.period.from} to ${data.period.to}`}
+                        {' · '}{data.rows.length} {isQuarterly ? 'payee' : 'employee'}{data.rows.length === 1 ? '' : 's'}
                     </p>
 
                     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">

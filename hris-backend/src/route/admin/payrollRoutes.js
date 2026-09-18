@@ -11,6 +11,7 @@
 //   payroll-runs:*              -> payroll runs, their payslips + adjustments
 //   payslip-requests:*          -> admin review of employee payslip-copy requests
 //   employer-profile:*          -> registered-employer identity for gov filings
+//   ewt-payees:*                -> EWT payee master + income payment log (BIR 2307)
 //
 // Employee self-service (own payslips) is gated by verifyToken only.
 
@@ -30,6 +31,8 @@ const Payslip = require('../../module/admin/controller/payroll/PayslipController
 const PayslipRequest = require('../../module/admin/controller/payroll/PayslipRequestController');
 const EmployerProfile = require('../../module/admin/controller/payroll/EmployerProfileController');
 const GovFiling = require('../../module/admin/controller/payroll/GovFilingController');
+const EwtPayee = require('../../module/admin/controller/payroll/EwtPayeeController');
+const EwtPayment = require('../../module/admin/controller/payroll/EwtPaymentController');
 
 const SETUP = 'payroll-and-compensation';
 const STAT = 'statutory-and-compliance';
@@ -38,6 +41,7 @@ const PERIODS = 'pay-periods';
 const RUNS = 'payroll-runs';
 const REQUESTS = 'payslip-requests';
 const EMPLOYER_PROFILE = 'employer-profile';
+const EWT = 'ewt-payees';
 
 /* ---------------------------------------------------------------- *
  * SELF-SERVICE (employee PWA, gated by the 'My Payslips' scope) —
@@ -99,6 +103,19 @@ router.delete('/assignments/:uuid', verifyToken, requirePermission(`${SETUP}:del
  * ---------------------------------------------------------------- */
 router.get('/employer-profile', verifyToken, requirePermission(`${EMPLOYER_PROFILE}:view`), EmployerProfile.get);
 router.put('/employer-profile', verifyToken, requirePermission(`${EMPLOYER_PROFILE}:edit`), EmployerProfile.update);
+
+/* ---------------------------------------------------------------- *
+ * EWT PAYEES + INCOME PAYMENTS (contractors / professionals / talents / suppliers — BIR 2307)
+ * ---------------------------------------------------------------- */
+router.get('/ewt-payees', verifyToken, requirePermission(`${EWT}:view`), EwtPayee.getAll);
+router.get('/ewt-payees/:uuid', verifyToken, requirePermission(`${EWT}:view`), EwtPayee.getByUuid);
+router.post('/ewt-payees', verifyToken, requirePermission(`${EWT}:create`), EwtPayee.create);
+router.put('/ewt-payees/:uuid', verifyToken, requirePermission(`${EWT}:edit`), EwtPayee.update);
+router.delete('/ewt-payees/:uuid', verifyToken, requirePermission(`${EWT}:delete`), EwtPayee.remove);
+
+router.get('/ewt-payees/:payee_uuid/payments', verifyToken, requirePermission(`${EWT}:view`), EwtPayment.listForPayee);
+router.post('/ewt-payees/:payee_uuid/payments', verifyToken, requirePermission(`${EWT}:create`), EwtPayment.createForPayee);
+router.delete('/ewt-payments/:uuid', verifyToken, requirePermission(`${EWT}:delete`), EwtPayment.remove);
 
 /* ---------------------------------------------------------------- *
  * GOVERNMENT FILING ARTIFACTS (BIR / SSS / PhilHealth / Pag-IBIG)

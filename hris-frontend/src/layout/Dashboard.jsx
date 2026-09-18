@@ -132,6 +132,7 @@ const Dashboard = () => {
                 { label: 'Payslip Requests', path: '/dashboard/payroll/payslip-requests', permission: 'payslip-requests:view' },
                 { label: 'Pay Periods', path: '/dashboard/payroll/periods', permission: 'pay-periods:view' },
                 { label: 'Pay Components', path: '/dashboard/payroll/components', permission: 'pay-components:view' },
+                { label: 'EWT Payees', path: '/dashboard/payroll/ewt-payees', permission: 'ewt-payees:view' },
                 { label: 'Statutory Tables', path: '/dashboard/payroll/statutory-tables', permission: 'statutory-and-compliance:view' },
                 { label: 'Government Forms', path: '/dashboard/payroll/government-forms', permission: 'government-forms:view' },
                 { label: 'Employer Profile', path: '/dashboard/payroll/employer-profile', permission: 'employer-profile:view' },

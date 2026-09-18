@@ -24,6 +24,7 @@ const PAYROLL_TREE_SLUGS = [
     'payslip-requests',
     'pay-periods',
     'pay-components',
+    'ewt-payees',
     'statutory-and-compliance',
     'government-forms',
     'employer-profile',
